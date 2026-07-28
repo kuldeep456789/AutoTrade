@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { useGetProductDetailsQuery, useCreateReviewMutation } from '../store/slices/productApiSlice';
+import { useGetProductDetailsQuery, useCreateReviewMutation, useGetRelatedProductsQuery } from '../store/slices/productApiSlice';
 import { addToCart } from '../store/slices/cartSlice';
 import { toggleWishlist } from '../store/slices/wishlistSlice';
 import type { RootState } from '../store/store';
 import { ShoppingBag, Heart, Star, Check, ChevronRight, ChevronLeft, X, ZoomIn, SendHorizontal, ThumbsUp, Share2, Loader2, UserRound } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Loader from '../components/Loader';
+import ProductCard from '../components/product/ProductCard';
 import WishlistLoginPopup from '../components/WishlistLoginPopup';
 import { getColorHex } from '../utils/colorMap';
 import { getProductId } from '../lib/product';
@@ -37,6 +38,8 @@ const ProductDetailsPage = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { data: product, isLoading, error, refetch } = useGetProductDetailsQuery(id);
+  const { data: relatedData } = useGetRelatedProductsQuery(id, { skip: !id });
+  const relatedProducts = relatedData?.products || [];
   const [createReview, { isLoading: isReviewLoading }] = useCreateReviewMutation();
   const userInfo = useSelector((state: RootState) => state.auth.userInfo);
   const wishlistItems = useSelector((state: RootState) => state.wishlist.wishlistItems);
@@ -587,7 +590,7 @@ const ProductDetailsPage = () => {
               <div className="mt-12 text-[16px] text-[#111111] dark:text-zinc-200 leading-relaxed max-w-prose">
                 {product.description && (
                   <div 
-                    className="[&>p]:mb-4 [&>ul]:list-disc [&>ul]:pl-5 [&>ul]:mb-4 [&>ul>li]:mb-1 [&>ul]:mt-4" 
+                    className="space-y-4 leading-relaxed" 
                     dangerouslySetInnerHTML={{ __html: product.description }} 
                   />
                 )}
@@ -601,6 +604,22 @@ const ProductDetailsPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Related Products Section */}
+      {relatedProducts && relatedProducts.length > 0 && (
+        <div className="w-full border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 py-12 sm:py-16">
+          <div className="max-w-[1400px] mx-auto px-6 sm:px-10">
+            <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-zinc-900 dark:text-white mb-8">
+              YOU MIGHT ALSO LIKE
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+              {relatedProducts.slice(0, 4).map((relProd: any) => (
+                <ProductCard key={relProd._id || relProd.pid || relProd.id} product={relProd} />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
 
 
