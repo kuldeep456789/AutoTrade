@@ -243,8 +243,8 @@ const CollectionPage = () => {
         ) : (
           <>
             <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6">
-              {paginatedProducts.map((product: any) => (
-                <ProductCard key={product.pid || product._id || product.id || product.name} product={product} />
+              {paginatedProducts.map((product: any, idx: number) => (
+                <ProductCard key={`${product.pid || product._id || product.id || product.name}-${idx}`} product={product} />
               ))}
             </div>
             {totalPages > 1 && (

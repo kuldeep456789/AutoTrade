@@ -278,8 +278,8 @@ const CartPage = () => {
                   <div className="mt-10 pt-8 border-t border-zinc-200 dark:border-zinc-800">
                     <h2 className="text-[18px] font-bold tracking-tight mb-5">You May Also Like</h2>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
-                      {recommendedProducts.map((product: any) => (
-                        <ProductCard key={product._id} product={product} />
+                      {recommendedProducts.map((product: any, idx: number) => (
+                        <ProductCard key={`${product._id || product.pid || product.id || 'rec'}-${idx}`} product={product} />
                       ))}
                     </div>
                   </div>

@@ -613,8 +613,8 @@ const ProductDetailsPage = () => {
               YOU MIGHT ALSO LIKE
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-              {relatedProducts.slice(0, 4).map((relProd: any) => (
-                <ProductCard key={relProd._id || relProd.pid || relProd.id} product={relProd} />
+              {relatedProducts.slice(0, 4).map((relProd: any, idx: number) => (
+                <ProductCard key={`${relProd._id || relProd.pid || relProd.id || 'rel'}-${idx}`} product={relProd} />
               ))}
             </div>
           </div>
