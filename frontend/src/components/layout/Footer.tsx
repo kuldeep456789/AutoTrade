@@ -13,7 +13,7 @@ const Footer = () => {
   return (
     <footer className="bg-zinc-950 text-white font-sans w-full border-t border-zinc-800">
       {/* Main Footer Links */}
-      <div className="max-w-7xl mx-auto px-6 sm:px-8 py-12 sm:py-20">
+      <div className="max-w-7xl mx-auto px-6 sm:px-8 py-8 sm:py-10">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 sm:gap-12">
 
           {/* Brand Column */}

@@ -12,8 +12,8 @@ export const Automobiles: Record<string, CJCategory[]> = {
 
   'Interior Accessories': [
     { categoryId: '090E48F4-B406-438B-9EBF-D52450AC370A', name: 'Floor Mats' },
-    { categoryId: '2601070551311618400',                  name: 'Car Aromatherapy' },
-    { categoryId: '2601070551481626500',                  name: 'Car Perfume' },
+    { categoryId: '2601070551311618400', name: 'Car Aromatherapy' },
+    { categoryId: '2601070551481626500', name: 'Car Perfume' },
     { categoryId: '309854A6-BDC2-4F52-80D8-93E5109B3A53', name: 'Key Case for Car' },
     { categoryId: '5559DD57-7F12-44BC-9C29-9E9BD1CDB029', name: 'Steering Covers' },
     { categoryId: '808A409E-8E16-43A8-879A-153672135DB9', name: 'Automobiles Seat Covers' },
@@ -71,10 +71,7 @@ export const AUTOMOBILE_CATEGORIES = {
   autoReplacementParts: Automobiles['Auto Replacement Parts'],
 };
 
-/**
- * Flat list of all categories with their parent group name.
- * Used in fetchCatalog to build the sync target list.
- */
+
 export function getAllSyncTargets(): { categoryId: string; parentCategory: string; name: string }[] {
   const targets: { categoryId: string; parentCategory: string; name: string }[] = [];
   for (const [parent, items] of Object.entries(Automobiles)) {

@@ -268,6 +268,7 @@ export class ProductsService implements OnModuleInit {
       pageSize,
       query.categoryId,
       query.subcategoryName,
+      query.collectionType,
     );
 
     if (warehouseResult && warehouseResult.products.length > 0) {

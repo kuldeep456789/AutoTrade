@@ -1,15 +1,16 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Heart } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Heart, Star, ShoppingBag, Check } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { toggleWishlist } from '../../store/slices/wishlistSlice';
+import { addToCart } from '../../store/slices/cartSlice';
 import type { RootState } from '../../store/store';
 import { getProductId } from '../../lib/product';
 import { formatINR } from '../../lib/currency';
 import toast from 'react-hot-toast';
 import WishlistLoginPopup from '../WishlistLoginPopup';
 
-const PLACEHOLDER_IMAGE = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="500" viewBox="0 0 400 500"><rect width="100%" height="100%" fill="%23f4f4f5"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="24" font-weight="900" fill="%23a1a1aa" letter-spacing="4">AutoTrade</text></svg>';
+const PLACEHOLDER_IMAGE = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="500" viewBox="0 0 400 500"><rect width="100%" height="100%" fill="%2318181b"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="24" font-weight="900" fill="%23ef4444" letter-spacing="4">AUTOTRADE</text></svg>';
 
 interface ProductCardProps {
   product: {
@@ -26,18 +27,22 @@ interface ProductCardProps {
     description?: string;
     numReviews?: number;
     averageRating?: number;
+    subcategoryName?: string;
+    collectionType?: string;
   };
   keyword?: string;
 }
 
 export const ProductCardSkeleton = () => (
-  <div className="w-full bg-white dark:bg-zinc-900 rounded-[14px] overflow-hidden animate-pulse">
-    <div className="aspect-[4/5] bg-zinc-100 dark:bg-zinc-800" />
-    <div className="p-4 border-t border-gray-100 dark:border-zinc-800 space-y-2">
-      <div className="h-4 w-full bg-zinc-100 dark:bg-zinc-800 rounded" />
-      <div className="flex items-center gap-2">
-        <div className="h-6 w-16 bg-zinc-100 dark:bg-zinc-800 rounded" />
-        <div className="h-4 w-14 bg-zinc-100 dark:bg-zinc-800 rounded" />
+  <div className="w-full bg-[#0e121b] border border-zinc-800 rounded-2xl overflow-hidden animate-pulse">
+    <div className="aspect-[4/5] bg-zinc-800/60" />
+    <div className="p-4 space-y-3">
+      <div className="h-3 w-1/3 bg-zinc-800 rounded" />
+      <div className="h-5 w-full bg-zinc-800 rounded" />
+      <div className="h-4 w-2/3 bg-zinc-800 rounded" />
+      <div className="flex items-center justify-between pt-2">
+        <div className="h-6 w-20 bg-zinc-800 rounded" />
+        <div className="h-8 w-24 bg-zinc-800 rounded-lg" />
       </div>
     </div>
   </div>
@@ -46,21 +51,33 @@ export const ProductCardSkeleton = () => (
 const ProductCard = ({ product }: ProductCardProps) => {
   const [imageFailed, setImageFailed] = useState(false);
   const [hovered, setHovered] = useState(false);
+  const [isAdded, setIsAdded] = useState(false);
   const [showWishlistPopup, setShowWishlistPopup] = useState(false);
+
   const dispatch = useDispatch();
+  const navigate = useNavigate();
+
   const userInfo = useSelector((state: RootState) => state.auth.userInfo);
   const wishlistItems = useSelector((state: RootState) => state.wishlist.wishlistItems);
+
   const productId = getProductId(product) || product.name || 'product';
   const isWishlisted = wishlistItems.some((item: any) => item._id === productId);
 
-  const primaryImage = product?.images?.[0] || (product as any)?.productImage || PLACEHOLDER_IMAGE;
-  const hoverImage = product?.images?.[1] || null; // second image for hover, if available
+  const productName = product.title || (product as any)?.productName || product.name || 'AutoTrade Product';
 
-  // The image to show: if hovered AND a second image exists, show it
-  const displayImage = hovered && hoverImage ? hoverImage : primaryImage;
+  const primaryImage = product?.images?.[0] || (product as any)?.productImage || PLACEHOLDER_IMAGE;
+  const hoverImage = product?.images?.[1] || null;
+
+  const currentPrice = product.discountPrice && product.discountPrice < product.price ? product.discountPrice : product.price;
+  const originalPrice = product.discountPrice && product.discountPrice < product.price ? product.price : undefined;
+
+  const discountPct = originalPrice && originalPrice > currentPrice
+    ? Math.round(((originalPrice - currentPrice) / originalPrice) * 100)
+    : 0;
 
   const handleWishlistClick = (e: React.MouseEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     if (!userInfo) {
       setShowWishlistPopup(true);
       return;
@@ -68,111 +85,174 @@ const ProductCard = ({ product }: ProductCardProps) => {
     dispatch(
       toggleWishlist({
         _id: productId,
-        name: product.name || (product as any)?.productName || product.title,
-        price: product.price || (product as any)?.sellPrice,
+        name: productName,
+        price: currentPrice,
         discountPrice: product.discountPrice,
         image: primaryImage,
       })
     );
     if (!isWishlisted) {
-      toast.success('Added to your Wishlist');
+      toast.success('Added to Wishlist');
     }
   };
 
-  const currentPrice = product.discountPrice && product.discountPrice < product.price ? product.discountPrice : product.price;
-  const originalPrice = product.discountPrice && product.discountPrice < product.price ? product.price : undefined;
+  const handleQuickAdd = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!userInfo) {
+      const pendingItem = {
+        _id: productId,
+        name: productName,
+        price: currentPrice,
+        image: primaryImage,
+        qty: 1,
+        variant: { color: product.colors?.[0] || 'Default', size: 'One Size' },
+      };
+      sessionStorage.setItem('pendingCartItem', JSON.stringify(pendingItem));
+      navigate(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+      return;
+    }
+
+    dispatch(
+      addToCart({
+        _id: productId,
+        name: productName,
+        price: currentPrice,
+        image: primaryImage,
+        qty: 1,
+        increment: true,
+        variant: { color: product.colors?.[0] || 'Default', size: 'One Size' },
+      })
+    );
+
+    setIsAdded(true);
+    toast.success('Added to Bag');
+    setTimeout(() => setIsAdded(false), 2000);
+  };
 
   return (
     <div
-      className="group relative flex flex-col w-full bg-white dark:bg-zinc-900 border-none cursor-pointer"
+      className="group relative flex flex-col w-full bg-[#0e121b] border border-zinc-800/80 hover:border-red-500/60 rounded-2xl overflow-hidden shadow-xl hover:shadow-[0_10px_30px_rgba(239,68,68,0.2)] transition-all duration-500 cursor-pointer"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <Link to={`/product/${productId}`} className="block w-full">
-        <div className="relative aspect-[4/5] overflow-hidden bg-[#f6f6f6] dark:bg-zinc-800">
-          {imageFailed ? (
-            <div className="flex h-full w-full flex-col items-center justify-center bg-zinc-50 dark:bg-zinc-800 px-8 text-center">
-              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">AutoTrade</span>
-              <span className="mt-2 line-clamp-3 text-lg font-bold leading-tight text-zinc-700 dark:text-zinc-300">
-                {product.title || (product as any)?.productName || product.name}
-              </span>
-            </div>
-          ) : (
-            <>
-              {/* Primary image — always rendered, fades out on hover if second image exists */}
+      {/* Product Image Box */}
+      <Link to={`/product/${productId}`} className="relative block aspect-square w-full bg-white overflow-hidden p-2.5 sm:p-3">
+        {imageFailed ? (
+          <div className="flex h-full w-full flex-col items-center justify-center bg-zinc-900 px-6 text-center">
+            <span className="text-xs font-bold uppercase tracking-[0.2em] text-red-500">AUTOTRADE</span>
+            <span className="mt-2 line-clamp-2 text-sm font-bold text-white">
+              {productName}
+            </span>
+          </div>
+        ) : (
+          <>
+            {/* Primary image */}
+            <img
+              src={primaryImage}
+              alt={productName}
+              loading="lazy"
+              onError={() => { if (primaryImage !== PLACEHOLDER_IMAGE) setImageFailed(true); }}
+              className={`h-full w-full object-contain object-center transform group-hover:scale-108 transition-all duration-500 ${
+                hovered && hoverImage ? 'opacity-0' : 'opacity-100'
+              }`}
+            />
+            {/* Secondary hover image */}
+            {hoverImage && (
               <img
-                src={primaryImage}
-                alt={product.name || (product as any)?.productName}
+                src={hoverImage}
+                alt={`${productName} hover view`}
                 loading="lazy"
-                onError={() => { if (primaryImage !== PLACEHOLDER_IMAGE) setImageFailed(true); }}
-                className={`absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-400 ease-in-out ${
-                  hovered && hoverImage ? 'opacity-0' : 'opacity-100'
+                className={`absolute inset-0 h-full w-full object-contain object-center p-2.5 sm:p-3 transform group-hover:scale-108 transition-all duration-500 ${
+                  hovered ? 'opacity-100' : 'opacity-0'
                 }`}
               />
-              {/* Hover image — only rendered if available, fades in on hover */}
-              {hoverImage && (
-                <img
-                  src={hoverImage}
-                  alt={`${product.name || (product as any)?.productName} — alternate view`}
-                  loading="lazy"
-                  className={`absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-400 ease-in-out ${
-                    hovered ? 'opacity-100' : 'opacity-0'
-                  }`}
-                />
+            )}
+          </>
+        )}
+
+        {/* Top Badges */}
+        {discountPct > 0 && (
+          <div className="absolute top-2.5 left-2.5 flex flex-col gap-1.5 z-10 pointer-events-none">
+            <span className="bg-red-600 text-white font-bold text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-md shadow-md">
+              -{discountPct}%
+            </span>
+          </div>
+        )}
+
+        {/* Wishlist Button */}
+        <button
+          onClick={handleWishlistClick}
+          className={`absolute top-2.5 right-2.5 z-20 flex h-8 w-8 items-center justify-center rounded-full backdrop-blur-md transition-all duration-300 shadow-md hover:scale-110 active:scale-95 ${
+            isWishlisted
+              ? 'bg-red-600 text-white'
+              : 'bg-black/60 text-zinc-300 hover:bg-red-600 hover:text-white'
+          }`}
+          aria-label="Wishlist"
+        >
+          <Heart size={15} fill={isWishlisted ? 'currentColor' : 'none'} strokeWidth={2} />
+        </button>
+      </Link>
+
+      {/* Product Content Details */}
+      <div className="flex flex-col flex-1 p-3 sm:p-4 justify-between">
+        <Link to={`/product/${productId}`} className="space-y-1.5">
+          {/* Subcategory / Brand Tag */}
+          <span className="text-[11px] font-bold text-amber-500 uppercase tracking-widest block">
+            {product.subcategoryName || product.collectionType || 'AUTOTRADE PRO'}
+          </span>
+
+          {/* Product Title */}
+          <h3 className="text-sm sm:text-[15px] font-bold text-white group-hover:text-red-400 transition-colors line-clamp-2 leading-snug tracking-tight">
+            {productName}
+          </h3>
+        </Link>
+
+        {/* Price & Quick Add Button */}
+        <div className="pt-3 border-t border-zinc-800/80 mt-3 flex items-center justify-between gap-2">
+          <div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-base sm:text-lg font-black text-white">
+                {formatINR(currentPrice)}
+              </span>
+              {originalPrice && (
+                <span className="text-xs text-zinc-500 line-through">
+                  {formatINR(originalPrice)}
+                </span>
               )}
-            </>
-          )}
+            </div>
+          </div>
 
           <button
-            onClick={handleWishlistClick}
-            className={`absolute top-3 right-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-md transition-all duration-200 hover:shadow-lg hover:scale-110 ${
-              isWishlisted
-                ? 'text-orange-500 shadow-orange-500/20'
-                : 'text-zinc-400 hover:text-orange-500'
+            onClick={handleQuickAdd}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all duration-300 shadow-md active:scale-95 cursor-pointer ${
+              isAdded
+                ? 'bg-green-600 text-white'
+                : 'bg-[#18233c] text-amber-400 hover:bg-amber-500 hover:text-black border border-amber-500/40'
             }`}
-            aria-label="Add to wishlist"
           >
-            <Heart size={18} fill={isWishlisted ? 'currentColor' : 'none'} strokeWidth={2} />
+            {isAdded ? (
+              <>
+                <Check size={14} strokeWidth={3} />
+                <span>ADDED</span>
+              </>
+            ) : (
+              <>
+                <ShoppingBag size={14} />
+                <span>ADD</span>
+              </>
+            )}
           </button>
-
-          {/* Dot indicators — shown when product has multiple images */}
-          {hoverImage && (
-            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 z-10">
-              <span className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${hovered ? 'bg-zinc-400' : 'bg-zinc-700'}`} />
-              <span className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${hovered ? 'bg-white' : 'bg-zinc-500'}`} />
-            </div>
-          )}
         </div>
-      </Link>
-
-      <Link to={`/product/${productId}`} className="flex flex-col pt-3 pb-1 flex-1">
-        <span className="text-[13px] font-medium text-[#9e352f] mb-1">Just In</span>
-        <h3 className="text-[15px] sm:text-base font-medium text-[#111111] dark:text-white line-clamp-2">
-          {product.title || (product as any)?.productName || product.name}
-        </h3>
-        {product.description && (
-          <p className="text-[14px] text-gray-500 dark:text-zinc-400 line-clamp-2 mt-0.5">
-            {product.description.replace(/<[^>]*>?/gm, '')}
-          </p>
-        )}
-        <div className="flex items-center gap-1.5 sm:gap-2 mt-2">
-          <span className="text-[15px] sm:text-[16px] font-medium text-[#111111] dark:text-white">
-            {formatINR(currentPrice)}
-          </span>
-          {originalPrice && (
-            <span className="text-[14px] sm:text-[15px] text-gray-500 line-through">
-              {formatINR(originalPrice)}
-            </span>
-          )}
-        </div>
-      </Link>
+      </div>
 
       {showWishlistPopup && (
         <WishlistLoginPopup
           product={{
             _id: productId,
-            name: product.name,
-            price: product.price,
+            name: productName,
+            price: currentPrice,
             discountPrice: product.discountPrice,
             image: primaryImage,
           }}

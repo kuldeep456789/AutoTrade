@@ -1,12 +1,84 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Play, Pause } from 'lucide-react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Play,
+  Pause,
+  ArrowRight,
+  Car,
+  Armchair,
+  Wrench,
+  Bike,
+  Cpu,
+  Cog,
+  Droplets,
+  Warehouse,
+} from 'lucide-react';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../store/store';
 
 import { useGetProductsQuery } from '../store/slices/productApiSlice';
 import ProductCard from '../components/product/ProductCard';
 
+const heroCategories = [
+  {
+    title: 'Exterior Accessories',
+    description: 'Enhance style and protection with premium exterior accessories.',
+    to: '/collections/exterior-accessories',
+    bgImage: 'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?auto=format&fit=crop&w=800&q=80',
+    icon: Car,
+  },
+  {
+    title: 'Interior Accessories',
+    description: 'Upgrade comfort and luxury with high-quality interior accessories.',
+    to: '/collections/interior-accessories',
+    bgImage: 'https://images.unsplash.com/photo-1563720223185-11003d516935?auto=format&fit=crop&w=800&q=80',
+    icon: Armchair,
+  },
+  {
+    title: 'Tools & Maintenance',
+    description: 'Professional tools and care products for every maintenance need.',
+    to: '/collections/tools-maintenance-care',
+    bgImage: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80',
+    icon: Wrench,
+  },
+  {
+    title: 'Car Electronics',
+    description: 'Smart electronics for entertainment, safety and convenience.',
+    to: '/collections/car-electronics',
+    bgImage: 'https://images.unsplash.com/photo-1508974239320-0a029497e820?auto=format&fit=crop&w=800&q=80',
+    icon: Cpu,
+  },
+  {
+    title: 'Motorcycle Accessories',
+    description: 'Premium accessories and parts for ultimate ride performance.',
+    to: '/collections/motorcycle-accessories',
+    bgImage: 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&w=800&q=80',
+    icon: Bike,
+  },
+  {
+    title: 'Auto Replacement Parts',
+    description: 'High-quality replacement parts for long-lasting performance.',
+    to: '/collections/auto-replacement-parts',
+    bgImage: 'https://images.unsplash.com/photo-1486006920555-c77dce18193b?auto=format&fit=crop&w=800&q=80',
+    icon: Cog,
+  },
+  {
+    title: 'Car Care & Detailing',
+    description: 'Keep your vehicle looking new with premium care & detailing products.',
+    to: '/collections/paint-care',
+    bgImage: 'https://images.unsplash.com/photo-1607860108855-64acf2078ed9?auto=format&fit=crop&w=800&q=80',
+    icon: Droplets,
+  },
+  {
+    title: 'Garage Equipment',
+    description: 'Advanced garage equipment for workshops and professionals.',
+    to: '/collections/diagnostic-tools',
+    bgImage: 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=800&q=80',
+    icon: Warehouse,
+  },
+];
 
 const HomePage = () => {
   const location = useLocation();
@@ -74,8 +146,6 @@ const HomePage = () => {
     };
   }, [heroImages.length, userInfo, isPlaying]);
 
-
-
   const handleNextHero = () => {
     setCurrentHeroIdx((prev) => (prev + 1) % heroImages.length);
   };
@@ -112,21 +182,6 @@ const HomePage = () => {
           </div>
         ))}
         <div className="absolute inset-0 bg-black/35" />
-        {/* <div className="relative z-10 flex flex-col justify-center h-full w-full max-w-[1920px] mx-auto px-6 sm:px-10 lg:px-16 pt-10">
-          <div className="max-w-2xl w-full">
-            <h1 className="text-6xl sm:text-8xl lg:text-[100px] font-black leading-[0.85] tracking-tighter text-white drop-shadow-2xl">
-              AutoTrade
-            </h1>
-            <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row gap-4 sm:gap-5 items-center w-full sm:w-auto">
-              <Link to="/collections/exterior-accessories" className="inline-flex w-full sm:w-auto items-center justify-center h-[56px] sm:h-[64px] px-10 sm:px-14 bg-red-600 text-white text-[15px] sm:text-[16px] font-bold tracking-widest transition-all duration-300 hover:bg-red-700 border-2 border-red-600 hover:scale-105 active:scale-95 shadow-[0_4px_20px_rgba(255,0,0,0.3)]">
-                EXPLORE ACCESSORIES
-              </Link>
-              <Link to="/collections/car-electronics" className="inline-flex w-full sm:w-auto items-center justify-center h-[56px] sm:h-[64px] px-10 sm:px-14 text-white text-[15px] sm:text-[16px] font-bold tracking-widest transition-all duration-300 hover:bg-white hover:text-black border-2 border-white hover:scale-105 active:scale-95 shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
-                ELECTRONICS & PARTS
-              </Link>
-            </div>
-          </div>
-        </div> */}
 
         {/* Navigation Dots */}
         <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20 flex gap-3">
@@ -166,23 +221,84 @@ const HomePage = () => {
         </div>
       </section>
 
+      {/* ───────── CATEGORY SHOWCASE (1 SINGLE ROW OF ALL 8 CATEGORIES) ───────── */}
+      <section className="bg-[#0b0e14] dark:bg-[#07090d] py-12 sm:py-16 border-b-2 border-black dark:border-zinc-800">
+        <div className="max-w-[1920px] mx-auto px-6 sm:px-10 lg:px-16">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 sm:mb-10 gap-4">
+            <div>
+              <p className="text-red-500 font-bold tracking-[0.2em] text-xs sm:text-sm uppercase mb-2">Shop By Category</p>
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white uppercase">
+                Explore Premium Collections
+              </h2>
+            </div>
+            <Link
+              to="/collections/all"
+              className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold tracking-widest text-zinc-400 hover:text-red-500 transition-colors uppercase group"
+            >
+              <span>VIEW ALL CATEGORIES</span>
+              <ArrowRight className="w-4 h-4 text-red-500 transform group-hover:translate-x-1 transition-transform" />
+            </Link>
+          </div>
+
+          {/* 1 Single Horizontal Row Container (8 Columns on XL screens, horizontal scroll on mobile) */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3 sm:gap-4">
+            {heroCategories.map((cat, idx) => (
+              <Link
+                key={idx}
+                to={cat.to}
+                className="group relative rounded-2xl bg-[#0a0d14] border border-zinc-800/80 hover:border-red-500/70 shadow-xl hover:shadow-[0_0_25px_rgba(239,68,68,0.3)] transition-all duration-300 flex flex-col items-center justify-between text-center p-4 sm:p-5"
+              >
+                {/* Background Glow Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-b from-red-950/10 via-transparent to-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl" />
+
+                {/* Top: Glowing Icon Badge */}
+                <div className="relative z-10 my-1">
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-2 border-red-500/70 shadow-[0_0_18px_rgba(239,68,68,0.5)] flex items-center justify-center text-white bg-black/40 group-hover:scale-110 group-hover:border-red-500 group-hover:shadow-[0_0_25px_rgba(239,68,68,0.85)] transition-all duration-300">
+                    <cat.icon className="w-7 h-7 stroke-[2]" />
+                  </div>
+                </div>
+
+                {/* Center: Title & Description */}
+                <div className="relative z-10 flex-1 flex flex-col items-center justify-center my-3">
+                  <h3 className="text-xs sm:text-sm font-black tracking-tight text-white uppercase group-hover:text-red-500 transition-colors leading-snug mb-1">
+                    {cat.title}
+                  </h3>
+                  <p className="text-[11px] text-zinc-400 font-normal normal-case leading-tight line-clamp-2">
+                    {cat.description}
+                  </p>
+                </div>
+
+                {/* Bottom: Pill Button */}
+                <div className="relative z-10 mt-1">
+                  <div className="px-3 py-1.5 rounded-full border border-zinc-700/80 bg-black/60 text-[10px] font-bold text-white group-hover:border-red-500 group-hover:text-red-500 transition-all inline-flex items-center gap-1 uppercase tracking-wider shadow-sm">
+                    <span>Explore</span>
+                    <ArrowRight className="w-3 h-3 text-red-500 transform group-hover:translate-x-0.5 transition-transform" />
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ───────── FEATURED COLLECTION carousel ───────── */}
       {carouselProducts.length > 0 && (
-        <section className="border-b-2 border-black dark:border-white">
-          <div className="max-w-[1920px] mx-auto px-6 sm:px-10 lg:px-16 py-12 sm:py-16 lg:py-20">
-            <div className="flex items-end justify-between mb-8 sm:mb-10">
+        <section className="border-b-2 border-black dark:border-zinc-800 bg-[#07090d]">
+          <div className="max-w-[1920px] mx-auto px-6 sm:px-10 lg:px-16 py-8 sm:py-10 lg:py-12">
+            <div className="flex items-end justify-between mb-6 sm:mb-8">
               <div>
-                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight leading-none">COLLECTION</h2>
+                <p className="text-red-500 font-bold tracking-[0.2em] text-xs uppercase mb-1">Featured Store</p>
+                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight leading-none text-white">COLLECTION</h2>
               </div>
             </div>
             <div className="relative group">
               <div
                 ref={carouselRef}
-                className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-4 -mx-6 px-6 sm:-mx-10 sm:px-10 lg:-mx-16 lg:px-16"
+                className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2 -mx-6 px-6 sm:-mx-10 sm:px-10 lg:-mx-16 lg:px-16"
                 style={{ scrollBehavior: 'smooth', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
               >
                 {carouselProducts.map((product: any, index: number) => (
-                  <div key={`${product.pid || product._id || product.id}-${index}`} className="flex-shrink-0 w-[280px] sm:w-[320px] lg:w-[calc(25%-12px)] snap-start">
+                  <div key={`${product.pid || product._id || product.id}-${index}`} className="flex-shrink-0 w-[210px] sm:w-[240px] md:w-[250px] lg:w-[260px] snap-start">
                     <ProductCard product={product} />
                   </div>
                 ))}
@@ -193,24 +309,24 @@ const HomePage = () => {
                   <button
                     onClick={() => {
                       if (carouselRef.current) {
-                        carouselRef.current.scrollBy({ left: -320, behavior: 'smooth' });
+                        carouselRef.current.scrollBy({ left: -280, behavior: 'smooth' });
                       }
                     }}
-                    className="w-12 h-12 rounded-full bg-white dark:bg-zinc-800 text-black dark:text-white shadow-md hover:shadow-lg transition-all flex items-center justify-center cursor-pointer border border-zinc-200 dark:border-zinc-700"
+                    className="w-10 h-10 rounded-full bg-zinc-900 text-white shadow-md hover:bg-red-600 transition-all flex items-center justify-center cursor-pointer border border-zinc-800"
                     aria-label="Previous products"
                   >
-                    <ChevronLeft size={20} strokeWidth={2} />
+                    <ChevronLeft size={18} strokeWidth={2} />
                   </button>
                   <button
                     onClick={() => {
                       if (carouselRef.current) {
-                        carouselRef.current.scrollBy({ left: 320, behavior: 'smooth' });
+                        carouselRef.current.scrollBy({ left: 280, behavior: 'smooth' });
                       }
                     }}
-                    className="w-12 h-12 rounded-full bg-white dark:bg-zinc-800 text-black dark:text-white shadow-md hover:shadow-lg transition-all flex items-center justify-center cursor-pointer border border-zinc-200 dark:border-zinc-700"
+                    className="w-10 h-10 rounded-full bg-zinc-900 text-white shadow-md hover:bg-red-600 transition-all flex items-center justify-center cursor-pointer border border-zinc-800"
                     aria-label="Next products"
                   >
-                    <ChevronRight size={20} strokeWidth={2} />
+                    <ChevronRight size={18} strokeWidth={2} />
                   </button>
                 </div>
               )}
@@ -218,7 +334,6 @@ const HomePage = () => {
           </div>
         </section>
       )}
-
 
       {/* Empty state — warehouse not yet populated */}
       {autoProducts.length === 0 && (

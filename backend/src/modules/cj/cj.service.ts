@@ -47,7 +47,7 @@ export class CjService {
   constructor(
     private readonly redisService: RedisService,
     @InjectModel(Order.name) private readonly orderModel?: Model<Order>,
-  ) {}
+  ) { }
 
   async getAccessToken() {
     const apiKey = process.env.CJ_API_KEY;
@@ -304,14 +304,14 @@ export class CjService {
     return normalized;
   }
 
-  // page size controll from here
+
 
   async getAllProducts(categoryId?: string) {
     const categories = categoryId
       ? [categoryId]
       : ((await this.getCategories())?.categories
-          ?.map((c: any) => c.id)
-          .filter(Boolean) ?? []);
+        ?.map((c: any) => c.id)
+        .filter(Boolean) ?? []);
     const allProducts: any[] = [];
 
     for (const catId of categories) {
@@ -366,6 +366,7 @@ export class CjService {
     pageSize = 160,
     categoryId?: string,
     subcategoryName?: string,
+    collectionType?: string,
   ): Promise<{ products: any[]; total: number; warehouseHit: true } | null> {
     // Try fine-grained sub-category key first
     if (subcategoryName) {
@@ -457,6 +458,17 @@ export class CjService {
             .toLowerCase() === norm,
       );
     }
+
+    if (collectionType) {
+      const normColl = collectionType.trim().toLowerCase();
+      pool = pool.filter(
+        (p) =>
+          String(p._parentCategory ?? p._collectionType ?? p.collectionType ?? p.parentCategory ?? '')
+            .trim()
+            .toLowerCase() === normColl,
+      );
+    }
+
 
     const total = pool.length;
     const start = (pageNum - 1) * pageSize;
@@ -701,7 +713,7 @@ export class CjService {
               existing.name !== product.name ||
               existing.title !== product.title ||
               JSON.stringify(existing.productImageSet ?? []) !==
-                JSON.stringify(product.productImageSet ?? []);
+              JSON.stringify(product.productImageSet ?? []);
 
             if (isChanged) {
               productMap.set(pid, {
@@ -981,10 +993,10 @@ export class CjService {
 
       const catName = String(
         item.categoryName ||
-          item.categoryThirdName ||
-          item.categorySecondName ||
-          item.categoryFirstName ||
-          '',
+        item.categoryThirdName ||
+        item.categorySecondName ||
+        item.categoryFirstName ||
+        '',
       ).toLowerCase();
 
       // if (catName && this.isBlocked(catName)) return;
@@ -1065,12 +1077,12 @@ export class CjService {
 
     const pid = String(
       product?.pid ??
-        product?.id ??
-        product?.productId ??
-        product?.productPid ??
-        product?.product_id ??
-        product?.productCode ??
-        '',
+      product?.id ??
+      product?.productId ??
+      product?.productPid ??
+      product?.product_id ??
+      product?.productCode ??
+      '',
     );
     // if (EXCLUDED_PRODUCT_PIDS.has(pid)) return null;
 

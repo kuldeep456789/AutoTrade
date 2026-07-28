@@ -5,7 +5,7 @@ import { useGetProductDetailsQuery, useCreateReviewMutation, useGetRelatedProduc
 import { addToCart } from '../store/slices/cartSlice';
 import { toggleWishlist } from '../store/slices/wishlistSlice';
 import type { RootState } from '../store/store';
-import { ShoppingBag, Heart, Star, Check, ChevronRight, ChevronLeft, X, ZoomIn, SendHorizontal, ThumbsUp, Share2, Loader2, UserRound } from 'lucide-react';
+import { ShoppingBag, Heart, Star, Check, ChevronRight, ChevronLeft, ChevronUp, ChevronDown, X, ZoomIn, SendHorizontal, ThumbsUp, Share2, Loader2, UserRound, ClipboardList, Award, Truck, RotateCcw, ShieldCheck, Wrench } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Loader from '../components/Loader';
 import ProductCard from '../components/product/ProductCard';
@@ -33,6 +33,129 @@ const MOCK_REVIEWS = [
   // { user: 'Meera L.', rating: 5, comment: 'Love love love! The graphic print is vibrant and the cotton is breathable. Perfect summer wear.', date: '1 month ago', helpful: 19 },
 ];
 
+const ProductFeaturesAndSpecs = ({ product }: { product: any }) => {
+  const [descOpen, setDescOpen] = useState(true);
+  const productName = String(product?.name || product?.title || 'AutoTrade Equipment').trim();
+  const brandName = String(product?.brand || 'AutoTrade Pro Series').trim();
+
+  return (
+    <div className="w-full mt-6 pt-6 border-t border-zinc-800/80 bg-transparent text-white space-y-6">
+      {/* ── Header Toggle ── */}
+      <button
+        onClick={() => setDescOpen(!descOpen)}
+        className="w-full py-3 flex items-center justify-between bg-transparent hover:opacity-80 transition-opacity cursor-pointer border-b border-zinc-800/80 group"
+      >
+        <div className="flex items-center gap-3">
+          <ClipboardList className="w-5 h-5 text-amber-500 group-hover:scale-110 transition-transform" />
+          <span className="text-sm sm:text-base font-bold uppercase tracking-wider text-white">
+            Product Description & Specs
+          </span>
+        </div>
+        <div className="w-7 h-7 rounded-full bg-white/5 flex items-center justify-center text-zinc-400 group-hover:text-white transition-colors">
+          {descOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        </div>
+      </button>
+
+      {descOpen && (
+        <div className="space-y-6 bg-transparent py-1 max-h-[500px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-zinc-700/60 scrollbar-track-transparent">
+          
+          {/* 1. Overview */}
+          <div className="space-y-3">
+            <h3 className="text-sm sm:text-base font-bold text-amber-500 tracking-wider uppercase flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+              Overview
+            </h3>
+            <p className="text-zinc-300 text-xs sm:text-sm leading-relaxed font-normal normal-case">
+              The <strong className="text-white font-semibold">{productName}</strong> delivers high performance, reliability, and precision engineering for automotive enthusiasts and professional garages.
+            </p>
+            {product?.description && (
+              <div
+                className="text-zinc-300 text-xs sm:text-sm leading-relaxed normal-case mt-3 space-y-2 border-l-2 border-amber-500/50 pl-3 py-1"
+                dangerouslySetInnerHTML={{ __html: product.description }}
+              />
+            )}
+          </div>
+
+          {/* 2. Key Features */}
+          <div className="space-y-3 pt-2 border-t border-zinc-800/60">
+            <h3 className="text-sm sm:text-base font-bold text-amber-500 tracking-wider uppercase flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+              Key Features & Benefits
+            </h3>
+            <ul className="space-y-2 text-xs sm:text-sm text-zinc-300 font-normal normal-case">
+              <li className="flex items-start gap-2.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
+                <span><strong className="text-white font-semibold">Premium Build:</strong> Engineered with high-grade durable materials for extended service life.</span>
+              </li>
+              <li className="flex items-start gap-2.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
+                <span><strong className="text-white font-semibold">Universal Compatibility:</strong> Works seamlessly across major vehicle models and setups.</span>
+              </li>
+              <li className="flex items-start gap-2.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
+                <span><strong className="text-white font-semibold">Plug & Play Installation:</strong> Quick, hassle-free installation without modifications.</span>
+              </li>
+              <li className="flex items-start gap-2.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
+                <span><strong className="text-white font-semibold">Quality Verified:</strong> 100% factory tested and quality assured.</span>
+              </li>
+            </ul>
+          </div>
+
+          {/* 3. Detailed Specifications Table */}
+          <div className="space-y-3 pt-2 border-t border-zinc-800/60">
+            <h3 className="text-sm sm:text-base font-bold text-amber-500 tracking-wider uppercase flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+              Specifications
+            </h3>
+            <div className="overflow-hidden rounded-xl border border-zinc-800/80 bg-transparent">
+              <table className="w-full text-left text-xs text-zinc-300 font-normal">
+                <thead className="bg-zinc-900/60 text-amber-500 font-bold uppercase tracking-wider text-[11px] border-b border-zinc-800">
+                  <tr>
+                    <th className="py-2.5 px-3.5 w-1/3">Property</th>
+                    <th className="py-2.5 px-3.5 w-2/3">Specification</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-800/60 bg-transparent">
+                  <tr>
+                    <td className="py-2.5 px-3.5 font-semibold text-white">Brand / Line</td>
+                    <td className="py-2.5 px-3.5">{brandName}</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2.5 px-3.5 font-semibold text-white">Condition</td>
+                    <td className="py-2.5 px-3.5 text-amber-400 font-medium">100% Brand New Original</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2.5 px-3.5 font-semibold text-white">Warranty</td>
+                    <td className="py-2.5 px-3.5">1-Year Standard AutoTrade Guarantee</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2.5 px-3.5 font-semibold text-white">Quality Inspection</td>
+                    <td className="py-2.5 px-3.5">Passed ISO9001 standard inspection</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* 4. Package Contents */}
+          <div className="space-y-2 pt-2 border-t border-zinc-800/60">
+            <h3 className="text-sm sm:text-base font-bold text-amber-500 tracking-wider uppercase flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+              Package Contents
+            </h3>
+            <ul className="list-disc pl-5 space-y-1 text-xs text-zinc-300 font-normal normal-case">
+              <li>1x {productName}</li>
+              <li>1x Setup Guide & User Manual</li>
+            </ul>
+          </div>
+
+        </div>
+      )}
+    </div>
+  );
+};
+
 const ProductDetailsPage = () => {
   const { id } = useParams();
   const dispatch = useDispatch();
@@ -47,6 +170,7 @@ const ProductDetailsPage = () => {
   const isWishlisted = product ? wishlistItems.some((item: any) => item._id === productId) : false;
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedColor, setSelectedColor] = useState('');
+  const [qty, setQty] = useState(1);
   const [isAdded, setIsAdded] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const imageRef = useRef<HTMLDivElement>(null);
@@ -141,19 +265,15 @@ const ProductDetailsPage = () => {
       : 0;
 
   const handleAddToCart = () => {
-    if (!selectedColor) {
-      setErrorMsg('Please select a color');
-      setTimeout(() => setErrorMsg(''), 3000);
-      return;
-    }
+    const activeColor = selectedColor || (colors && colors.length > 0 ? colors[0] : 'Default');
     if (!userInfo) {
       const pendingItem = {
         _id: productId,
         name: product.name,
         price: product.discountPrice || product.price,
         image: product?.images?.[0] || '',
-        qty: 1,
-        variant: { color: selectedColor, size: 'One Size' },
+        qty: qty,
+        variant: { color: activeColor, size: 'One Size' },
       };
       sessionStorage.setItem('pendingCartItem', JSON.stringify(pendingItem));
       navigate(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
@@ -165,9 +285,9 @@ const ProductDetailsPage = () => {
         name: product.name,
         price: product.discountPrice || product.price,
         image: product?.images?.[0] || '',
-        qty: 1,
+        qty: qty,
         increment: true,
-        variant: { color: selectedColor, size: 'One Size' },
+        variant: { color: activeColor, size: 'One Size' },
       })
     );
     setIsAdded(true);
@@ -176,20 +296,16 @@ const ProductDetailsPage = () => {
   };
 
   const handleBuyNow = () => {
-    if (!selectedColor) {
-      setErrorMsg('Please select a color');
-      setTimeout(() => setErrorMsg(''), 3000);
-      return;
-    }
+    const activeColor = selectedColor || (colors && colors.length > 0 ? colors[0] : 'Default');
     dispatch(
       addToCart({
         _id: productId,
         name: product.name,
         price: product.discountPrice || product.price,
         image: product?.images?.[0] || '',
-        qty: 1,
+        qty: qty,
         increment: true,
-        variant: { color: selectedColor, size: 'One Size' },
+        variant: { color: activeColor, size: 'One Size' },
       })
     );
     navigate('/cart');
@@ -310,35 +426,34 @@ const ProductDetailsPage = () => {
         </div>
       </div>
 
-      {/* Main — Two Column Layout */}
-      <div className="max-w-[1400px] mx-auto px-8 lg:px-12 py-10">
-        <div className="flex flex-col lg:flex-row lg:flex-nowrap items-start justify-center gap-12">
+      {/* Main — Two Column Grid Layout */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start">
 
-          {/* ─── Left — Gallery (55%) ─── */}
-          <div className="w-full lg:w-[700px] lg:min-w-[580px] lg:flex-shrink-0">
-            <div className="flex gap-3">
+          {/* ─── Left — Gallery (Static / Sticky on Scroll) ─── */}
+          <div className="lg:col-span-6 lg:sticky lg:top-24 self-start space-y-4">
+            <div className="flex flex-col gap-3">
 
-
-              {/* Main Image */}
+              {/* Main Image Container */}
               <div className="flex-1 min-w-0 group relative" ref={imageRef}>
                 <div
                   onMouseMove={handleImageZoom}
                   onMouseLeave={() => setZoomLens((p) => ({ ...p, active: false }))}
                   onClick={() => openLightbox(selectedImage)}
-                  className="relative w-full max-w-[700px] h-[450px] sm:h-[620px] lg:h-[720px] bg-[#f8f8f8] rounded-[18px] overflow-hidden flex items-center justify-center cursor-crosshair"
+                  className="relative w-full aspect-square max-h-[460px] sm:max-h-[500px] bg-[#0c1017] border border-zinc-800/80 rounded-2xl overflow-hidden flex items-center justify-center cursor-crosshair shadow-2xl p-4"
                 >
                   <img
                     key={selectedImage}
                     src={displayImages[selectedImage] || displayImages[0]}
                     alt={productName || 'Product'}
-                    className="max-w-full max-h-full object-contain p-6 transition-opacity duration-300 select-none"
+                    className="max-w-full max-h-full object-contain p-4 transition-opacity duration-300 select-none bg-white rounded-xl shadow-sm"
                     draggable={false}
                   />
 
                   {/* Zoom lens */}
                   {zoomLens.active && (
                     <div
-                      className="absolute border-2 border-black dark:border-white bg-white/10 dark:bg-black/10 pointer-events-none z-30 rounded-sm"
+                      className="absolute border-2 border-amber-500 bg-amber-500/10 pointer-events-none z-30 rounded-sm"
                       style={{
                         width: `${LENS_SIZE}px`,
                         height: `${LENS_SIZE}px`,
@@ -349,29 +464,24 @@ const ProductDetailsPage = () => {
                   )}
 
                   {/* Badges */}
-                  <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
+                  <div className="absolute top-3 left-3 flex flex-col gap-2 z-10">
                     {discountPct > 0 && (
-                      <span className="bg-red-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-sm">
+                      <span className="bg-red-600 text-white text-xs font-bold px-2.5 py-1 rounded-md shadow-md">
                         -{discountPct}%
-                      </span>
-                    )}
-                    {productName.toLowerCase().includes('oversized') && (
-                      <span className="bg-black text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-sm">
-                        OVERSIZED
                       </span>
                     )}
                   </div>
 
                   {/* Floating Wishlist + Share */}
-                  <div className="absolute top-4 right-4 flex flex-col gap-2 z-20">
+                  <div className="absolute top-3 right-3 flex flex-col gap-2 z-20">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         handleWishlistToggle();
                       }}
-                      className={`w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-sm transition-all duration-200 cursor-pointer active:scale-90 ${isWishlisted
-                        ? 'bg-red-600 text-white shadow-md'
-                        : 'bg-white/80 dark:bg-zinc-800/80 text-zinc-700 dark:text-zinc-300 shadow-sm hover:bg-white dark:hover:bg-zinc-800'
+                      className={`w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-md transition-all duration-200 cursor-pointer active:scale-90 shadow-md ${isWishlisted
+                        ? 'bg-red-600 text-white'
+                        : 'bg-black/60 text-zinc-300 hover:bg-black/80 hover:text-white'
                         }`}
                       aria-label="Wishlist"
                     >
@@ -386,51 +496,23 @@ const ProductDetailsPage = () => {
                           navigator.clipboard?.writeText(window.location.href);
                         }
                       }}
-                      className="w-9 h-9 rounded-full bg-white/80 dark:bg-zinc-800/80 text-zinc-700 dark:text-zinc-300 shadow-sm hover:bg-white dark:hover:bg-zinc-800 flex items-center justify-center backdrop-blur-sm transition-all duration-200 cursor-pointer active:scale-90"
+                      className="w-9 h-9 rounded-full bg-black/60 text-zinc-300 hover:bg-black/80 hover:text-white flex items-center justify-center backdrop-blur-md transition-all duration-200 cursor-pointer active:scale-90 shadow-md"
                       aria-label="Share"
                     >
                       <Share2 className="w-[16px] h-[16px]" strokeWidth={1.5} />
                     </button>
                   </div>
 
-                  {/* Nav arrows at bottom-right (Nike-style) */}
-                  {displayImages.length > 1 && (
-                    <>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedImage((prev) => (prev - 1 + displayImages.length) % displayImages.length);
-                        }}
-                        className="absolute bottom-4 right-14 w-10 h-10 rounded-full bg-white shadow-md flex items-center justify-center hover:shadow-lg transition-shadow z-10 cursor-pointer"
-                        aria-label="Previous image"
-                      >
-                        <ChevronLeft size={18} strokeWidth={2} />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedImage((prev) => (prev + 1) % displayImages.length);
-                        }}
-                        className="absolute bottom-4 right-4 w-10 h-10 rounded-full bg-white shadow-md flex items-center justify-center hover:shadow-lg transition-shadow z-10 cursor-pointer"
-                        aria-label="Next image"
-                      >
-                        <ChevronRight size={18} strokeWidth={2} />
-                      </button>
-                    </>
-                  )}
-
                   {/* Zoom hint */}
-                  <div className="absolute bottom-4 left-4 bg-black/60 text-white text-[10px] font-medium px-2.5 py-1.5 rounded-md flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                  <div className="absolute bottom-3 left-3 bg-black/70 text-white text-[10px] font-medium px-2 py-1 rounded-md flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
                     <ZoomIn size={11} strokeWidth={2} /> ZOOM
                   </div>
                 </div>
 
-
-
                 {/* Zoom preview — lg screens */}
                 {zoomLens.active && (
                   <div className="hidden lg:block absolute top-0 left-full ml-6 z-[100] pointer-events-none">
-                    <div className="w-[450px] xl:w-[500px] h-[620px] lg:h-[720px] overflow-hidden rounded-[18px] border border-zinc-200 dark:border-zinc-800 shadow-2xl bg-white dark:bg-zinc-900">
+                    <div className="w-[450px] h-[480px] overflow-hidden rounded-2xl border border-zinc-800 shadow-2xl bg-[#0c1017]">
                       <img
                         src={displayImages[selectedImage] || displayImages[0]}
                         alt=""
@@ -446,121 +528,129 @@ const ProductDetailsPage = () => {
                 )}
               </div>
 
+              {/* Thumbnail Carousel */}
+              {displayImages.length > 0 && (
+                <div className="relative flex items-center justify-center gap-2 pt-1">
+                  {displayImages.length > 1 && (
+                    <button
+                      onClick={() => setSelectedImage((prev) => (prev - 1 + displayImages.length) % displayImages.length)}
+                      className="w-7 h-7 rounded-full bg-[#14203e] text-zinc-400 hover:text-white border border-zinc-700 flex items-center justify-center transition-colors shrink-0 cursor-pointer"
+                      aria-label="Previous thumbnail"
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+                  )}
+                  <div className="flex gap-2.5 overflow-x-auto scrollbar-hide py-1">
+                    {displayImages.map((img: string, idx: number) => (
+                      <button
+                        key={idx}
+                        onClick={() => setSelectedImage(idx)}
+                        className={`w-14 h-14 sm:w-16 sm:h-16 rounded-xl overflow-hidden border-2 transition-all duration-200 shrink-0 cursor-pointer ${
+                          selectedImage === idx
+                            ? 'border-amber-500 ring-2 ring-amber-500/40 opacity-100'
+                            : 'border-zinc-800 hover:border-zinc-600 opacity-60 hover:opacity-100'
+                        }`}
+                      >
+                        <img src={img} alt="" className="w-full h-full object-contain p-1 bg-white" />
+                      </button>
+                    ))}
+                  </div>
+                  {displayImages.length > 1 && (
+                    <button
+                      onClick={() => setSelectedImage((prev) => (prev + 1) % displayImages.length)}
+                      className="w-7 h-7 rounded-full bg-[#14203e] text-zinc-400 hover:text-white border border-zinc-700 flex items-center justify-center transition-colors shrink-0 cursor-pointer"
+                      aria-label="Next thumbnail"
+                    >
+                      <ChevronRight size={16} />
+                    </button>
+                  )}
+                </div>
+              )}
 
             </div>
           </div>
 
-          {/* ─── Right — Product Details (45%) ─── */}
-          <div className="w-full lg:w-[480px] lg:min-w-[380px] lg:flex-shrink-0 lg:sticky lg:top-6 self-start pl-0 lg:pl-4 xl:pl-8">
-            <div className="space-y-1">
-              {/* Brand / Just In
-              <span className="block text-base font-medium text-[#c93b3b]">
-                Just In
-              </span> */}
-
-              {/* Product Name */}
-              <h1 className="text-[26px] font-medium leading-tight text-[#111111] dark:text-white pt-1">
-                {productName || 'Product'}
+          {/* ─── Right — Product Buy Box Details & Embedded Description ─── */}
+          <div className="lg:col-span-6 space-y-5">
+            
+            {/* Tag, Title & Price */}
+            <div>
+              <span className="text-xs font-bold text-amber-500 uppercase tracking-widest block mb-1.5">
+                {product.subcategoryName || 'AUTOTRADE PRO'}
+              </span>
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold leading-snug text-white tracking-tight">
+                {productName}
               </h1>
-              <p className="text-base text-zinc-500 pb-2">
-                Men's Heavyweight Short-Sleeve Top
-              </p>
 
               {/* Price */}
-              <div className="flex flex-col pt-2 pb-6">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-lg font-medium text-[#111111] dark:text-white">
-                    {formatINR(product.discountPrice || product.price)}
-                  </span>
-                  {product.discountPrice && (
-                    <>
-                      <span className="text-sm text-zinc-500 line-through">{formatINR(product.price)}</span>
-                      <span className="text-sm font-medium text-green-600">{discountPct}% OFF</span>
-                    </>
-                  )}
-                </div>
-                <span className="text-[15px] text-zinc-500 mt-1">Inclusive of all taxes</span>
-              </div>
-
-              {/* Error message */}
-              {errorMsg && (
-                <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-600 text-sm font-medium p-3 rounded-xl mb-4">
-                  {errorMsg}
-                </div>
-              )}
-
-              {/* Colour Variants as Images */}
-              {colors && colors.length > 0 && (
-                <div className="pb-8">
-                  <p className="text-[16px] font-medium text-[#111111] dark:text-zinc-200 mb-2">
-                    Choose Color{selectedColor ? `: ${selectedColor}` : ''}
-                  </p>
-                  <div className="flex gap-2 flex-wrap mt-2">
-                    {colors.map((color: any) => {
-                      const variantImg = product.variants?.find((v: any) => v.color === color)?.variantImage
-                        || product.variants?.find((v: any) => v.color === color)?.image
-                        || displayImages[0];
-                      return (
-                        <button
-                          key={color}
-                          onClick={() => setSelectedColor(color)}
-                          className={`w-[70px] h-[70px] rounded-md overflow-hidden border transition-all duration-200 cursor-pointer ${selectedColor === color
-                            ? 'border-black dark:border-white ring-1 ring-black dark:ring-white'
-                            : 'border-zinc-200 dark:border-zinc-700 hover:border-zinc-400'
-                            }`}
-                          title={color}
-                        >
-                          {variantImg ? (
-                            <img src={variantImg} alt={color} className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full" style={{ backgroundColor: getColorHex(color) }} />
-                          )}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-
-
-
-              {/* Action Buttons */}
-              <div className="flex flex-col space-y-3 pt-2">
-                <button
-                  onClick={handleAddToCart}
-                  className={`w-full h-[62px] rounded-[31px] text-[16px] font-medium transition-all duration-200 cursor-pointer active:scale-[0.98] ${isAdded
-                    ? 'bg-green-600 text-white'
-                    : 'bg-[#111111] dark:bg-white text-white dark:text-[#111111] hover:bg-black/80 dark:hover:bg-white/80'
-                    }`}
-                >
-                  {isAdded ? 'Added to Bag' : 'Add to Bag'}
-                </button>
-                <button
-                  onClick={handleWishlistToggle}
-                  className={`w-full h-[62px] rounded-[31px] border flex items-center justify-center gap-2 text-[16px] font-medium transition-all duration-200 cursor-pointer active:scale-[0.98] ${isWishlisted
-                    ? 'border-red-600 text-red-600 bg-red-50 dark:bg-red-950/20'
-                    : 'border-zinc-300 dark:border-zinc-700 text-[#111111] dark:text-white hover:border-black dark:hover:border-white'
-                    }`}
-                >
-                  Favourite <Heart size={18} fill={isWishlisted ? 'currentColor' : 'none'} strokeWidth={1.5} />
-                </button>
-              </div>
-
-              {/* Product Description */}
-              <div className="mt-12 text-[16px] text-[#111111] dark:text-zinc-200 leading-relaxed max-w-prose">
-                {product.description && (
-                  <div
-                    className="space-y-4 leading-relaxed"
-                    dangerouslySetInnerHTML={{ __html: product.description }}
-                  />
+              <div className="flex items-center gap-3 mt-3">
+                <span className="text-2xl sm:text-3xl font-black text-white">
+                  {formatINR(product.discountPrice || product.price)}
+                </span>
+                {product.discountPrice && (
+                  <>
+                    <span className="text-sm text-zinc-500 line-through">{formatINR(product.price)}</span>
+                    <span className="bg-red-600 text-white font-bold text-xs px-2 py-0.5 rounded shadow">
+                      {discountPct}% OFF
+                    </span>
+                  </>
                 )}
-                <ul className="list-disc pl-5 mt-4 space-y-1">
-                  <li>Colour Shown: {product.colors?.length > 0 ? product.colors.join('|') : 'Default'}</li>
-                  <li>Style: {product._id?.substring(0, 8).toUpperCase() || 'N/A'}</li>
-                </ul>
               </div>
-
             </div>
+
+            {/* 4 Trust Badges Box */}
+            <div className="rounded-xl border border-zinc-800/80 bg-[#0e121b] p-3.5 shadow-lg">
+              <div className="grid grid-cols-4 gap-2 text-center">
+                <div className="flex flex-col items-center">
+                  <div className="w-9 h-9 rounded-lg bg-[#14203e] border border-amber-500/40 flex items-center justify-center text-amber-500 mb-1.5">
+                    <Award size={16} />
+                  </div>
+                  <span className="text-[10px] font-bold text-amber-500 uppercase">AUTHORISED</span>
+                  <span className="text-[9px] text-zinc-400">Since 2014</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <div className="w-9 h-9 rounded-lg bg-[#14203e] border border-amber-500/40 flex items-center justify-center text-amber-500 mb-1.5">
+                    <Truck size={16} />
+                  </div>
+                  <span className="text-[10px] font-bold text-amber-500 uppercase">FREE SHIPPING</span>
+                  <span className="text-[9px] text-zinc-400">Pan-India</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <div className="w-9 h-9 rounded-lg bg-[#14203e] border border-amber-500/40 flex items-center justify-center text-amber-500 mb-1.5">
+                    <RotateCcw size={16} />
+                  </div>
+                  <span className="text-[10px] font-bold text-amber-500 uppercase">14-DAY RETURNS</span>
+                  <span className="text-[9px] text-zinc-400">No questions</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <div className="w-9 h-9 rounded-lg bg-[#14203e] border border-amber-500/40 flex items-center justify-center text-amber-500 mb-1.5">
+                    <ShieldCheck size={16} />
+                  </div>
+                  <span className="text-[10px] font-bold text-amber-500 uppercase">GENUINE PRODUCT</span>
+                  <span className="text-[9px] text-zinc-400">100% authorised</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="space-y-2.5 pt-1">
+              <button
+                onClick={handleAddToCart}
+                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bold text-sm uppercase tracking-wider shadow-lg hover:shadow-[0_0_20px_rgba(239,68,68,0.3)] transition-all active:scale-[0.99] cursor-pointer flex items-center justify-center gap-2"
+              >
+                <ShoppingBag size={16} />
+                <span>{isAdded ? 'Added to cart' : 'Add to cart'}</span>
+              </button>
+              <button
+                onClick={handleBuyNow}
+                className="w-full py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-sm uppercase tracking-wider shadow-lg transition-all active:scale-[0.99] cursor-pointer flex items-center justify-center gap-2"
+              >
+                <span>Buy it now</span>
+              </button>
+            </div>
+
+            {/* Description & Detailed Specs Panel */}
+            <ProductFeaturesAndSpecs product={product} />
           </div>
         </div>
       </div>
