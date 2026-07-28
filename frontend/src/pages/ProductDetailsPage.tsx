@@ -50,7 +50,6 @@ const ProductDetailsPage = () => {
   const [selectedColor, setSelectedColor] = useState('');
   const [isAdded, setIsAdded] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
   const imageRef = useRef<HTMLDivElement>(null);
   const [zoomLens, setZoomLens] = useState({ active: false, imgX: 50, imgY: 50, conX: 50, conY: 50 });
   const ZOOM_SCALE = 2.5;
@@ -541,12 +540,6 @@ const ProductDetailsPage = () => {
               <div className="pb-8">
                 <div className="flex justify-between items-end mb-2">
                   <p className="text-[16px] font-medium text-[#111111] dark:text-zinc-200">Select Size</p>
-                  <button
-                    onClick={() => setSizeGuideOpen(true)}
-                    className="text-[15px] font-medium text-zinc-500 hover:text-black dark:hover:text-white transition-colors cursor-pointer flex items-center gap-1"
-                  >
-                    Size Guide
-                  </button>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
                   {sizes.map((size: any) => (
@@ -624,64 +617,7 @@ const ProductDetailsPage = () => {
 
 
 
-      {/* Size Guide Drawer */}
-      <div className={`fixed inset-0 z-50 transition-opacity duration-300 ${sizeGuideOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
-        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSizeGuideOpen(false)} />
-        <div className={`absolute right-0 top-0 h-full w-full max-w-md bg-white dark:bg-[#121212] text-zinc-900 dark:text-zinc-100 p-6 sm:p-8 transition-transform duration-300 ease-out flex flex-col justify-between shadow-2xl overflow-y-auto ${sizeGuideOpen ? 'translate-x-0' : 'translate-x-full'}`}>
-          <div className="space-y-6">
-            {/* Header */}
-            <div className="flex justify-between items-center pb-4 border-b border-zinc-200 dark:border-zinc-800">
-              <h2 className="text-xl font-extrabold tracking-wider text-zinc-900 dark:text-white uppercase">SIZE GUIDE</h2>
-              <button 
-                onClick={() => setSizeGuideOpen(false)} 
-                className="w-9 h-9 rounded-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center transition-all cursor-pointer"
-              >
-                <X size={18} strokeWidth={2.5} />
-              </button>
-            </div>
 
-            {/* Note */}
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium leading-relaxed uppercase tracking-wider">
-              All measurements are in inches. For oversized items, we recommend ordering your typical size for the intended fit.
-            </p>
-
-            {/* Table */}
-            <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden bg-white dark:bg-[#161616]">
-              <div className="grid grid-cols-4 font-bold text-xs bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 py-3.5 px-4 tracking-wider uppercase">
-                <div>SIZE</div>
-                <div className="text-center">CHEST</div>
-                <div className="text-center">WAIST</div>
-                <div className="text-center">LENGTH</div>
-              </div>
-              <div className="divide-y divide-zinc-100 dark:divide-zinc-800/60 text-xs">
-                {[
-                  ['XS', '34-36', '28-30', '27'],
-                  ['S', '36-38', '30-32', '28'],
-                  ['M', '38-40', '32-34', '29'],
-                  ['L', '40-42', '34-36', '30'],
-                  ['XL', '42-44', '36-38', '31']
-                ].map(([sz, ch, ws, len]) => (
-                  <div key={sz} className="grid grid-cols-4 py-3.5 px-4 items-center font-semibold hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors">
-                    <div className="font-extrabold text-zinc-900 dark:text-white">{sz}</div>
-                    <div className="text-center font-medium text-zinc-600 dark:text-zinc-300">{ch}</div>
-                    <div className="text-center font-medium text-zinc-600 dark:text-zinc-300">{ws}</div>
-                    <div className="text-center font-medium text-zinc-600 dark:text-zinc-300">{len}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="pt-6 border-t border-zinc-200 dark:border-zinc-800 mt-6">
-            <button
-              onClick={() => setSizeGuideOpen(false)}
-              className="w-full py-3.5 px-6 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 font-extrabold text-xs uppercase tracking-widest transition-all cursor-pointer"
-            >
-              CLOSE
-            </button>
-          </div>
-        </div>
-      </div>
 
       {showWishlistPopup && (
         <WishlistLoginPopup
