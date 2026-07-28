@@ -392,29 +392,51 @@ export class CjService {
     }
 
     let warehouse = await this.redisService.getJson<any[]>(WAREHOUSE_KEY_ALL);
-    
-    // Fallback: If global warehouse key is empty (e.g. sync still in progress), 
-    // dynamically assemble products from available category keys
+
+    // Fallback: If global warehouse key is empty (e.g. sync still in progress),
+    // dynamically assemble products from available category or individual product keys
     if (!warehouse || !Array.isArray(warehouse) || warehouse.length === 0) {
-      const keys = await this.redisService.keys('products:*');
-      if (keys && keys.length > 0) {
-        const allProducts: any[] = [];
-        for (const key of keys) {
-          // Only match category keys like 'products:parent:sub'
-          if (key.split(':').length === 3 && !key.includes('related')) {
+      // 1) Try category keys: products:parent:sub (3 colon-separated parts, no 'related')
+      const catKeys = await this.redisService.keys('products:*');
+      const allFromCats: any[] = [];
+      if (catKeys && catKeys.length > 0) {
+        for (const key of catKeys) {
+          const parts = key.split(':');
+          if (parts.length === 3 && !key.includes('related') && !key.includes('next')) {
             const catProducts = await this.redisService.getJson<any[]>(key);
             if (Array.isArray(catProducts)) {
-              allProducts.push(...catProducts);
+              allFromCats.push(...catProducts);
             }
           }
         }
-        if (allProducts.length > 0) {
-          warehouse = this.interleaveByCategory(allProducts);
+      }
+
+      if (allFromCats.length > 0) {
+        // Category keys exist — use them
+        warehouse = this.interleaveByCategory(allFromCats);
+        this.logger.log(`[Warehouse] Assembled ${warehouse.length} products from category sub-keys`);
+      } else {
+        // 2) Last-resort: use individual product:* detail cache entries
+        const productDetailKeys = await this.redisService.keys('product:*');
+        const allFromDetails: any[] = [];
+        if (productDetailKeys && productDetailKeys.length > 0) {
+          for (const key of productDetailKeys) {
+            // Skip compound keys like product:related:* (they won't exist but be safe)
+            if (key.split(':').length === 2) {
+              const p = await this.redisService.getJson<any>(key);
+              if (p && typeof p === 'object' && (p.pid || p._id || p.id)) {
+                allFromDetails.push(p);
+              }
+            }
+          }
+        }
+
+        if (allFromDetails.length > 0) {
+          warehouse = allFromDetails;
+          this.logger.warn(`[Warehouse] products:all empty — serving ${warehouse.length} products from individual detail cache (sync pending)`);
         } else {
           return null;
         }
-      } else {
-        return null;
       }
     }
 
