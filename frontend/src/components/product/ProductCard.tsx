@@ -45,6 +45,7 @@ export const ProductCardSkeleton = () => (
 
 const ProductCard = ({ product }: ProductCardProps) => {
   const [imageFailed, setImageFailed] = useState(false);
+  const [hovered, setHovered] = useState(false);
   const [showWishlistPopup, setShowWishlistPopup] = useState(false);
   const dispatch = useDispatch();
   const userInfo = useSelector((state: RootState) => state.auth.userInfo);
@@ -53,6 +54,10 @@ const ProductCard = ({ product }: ProductCardProps) => {
   const isWishlisted = wishlistItems.some((item: any) => item._id === productId);
 
   const primaryImage = product?.images?.[0] || (product as any)?.productImage || PLACEHOLDER_IMAGE;
+  const hoverImage = product?.images?.[1] || null; // second image for hover, if available
+
+  // The image to show: if hovered AND a second image exists, show it
+  const displayImage = hovered && hoverImage ? hoverImage : primaryImage;
 
   const handleWishlistClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -76,10 +81,13 @@ const ProductCard = ({ product }: ProductCardProps) => {
 
   const currentPrice = product.discountPrice && product.discountPrice < product.price ? product.discountPrice : product.price;
   const originalPrice = product.discountPrice && product.discountPrice < product.price ? product.price : undefined;
-  // Force HMR update to apply price logic
 
   return (
-    <div className="group relative flex flex-col w-full bg-white dark:bg-zinc-900 border-none cursor-pointer">
+    <div
+      className="group relative flex flex-col w-full bg-white dark:bg-zinc-900 border-none cursor-pointer"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
       <Link to={`/product/${productId}`} className="block w-full">
         <div className="relative aspect-[4/5] overflow-hidden bg-[#f6f6f6] dark:bg-zinc-800">
           {imageFailed ? (
@@ -90,13 +98,29 @@ const ProductCard = ({ product }: ProductCardProps) => {
               </span>
             </div>
           ) : (
-            <img
-              src={primaryImage}
-              alt={product.name || (product as any)?.productName}
-              loading="lazy"
-              onError={() => { if (primaryImage !== PLACEHOLDER_IMAGE) setImageFailed(true); }}
-              className="h-full w-full object-cover object-center"
-            />
+            <>
+              {/* Primary image — always rendered, fades out on hover if second image exists */}
+              <img
+                src={primaryImage}
+                alt={product.name || (product as any)?.productName}
+                loading="lazy"
+                onError={() => { if (primaryImage !== PLACEHOLDER_IMAGE) setImageFailed(true); }}
+                className={`absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-400 ease-in-out ${
+                  hovered && hoverImage ? 'opacity-0' : 'opacity-100'
+                }`}
+              />
+              {/* Hover image — only rendered if available, fades in on hover */}
+              {hoverImage && (
+                <img
+                  src={hoverImage}
+                  alt={`${product.name || (product as any)?.productName} — alternate view`}
+                  loading="lazy"
+                  className={`absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-400 ease-in-out ${
+                    hovered ? 'opacity-100' : 'opacity-0'
+                  }`}
+                />
+              )}
+            </>
           )}
 
           <button
@@ -110,6 +134,14 @@ const ProductCard = ({ product }: ProductCardProps) => {
           >
             <Heart size={18} fill={isWishlisted ? 'currentColor' : 'none'} strokeWidth={2} />
           </button>
+
+          {/* Dot indicators — shown when product has multiple images */}
+          {hoverImage && (
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 z-10">
+              <span className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${hovered ? 'bg-zinc-400' : 'bg-zinc-700'}`} />
+              <span className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${hovered ? 'bg-white' : 'bg-zinc-500'}`} />
+            </div>
+          )}
         </div>
       </Link>
 

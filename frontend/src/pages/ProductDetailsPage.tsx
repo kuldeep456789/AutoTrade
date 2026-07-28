@@ -5,7 +5,7 @@ import { useGetProductDetailsQuery, useCreateReviewMutation, useGetRelatedProduc
 import { addToCart } from '../store/slices/cartSlice';
 import { toggleWishlist } from '../store/slices/wishlistSlice';
 import type { RootState } from '../store/store';
-import { ShoppingBag, Heart, Star, Check, ChevronRight, ChevronLeft, X, ZoomIn, SendHorizontal, ThumbsUp, Share2, Loader2, UserRound } from 'lucide-react';
+import { ShoppingBag, Heart, Star, Check, ChevronRight, ChevronLeft, X, ZoomIn, SendHorizontal, ThumbsUp, Share2, Loader2, UserRound, Truck, RotateCcw, Shield, FileText, ChevronUp, ChevronDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Loader from '../components/Loader';
 import ProductCard from '../components/product/ProductCard';
@@ -64,6 +64,7 @@ const ProductDetailsPage = () => {
   const [helpfulVotes, setHelpfulVotes] = useState<Record<number, boolean>>({});
   const reviewRef = useRef<HTMLDivElement>(null);
   const [showWishlistPopup, setShowWishlistPopup] = useState(false);
+  const [descriptionOpen, setDescriptionOpen] = useState(true);
 
   const handleWishlistToggle = () => {
     if (!userInfo) {
@@ -524,13 +525,53 @@ const ProductDetailsPage = () => {
 
 
 
+              {/* Trust Badges */}
+              <div className="grid grid-cols-4 gap-2 mb-6 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 bg-zinc-50 dark:bg-zinc-900/50 mt-6">
+                <div className="flex flex-col items-center text-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-white dark:bg-zinc-800 flex items-center justify-center shadow-sm">
+                    <Star className="text-yellow-500 w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="text-[9px] sm:text-[10px] font-bold text-[#111111] dark:text-yellow-500 uppercase">Authorised</div>
+                    <div className="text-[8px] sm:text-[9px] text-zinc-500">Since 2014</div>
+                  </div>
+                </div>
+                <div className="flex flex-col items-center text-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-white dark:bg-zinc-800 flex items-center justify-center shadow-sm">
+                    <Truck className="text-yellow-500 w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="text-[9px] sm:text-[10px] font-bold text-[#111111] dark:text-yellow-500 uppercase">Free Shipping</div>
+                    <div className="text-[8px] sm:text-[9px] text-zinc-500">Pan-India</div>
+                  </div>
+                </div>
+                <div className="flex flex-col items-center text-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-white dark:bg-zinc-800 flex items-center justify-center shadow-sm">
+                    <RotateCcw className="text-yellow-500 w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="text-[9px] sm:text-[10px] font-bold text-[#111111] dark:text-yellow-500 uppercase">14-Day Returns</div>
+                    <div className="text-[8px] sm:text-[9px] text-zinc-500">No questions</div>
+                  </div>
+                </div>
+                <div className="flex flex-col items-center text-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-white dark:bg-zinc-800 flex items-center justify-center shadow-sm">
+                    <Shield className="text-yellow-500 w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="text-[9px] sm:text-[10px] font-bold text-[#111111] dark:text-yellow-500 uppercase">Genuine Product</div>
+                    <div className="text-[8px] sm:text-[9px] text-zinc-500">100% authorised</div>
+                  </div>
+                </div>
+              </div>
+
               {/* Action Buttons */}
               <div className="flex flex-col space-y-3 pt-2">
                 <button
                   onClick={handleAddToCart}
                   className={`w-full h-[62px] rounded-[31px] text-[16px] font-medium transition-all duration-200 cursor-pointer active:scale-[0.98] ${isAdded
                       ? 'bg-green-600 text-white'
-                      : 'bg-[#111111] dark:bg-white text-white dark:text-[#111111] hover:bg-black/80 dark:hover:bg-white/80'
+                      : 'bg-yellow-400 text-black hover:bg-yellow-500'
                     }`}
                 >
                   {isAdded ? 'Added to Bag' : 'Add to Bag'}
@@ -546,18 +587,47 @@ const ProductDetailsPage = () => {
                 </button>
               </div>
 
-              {/* Product Description */}
-              <div className="mt-12 text-[16px] text-[#111111] dark:text-zinc-200 leading-relaxed max-w-prose">
-                {product.description && (
-                  <div 
-                    className="space-y-4 leading-relaxed" 
-                    dangerouslySetInnerHTML={{ __html: product.description }} 
-                  />
+              {/* Product Description Accordion */}
+              <div className="mt-8 border-t border-zinc-200 dark:border-zinc-800 pt-6">
+                <button 
+                  onClick={() => setDescriptionOpen(!descriptionOpen)}
+                  className="flex items-center justify-between w-full text-left cursor-pointer group"
+                >
+                  <div className="flex items-center gap-3 text-[#111111] dark:text-white font-bold text-lg group-hover:opacity-80 transition-opacity">
+                    <FileText size={20} />
+                    <span>Description</span>
+                  </div>
+                  <div className="text-zinc-400 group-hover:text-zinc-600 dark:group-hover:text-zinc-300 transition-colors">
+                    {descriptionOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  </div>
+                </button>
+                
+                {descriptionOpen && (
+                  <div className="mt-6 text-[15px] text-[#111111] dark:text-zinc-300 leading-relaxed max-w-prose space-y-6">
+                    {product.description ? (
+                      <div 
+                        className="space-y-4" 
+                        dangerouslySetInnerHTML={{ __html: product.description }} 
+                      />
+                    ) : (
+                      <>
+                        <div>
+                          <h3 className="text-[20px] font-bold text-[#111111] dark:text-white mb-3">Product Description</h3>
+                          <p>The <strong>{productName}</strong> is a premium automotive product designed for Indian two-wheelers and cars. Built to handle India's conditions, it is a genuine, authorised product for your vehicle.</p>
+                        </div>
+                        <div>
+                          <h3 className="text-[20px] font-bold text-[#111111] dark:text-white mb-3">Features & Benefits</h3>
+                          <ul className="list-disc pl-5 space-y-2">
+                            <li><strong className="text-yellow-600 dark:text-yellow-500">Premium Quality:</strong> High-grade materials for durability.</li>
+                            <li><strong className="text-yellow-600 dark:text-yellow-500">Pan-India Compatibility:</strong> Handles Indian conditions reliably.</li>
+                          </ul>
+                        </div>
+                      </>
+                    )}
+                    
+
+                  </div>
                 )}
-                <ul className="list-disc pl-5 mt-4 space-y-1">
-                  <li>Colour Shown: {product.colors?.length > 0 ? product.colors.join('|') : 'Default'}</li>
-                  <li>Style: {product._id?.substring(0, 8).toUpperCase() || 'N/A'}</li>
-                </ul>
               </div>
 
             </div>

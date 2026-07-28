@@ -391,9 +391,31 @@ export class CjService {
       }
     }
 
-    const warehouse = await this.redisService.getJson<any[]>(WAREHOUSE_KEY_ALL);
+    let warehouse = await this.redisService.getJson<any[]>(WAREHOUSE_KEY_ALL);
+    
+    // Fallback: If global warehouse key is empty (e.g. sync still in progress), 
+    // dynamically assemble products from available category keys
     if (!warehouse || !Array.isArray(warehouse) || warehouse.length === 0) {
-      return null;
+      const keys = await this.redisService.keys('products:*');
+      if (keys && keys.length > 0) {
+        const allProducts: any[] = [];
+        for (const key of keys) {
+          // Only match category keys like 'products:parent:sub'
+          if (key.split(':').length === 3 && !key.includes('related')) {
+            const catProducts = await this.redisService.getJson<any[]>(key);
+            if (Array.isArray(catProducts)) {
+              allProducts.push(...catProducts);
+            }
+          }
+        }
+        if (allProducts.length > 0) {
+          warehouse = this.interleaveByCategory(allProducts);
+        } else {
+          return null;
+        }
+      } else {
+        return null;
+      }
     }
 
     let pool = warehouse;

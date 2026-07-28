@@ -1,9 +1,10 @@
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Outlet } from 'react-router-dom';
 import Navbar from './components/layout/Navbar';
 import AnnouncementBanner from './components/layout/AnnouncementBanner';
 import Footer from './components/layout/Footer';
+import SplashScreen from './components/SplashScreen';
 
 import HomePage from './pages/HomePage';
 import ProductListPage from './pages/ProductListPage';
@@ -57,10 +58,21 @@ function MainLayout() {
 }
 
 function App() {
+  const [showSplash, setShowSplash] = useState(
+    () => !sessionStorage.getItem('at_splash_done')
+  );
+
+  const handleSplashDone = useCallback(() => {
+    sessionStorage.setItem('at_splash_done', '1');
+    setShowSplash(false);
+  }, []);
+
   return (
-    <Router>
-      <ScrollToTop />
-      <Routes>
+    <>
+      {showSplash && <SplashScreen onDone={handleSplashDone} />}
+      <Router>
+        <ScrollToTop />
+        <Routes>
         {/* Admin routes (separate layout, no Navbar/Footer) */}
         <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
           <Route index element={<AdminDashboard />} />
@@ -101,7 +113,8 @@ function App() {
           <Route path="/returns" element={<ReturnsPage />} />
         </Route>
       </Routes>
-    </Router>
+      </Router>
+    </>
   );
 }
 

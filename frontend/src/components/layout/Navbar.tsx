@@ -13,7 +13,7 @@ import { useGetCategoriesQuery } from '../../store/slices/categoryApiSlice';
 import { getProductId } from '../../lib/product';
 import { formatINR } from '../../lib/currency';
 import MiniCart from './MiniCart';
-import VastraLogo from './VastraLogo';
+
 import ThemeToggle from '../theme/ThemeToggle';
 
 interface SubItem { label: string; to: string; }
@@ -322,12 +322,16 @@ const Navbar = () => {
 
   return (
     <>
-      <header className={`fixed top-0 left-0 right-0 z-50 w-full bg-[#0B132B] text-white transition-all duration-300 font-sans border-b border-[#1C274C] ${scrolled ? 'shadow-xl shadow-black/40' : 'shadow-none'}`}>
+      <header className={`fixed top-0 left-0 right-0 z-50 w-full bg-black text-white transition-all duration-300 font-sans border-b border-zinc-800 ${scrolled ? 'shadow-xl shadow-black/40' : 'shadow-none'}`}>
         <div className="flex items-center justify-between h-[72px] max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-10">
 
           {/* Left - Logo */}
-          <Link to="/" className="shrink-0 flex items-center">
-            <VastraLogo />
+          <Link to="/" className="shrink-0 flex items-center group">
+            <img
+              src="/img/logo.jpg"
+              alt="AutoTrade"
+              className="h-12 w-auto object-contain transition-transform duration-200 group-hover:scale-105"
+            />
           </Link>
 
           {/* Center - Nav with Mega Dropdowns (Desktop) */}
