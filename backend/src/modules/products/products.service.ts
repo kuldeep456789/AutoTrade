@@ -126,38 +126,43 @@ export class ProductsService implements OnModuleInit {
       return { products: cached };
     }
 
-    // Try to find related products from the warehouse (no live CJ call)
     try {
       const cjProduct = await this.cjService.getProductById(id);
-      const gender = String(
-        cjProduct?._gender ??
-          cjProduct?.gender ??
-          cjProduct?.collectionType ??
-          '',
-      ).toLowerCase() as 'men' | 'women' | 'all';
       const subcategoryName =
-        cjProduct?._category ?? cjProduct?.subcategoryName ?? '';
+        cjProduct?._category ?? cjProduct?.subcategoryName ?? cjProduct?.categoryName ?? '';
 
-      if (gender && subcategoryName) {
+      let products: any[] = [];
+
+      // 1. Try finding products from the same subcategory
+      if (subcategoryName) {
         const warehouseResult = await this.cjService.getWarehouseProducts(
-          gender,
+          'all',
           1,
-          12,
+          16,
           undefined,
           subcategoryName,
         );
         if (warehouseResult && warehouseResult.products.length > 0) {
-          const products = warehouseResult.products
-            .filter((p: any) => (p.pid || p.id) !== id)
-            .slice(0, 8);
-
-          const withRatings = await Promise.all(
-            products.map((p: any) => this.withReviews(p, p.pid || p._id)),
-          );
-          await this.redisService.setJson(cacheKey, withRatings, 60 * 60);
-          return { products: withRatings };
+          products = warehouseResult.products.filter((p: any) => (p.pid || p.id || p._id) !== id);
         }
       }
+
+      // 2. Fallback: if no products found in subcategory, return items from main warehouse pool
+      if (products.length === 0) {
+        const fallbackResult = await this.cjService.getWarehouseProducts('all', 1, 16);
+        if (fallbackResult && fallbackResult.products.length > 0) {
+          products = fallbackResult.products.filter((p: any) => (p.pid || p.id || p._id) !== id);
+        }
+      }
+
+      const finalProducts = products.slice(0, 8);
+      const withRatings = await Promise.all(
+        finalProducts.map((p: any) => this.withReviews(p, p.pid || p._id)),
+      );
+      if (withRatings.length > 0) {
+        await this.redisService.setJson(cacheKey, withRatings, 60 * 60);
+      }
+      return { products: withRatings };
     } catch (err: any) {
       this.logger.warn(
         `[Products] Failed to fetch related for ${id}: ${err?.message ?? err}`,
