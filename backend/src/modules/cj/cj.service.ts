@@ -10,21 +10,16 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { RedisService } from '../redis/redis.service';
 import { Order } from '../orders/schemas/order.schema';
-import { CLOTHING_CATEGORIES } from './collections';
+import { Automobiles, getAllSyncTargets } from './collections';
 import { CjCreateOrderDto, CjOrderProductItem } from './dto/cj-order.dto';
 
-const WAREHOUSE_KEY_MEN = 'products:men';
-const WAREHOUSE_KEY_WOMEN = 'products:women';
 const WAREHOUSE_KEY_ALL = 'products:all';
-
-const WAREHOUSE_NEXT_MEN = 'products:next:men';
-const WAREHOUSE_NEXT_WOMEN = 'products:next:women';
 const WAREHOUSE_NEXT_ALL = 'products:next:all';
 
-const categoryKey = (gender: string, cat: string) =>
-  `products:${gender.toLowerCase()}:${cat.toLowerCase().replace(/[\s_'&-]+/g, '')}`;
-const categoryNextKey = (gender: string, cat: string) =>
-  `products:next:${gender.toLowerCase()}:${cat.toLowerCase().replace(/[\s_'&-]+/g, '')}`;
+const categoryKey = (parentCat: string, subCat: string) =>
+  `products:${parentCat.toLowerCase().replace(/[\s_'&-]+/g, '')}:${subCat.toLowerCase().replace(/[\s_'&-]+/g, '')}`;
+const categoryNextKey = (parentCat: string, subCat: string) =>
+  `products:next:${parentCat.toLowerCase().replace(/[\s_'&-]+/g, '')}:${subCat.toLowerCase().replace(/[\s_'&-]+/g, '')}`;
 
 const SYNC_METRICS_KEY = 'cj:sync:metrics';
 
@@ -367,14 +362,23 @@ export class CjService {
 
   //warehouse
   async getWarehouseProducts(
-    gender: 'men' | 'women' | 'all' | '' = 'all',
+    _gender: 'men' | 'women' | 'all' | '' = 'all',
     pageNum = 1,
     pageSize = 160,
     categoryId?: string,
     subcategoryName?: string,
   ): Promise<{ products: any[]; total: number; warehouseHit: true } | null> {
-    if (subcategoryName && gender && gender !== 'all') {
-      const catKey = categoryKey(gender, subcategoryName);
+    // Try fine-grained sub-category key first
+    if (subcategoryName) {
+      // Find parent category for this sub
+      let parentCat = 'auto';
+      for (const [parent, items] of Object.entries(Automobiles)) {
+        if (items.some(i => i.name.toLowerCase() === subcategoryName.toLowerCase())) {
+          parentCat = parent;
+          break;
+        }
+      }
+      const catKey = categoryKey(parentCat, subcategoryName);
       const catData = await this.redisService.getJson<any[]>(catKey);
 
       if (catData && Array.isArray(catData) && catData.length > 0) {
@@ -387,14 +391,8 @@ export class CjService {
         return { products, total, warehouseHit: true };
       }
     }
-    const key =
-      gender === 'men'
-        ? WAREHOUSE_KEY_MEN
-        : gender === 'women'
-          ? WAREHOUSE_KEY_WOMEN
-          : WAREHOUSE_KEY_ALL;
 
-    const warehouse = await this.redisService.getJson<any[]>(key);
+    const warehouse = await this.redisService.getJson<any[]>(WAREHOUSE_KEY_ALL);
     if (!warehouse || !Array.isArray(warehouse) || warehouse.length === 0) {
       return null;
     }
@@ -422,7 +420,7 @@ export class CjService {
     const products = pool.slice(start, start + pageSize);
 
     this.logger.log(
-      `[CJ] Warehouse READ gender=${gender} page=${pageNum} size=${pageSize} → ${products.length}/${total}`,
+      `[CJ] Warehouse READ page=${pageNum} size=${pageSize} → ${products.length}/${total}`,
     );
     return { products, total, warehouseHit: true };
   }
@@ -480,30 +478,17 @@ export class CjService {
         return { success: false, count: allProducts.length };
       }
 
-      /// here is one task running on the background, , then start second part is called buffering ,
+      /// here is one task running on the background, then start second part is called buffering ,
       // not burden on first task , and load properly and render/reflect on frontend
 
-      const rawMen = allProducts.filter(
-        (p) => String(p._gender ?? '').toLowerCase() === 'men',
-      );
-      const rawWomen = allProducts.filter(
-        (p) => String(p._gender ?? '').toLowerCase() === 'women',
-      );
-
-      const menProducts = this.interleaveByCategory(rawMen);
-      const womenProducts = this.interleaveByCategory(rawWomen);
       const balancedAll = this.interleaveByCategory(allProducts);
 
       this.logger.log(
-        `[Cron] Products Fetched & Interleaved — Men: ${menProducts.length}, Women: ${womenProducts.length}, Total: ${allProducts.length}`,
+        `[Cron] Products Fetched & Interleaved — Total: ${allProducts.length}`,
       );
 
       // Write to :next buffer without TTL to make it persistent
-      await Promise.all([
-        this.redisService.setJson(WAREHOUSE_NEXT_ALL, balancedAll),
-        this.redisService.setJson(WAREHOUSE_NEXT_MEN, menProducts),
-        this.redisService.setJson(WAREHOUSE_NEXT_WOMEN, womenProducts),
-      ]);
+      await this.redisService.setJson(WAREHOUSE_NEXT_ALL, balancedAll);
 
       // Write per-category keys to :next buffer without TTL
       const categoryGroups = this.groupByCategory(allProducts);
@@ -516,11 +501,7 @@ export class CjService {
       await Promise.all(catWriteOps);
 
       // Atomic swap: :next → :current
-      await Promise.all([
-        this.redisService.rename(WAREHOUSE_NEXT_ALL, WAREHOUSE_KEY_ALL),
-        this.redisService.rename(WAREHOUSE_NEXT_MEN, WAREHOUSE_KEY_MEN),
-        this.redisService.rename(WAREHOUSE_NEXT_WOMEN, WAREHOUSE_KEY_WOMEN),
-      ]);
+      await this.redisService.rename(WAREHOUSE_NEXT_ALL, WAREHOUSE_KEY_ALL);
 
       // Swap per-category keys
       const catSwapOps: Promise<void>[] = [];
@@ -583,43 +564,19 @@ export class CjService {
     const allProducts: any[] = [];
     const globalSeenPids = new Set<string>();
 
-    // 1. Target categories from CLOTHING_CATEGORIES
-    const targetCategories: {
-      categoryId: string;
-      gender: string;
-      categoryName: string;
-    }[] = [];
-
-    for (const cat of CLOTHING_CATEGORIES.men) {
-      targetCategories.push({
-        categoryId: cat.categoryId,
-        gender: 'men',
-        categoryName: cat.name,
-      });
-    }
-
-    for (const cat of CLOTHING_CATEGORIES.women) {
-      targetCategories.push({
-        categoryId: cat.categoryId,
-        gender: 'women',
-        categoryName: cat.name,
-      });
-    }
-
-    const uniqueTargets = Array.from(
-      new Map(targetCategories.map((item) => [item.categoryId, item])).values(),
-    );
+    // Build sync targets from Automobiles categories (skip empty categoryIds)
+    const uniqueTargets = getAllSyncTargets();
 
     this.logger.log(
-      `[CJ] Starting full catalog sync across ${uniqueTargets.length} categories (processing ONE category at a time)...`,
+      `[CJ] Starting full catalog sync across ${uniqueTargets.length} automobile categories (processing ONE at a time)...`,
     );
 
     let totalPagesSyncedAll = 0;
 
     // 2. Process ONE CATEGORY AT A TIME sequentially
     for (const entry of uniqueTargets) {
-      const { categoryId, gender, categoryName } = entry;
-      const catKey = categoryKey(gender, categoryName);
+      const { categoryId, parentCategory, name: categoryName } = entry;
+      const catKey = categoryKey(parentCategory, categoryName);
       const catStart = Date.now();
 
       // Read existing products from Redis for safe merge (NEVER CLEAR keys)
@@ -721,11 +678,11 @@ export class CjService {
               productMap.set(pid, {
                 ...existing,
                 ...product,
-                _gender: gender,
+                _parentCategory: parentCategory,
                 _category: categoryName,
-                _collectionType: gender,
+                _collectionType: parentCategory,
               });
-              updatedProductsCount++;
+              updatedProductsCount++;;
             } else {
               duplicatesRemovedCount++;
             }
@@ -733,9 +690,9 @@ export class CjService {
             // New product discovered
             productMap.set(pid, {
               ...product,
-              _gender: gender,
+              _parentCategory: parentCategory,
               _category: categoryName,
-              _collectionType: gender,
+              _collectionType: parentCategory,
             });
             newProductsCount++;
           }
@@ -761,10 +718,10 @@ export class CjService {
 
       const catDurationSec = ((Date.now() - catStart) / 1000).toFixed(1);
       this.logger.log(
-        `[CJ] Category "${categoryName}" (${gender}): ${productsAfter} items (${newProductsCount} new, ${updatedProductsCount} updated) in ${catDurationSec}s`,
+        `[CJ] Category "${categoryName}" (${parentCategory}): ${productsAfter} items (${newProductsCount} new, ${updatedProductsCount} updated) in ${catDurationSec}s`,
       );
 
-      // Append to global pool for top-level gender keys
+      // Append to global product pool
       for (const p of mergedCatProducts) {
         const pid = String(p.pid || p.id || '');
         if (pid && !globalSeenPids.has(pid)) {
@@ -788,11 +745,11 @@ export class CjService {
     const groups: Record<string, any[]> = {};
 
     for (const p of products) {
-      const gender = String(p._gender ?? '').toLowerCase();
+      const parent = String(p._parentCategory ?? p._collectionType ?? 'auto').toLowerCase();
       const catName = String(
         p._category ?? p.subcategoryName ?? p.category ?? 'other',
       );
-      const key = `${gender}:${catName.toLowerCase().replace(/[\s_'&-]+/g, '')}`;
+      const key = `${parent.replace(/[\s_'&-]+/g, '')}:${catName.toLowerCase().replace(/[\s_'&-]+/g, '')}`;
 
       if (!groups[key]) groups[key] = [];
       groups[key].push(p);

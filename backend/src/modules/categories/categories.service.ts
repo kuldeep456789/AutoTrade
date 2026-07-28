@@ -1,41 +1,19 @@
 import { Injectable } from '@nestjs/common';
+import { Automobiles } from '../cj/collections';
 
 @Injectable()
 export class CategoriesService {
-  private readonly CURATED_CATEGORIES = [
-    // Men Categories
-    { name: 'T-Shirts', group: 'Men' },
-    { name: 'Shirts', group: 'Men' },
-    { name: 'Polo Shirts', group: 'Men' },
-    { name: 'Cargo Pants', group: 'Men' },
-    { name: 'Jeans', group: 'Men' },
-    { name: 'Joggers', group: 'Men' },
-    { name: 'Shorts', group: 'Men' },
-    { name: 'Hoodies', group: 'Men' },
-    { name: 'Sweatshirts', group: 'Men' },
-    { name: 'Jackets', group: 'Men' },
-    { name: 'Sweaters', group: 'Men' },
-    { name: 'Co-Ord Sets', group: 'Men' },
-    { name: 'Ethnic Wear', group: 'Men' },
-
-    // Women Categories
-    { name: 'Tops', group: 'Women' },
-    { name: 'T-Shirts', group: 'Women' },
-    { name: 'Shirts', group: 'Women' },
-    { name: 'Jeans', group: 'Women' },
-    { name: 'Pants', group: 'Women' },
-    { name: 'Shorts', group: 'Women' },
-    { name: 'Skirts', group: 'Women' },
-    { name: 'Dresses', group: 'Women' },
-    { name: 'Hoodies', group: 'Women' },
-    { name: 'Sweatshirts', group: 'Women' },
-    { name: 'Jackets', group: 'Women' },
-    { name: 'Activewear', group: 'Women' },
-    { name: 'Co-Ord Sets', group: 'Women' },
-    { name: 'Ethnic Wear', group: 'Women' },
-  ];
-
+  /**
+   * Returns curated automobile categories derived directly from the
+   * Automobiles map in collections.ts — single source of truth.
+   */
   async getCategories() {
-    return this.CURATED_CATEGORIES;
+    const result: { name: string; group: string }[] = [];
+    for (const [parent, items] of Object.entries(Automobiles)) {
+      for (const item of items) {
+        result.push({ name: item.name, group: parent });
+      }
+    }
+    return result;
   }
 }

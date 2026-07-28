@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { ShoppingBag, Heart, UserRound, X, Search, Menu, Package, MapPin, Settings, LogOut, Loader2, Shield, Mail, Bell } from 'lucide-react';
+import { ShoppingBag, Heart, UserRound, X, Search, Menu, Package, MapPin, Settings, LogOut, Loader2, Shield, Mail, Bell, ChevronDown, ChevronRight } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { RootState } from '../../store/store';
@@ -16,9 +16,89 @@ import MiniCart from './MiniCart';
 import VastraLogo from './VastraLogo';
 import ThemeToggle from '../theme/ThemeToggle';
 
-const navItems = [
-  { to: '/collections/men', label: 'Men' },
-  { to: '/collections/women', label: 'Women' },
+interface SubItem { label: string; to: string; }
+interface NavCategory {
+  label: string;
+  to: string;
+  subs: SubItem[];
+}
+
+const navCategories: NavCategory[] = [
+  {
+    label: 'Exterior Accessories',
+    to: '/collections/exterior-accessories',
+    subs: [
+      { label: 'Car Stickers',               to: '/collections/car-stickers' },
+      { label: 'Other Exterior Accessories',  to: '/collections/other-exterior-accessories' },
+      { label: 'Car Covers',                  to: '/collections/car-covers' },
+    ],
+  },
+  {
+    label: 'Interior Accessories',
+    to: '/collections/interior-accessories',
+    subs: [
+      { label: 'Floor Mats',              to: '/collections/floor-mats' },
+      { label: 'Car Aromatherapy',        to: '/collections/car-aromatherapy' },
+      { label: 'Car Perfume',             to: '/collections/car-perfume' },
+      { label: 'Key Case for Car',        to: '/collections/key-case-for-car' },
+      { label: 'Steering Covers',         to: '/collections/steering-covers' },
+      { label: 'Automobiles Seat Covers', to: '/collections/automobiles-seat-covers' },
+      { label: 'Stowing Tidying',         to: '/collections/stowing-tidying' },
+    ],
+  },
+  {
+    label: 'Tools, Maintenance & Care',
+    to: '/collections/tools-maintenance-care',
+    subs: [
+      { label: 'Car Washer',                to: '/collections/car-washer' },
+      { label: 'Diagnostic Tools',          to: '/collections/diagnostic-tools' },
+      { label: 'Paint Care',                to: '/collections/paint-care' },
+      { label: 'Other Maintenance Products',to: '/collections/other-maintenance-products' },
+    ],
+  },
+  {
+    label: 'Car Electronics',
+    to: '/collections/car-electronics',
+    subs: [
+      { label: 'Vehicle Camera',          to: '/collections/vehicle-camera' },
+      { label: 'DVR & Dash Camera',       to: '/collections/dvr-dash-camera' },
+      { label: 'Car Monitors',            to: '/collections/car-monitors' },
+      { label: 'Vehicle GPS',             to: '/collections/vehicle-gps' },
+      { label: 'Car Mirror Video',        to: '/collections/car-mirror-video' },
+      { label: 'Car Radios',              to: '/collections/car-radios' },
+      { label: 'GPS Trackers',            to: '/collections/gps-trackers' },
+      { label: 'Car Multimedia Player',   to: '/collections/car-multimedia-player' },
+      { label: 'Alarm Systems & Security',to: '/collections/alarm-systems-security' },
+      { label: 'Jump Starter',            to: '/collections/jump-starter' },
+    ],
+  },
+  {
+    label: 'Motorcycle Accessories & Parts',
+    to: '/collections/motorcycle-accessories',
+    subs: [
+      { label: 'Lighting',                     to: '/collections/motorcycle-lighting' },
+      { label: 'Exhaust & Exhaust Systems',     to: '/collections/exhaust-systems' },
+      { label: 'Motor Brake System',            to: '/collections/motor-brake-system' },
+      { label: 'Motorcycle Seat Covers',        to: '/collections/motorcycle-seat-covers' },
+      { label: 'Other Motorcycle Accessories',  to: '/collections/other-motorcycle-accessories' },
+      { label: 'Helmet Headset',                to: '/collections/helmet-headset' },
+      { label: 'Body & Frame',                  to: '/collections/body-frame' },
+    ],
+  },
+  {
+    label: 'Auto Replacement Parts',
+    to: '/collections/auto-replacement-parts',
+    subs: [
+      { label: 'Interior Parts',                  to: '/collections/interior-parts' },
+      { label: 'Car Brake System',                to: '/collections/car-brake-system' },
+      { label: 'Spark Plugs & Ignition System',   to: '/collections/spark-plugs-ignition' },
+      { label: 'Automobiles Sensors',             to: '/collections/automobiles-sensors' },
+      { label: 'Exterior Parts',                  to: '/collections/exterior-parts' },
+      { label: 'Other Replacement Parts',         to: '/collections/other-replacement-parts' },
+      { label: 'Car Lights',                      to: '/collections/car-lights' },
+      { label: 'Windscreen Wipers & Windows',     to: '/collections/windscreen-wipers-windows' },
+    ],
+  },
 ];
 
 const Navbar = () => {
@@ -55,6 +135,9 @@ const Navbar = () => {
   const [miniCartOpen, setMiniCartOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [hoveredSub, setHoveredSub] = useState<string | null>(null);
+  const dropdownCloseTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [selectedSuggestionIdx, setSelectedSuggestionIdx] = useState(-1);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -216,43 +299,148 @@ const Navbar = () => {
 
   const isActive = (path: string) => location.pathname.startsWith(path);
 
+  const handleNavEnter = (label: string) => {
+    clearTimeout(dropdownCloseTimer.current);
+    setOpenDropdown(label);
+    setHoveredSub(null);
+  };
+  const handleNavLeave = () => {
+    dropdownCloseTimer.current = setTimeout(() => {
+      setOpenDropdown(null);
+      setHoveredSub(null);
+    }, 120);
+  };
+  const handleDropdownEnter = () => {
+    clearTimeout(dropdownCloseTimer.current);
+  };
+  const handleDropdownLeave = () => {
+    dropdownCloseTimer.current = setTimeout(() => {
+      setOpenDropdown(null);
+      setHoveredSub(null);
+    }, 120);
+  };
+
   return (
     <>
-      <header className={`fixed top-0 left-0 right-0 z-50 w-full bg-white dark:bg-[#111111] text-zinc-900 dark:text-zinc-100 transition-all duration-300 font-sans border-b border-zinc-200 dark:border-zinc-800 ${scrolled ? 'shadow-lg shadow-black/5 dark:shadow-white/5' : 'shadow-none'}`}>
-        <div className="flex items-center h-[88px] max-w-[1920px] mx-auto px-6 sm:px-8 lg:px-12">
-
+      <header className={`fixed top-0 left-0 right-0 z-50 w-full bg-[#0B132B] text-white transition-all duration-300 font-sans border-b border-[#1C274C] ${scrolled ? 'shadow-xl shadow-black/40' : 'shadow-none'}`}>
+        <div className="flex items-center justify-between h-[72px] max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-10">
 
           {/* Left - Logo */}
-          <Link to="/" className="shrink-0">
+          <Link to="/" className="shrink-0 flex items-center">
             <VastraLogo />
           </Link>
 
-          {/* Center - Nav Links (Desktop) */}
-          <nav className="hidden lg:flex items-center gap-[36px] ml-14">
-            {navItems.map((item) => {
-              const gender = item.label.toLowerCase() as 'men' | 'women';
+          {/* Center - Nav with Mega Dropdowns (Desktop) */}
+          <nav className="hidden lg:flex items-center gap-1 xl:gap-2">
+            {navCategories.map((cat) => {
+              const hasSubs = cat.subs.length > 0;
+              const isOpen = openDropdown === cat.label;
+              const active = isActive(cat.to);
+              const activeSub = hoveredSub ?? (cat.subs[0]?.label ?? null);
+              const subItems = cat.subs;
               return (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  onMouseEnter={() => prefetchProducts({ gender, pageNum: 1, pageSize: 200 }, { ifOlderThan: 300 })}
-                  className={`relative text-[17px] font-bold tracking-wider transition-colors duration-200 group ${isActive(item.to)
-                    ? 'text-black dark:text-white'
-                    : 'text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-white'
-                    }`}
+                <div
+                  key={cat.to}
+                  className="relative"
+                  onMouseEnter={() => handleNavEnter(cat.label)}
+                  onMouseLeave={handleNavLeave}
                 >
-                  {item.label}
-                  <span className={`absolute -bottom-[6px] left-0 h-[3px] rounded-full transition-all duration-300 ease-out ${isActive(item.to)
-                    ? 'w-full bg-black dark:bg-white'
-                    : 'w-0 bg-black dark:bg-white group-hover:w-full'
-                    }`} />
-                </Link>
+                  {/* Nav button */}
+                  <Link
+                    to={cat.to}
+                    className={`flex items-center gap-1 px-2.5 xl:px-3 py-2 rounded-md text-[12.5px] xl:text-[13px] font-semibold tracking-wide transition-all duration-150 whitespace-nowrap ${
+                      active
+                        ? 'text-red-400'
+                        : isOpen
+                        ? 'text-white bg-white/5'
+                        : 'text-zinc-300 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    {cat.label}
+                    {hasSubs && (
+                      <ChevronDown
+                        className={`h-3.5 w-3.5 shrink-0 transition-transform duration-200 ${
+                          isOpen ? 'rotate-180 text-red-400' : 'text-zinc-400'
+                        }`}
+                        strokeWidth={2.5}
+                      />
+                    )}
+                  </Link>
+
+                  {/* Mega Dropdown */}
+                  <AnimatePresence>
+                    {isOpen && hasSubs && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -6, scaleY: 0.97 }}
+                        animate={{ opacity: 1, y: 0, scaleY: 1 }}
+                        exit={{ opacity: 0, y: -6, scaleY: 0.97 }}
+                        transition={{ duration: 0.15, ease: 'easeOut' }}
+                        style={{ transformOrigin: 'top center' }}
+                        className="absolute top-full left-0 mt-1 z-50 flex rounded-xl overflow-hidden shadow-2xl border border-[#1C274C] bg-white"
+                        onMouseEnter={handleDropdownEnter}
+                        onMouseLeave={handleDropdownLeave}
+                      >
+                        {/* Left panel – category list */}
+                        <div className="w-[230px] border-r border-gray-100 py-2">
+                          {navCategories.map((c) => {
+                            const isThisHovered = (hoveredSub === null && c.label === cat.label) || c.label === hoveredSub?.split('__')[0];
+                            const isHighlighted = c.label === (hoveredSub?.split('__')[0] ?? cat.label);
+                            return (
+                              <div
+                                key={c.label}
+                                className={`flex items-center justify-between px-5 py-3 cursor-pointer transition-colors duration-100 group/item ${
+                                  isHighlighted
+                                    ? 'bg-orange-50'
+                                    : 'hover:bg-gray-50'
+                                }`}
+                                onMouseEnter={() => setHoveredSub(c.label + '__')}
+                              >
+                                <span className={`text-[13px] font-medium ${
+                                  isHighlighted ? 'text-orange-500 font-semibold' : 'text-gray-800 group-hover/item:text-orange-500'
+                                }`}>
+                                  {c.label}
+                                </span>
+                                {c.subs.length > 0 && (
+                                  <ChevronRight className={`h-3.5 w-3.5 shrink-0 ${
+                                    isHighlighted ? 'text-orange-500' : 'text-gray-400 group-hover/item:text-orange-500'
+                                  }`} strokeWidth={2.5} />
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Right panel – subcategories of highlighted category */}
+                        {(() => {
+                          const highlightedCat = hoveredSub
+                            ? navCategories.find(c => c.label === hoveredSub.split('__')[0])
+                            : cat;
+                          if (!highlightedCat || highlightedCat.subs.length === 0) return null;
+                          return (
+                            <div className="w-[210px] py-2 bg-white">
+                              {highlightedCat.subs.map((sub) => (
+                                <Link
+                                  key={sub.to}
+                                  to={sub.to}
+                                  onClick={() => { setOpenDropdown(null); setHoveredSub(null); }}
+                                  className="block px-5 py-3 text-[13px] text-gray-800 hover:text-orange-500 hover:bg-orange-50 transition-colors duration-100 font-medium"
+                                >
+                                  {sub.label}
+                                </Link>
+                              ))}
+                            </div>
+                          );
+                        })()}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               );
             })}
           </nav>
 
           {/* Right - Actions */}
-          <div className="flex items-center gap-1 sm:gap-2 lg:gap-3 ml-auto">
+          <div className="flex items-center gap-0.5 sm:gap-1 lg:gap-1.5">
 
             {/* Desktop Search Bar */}
             <div ref={searchContainerRef} className="hidden md:block relative">
@@ -262,8 +450,8 @@ const Navbar = () => {
                 animate={searchFocused ? { scaleX: 1.05 } : { scaleX: 1 }}
                 transition={{ duration: 0.2 }}
               >
-                <div className={`flex items-center rounded-[25px] border transition-all duration-200 h-[50px] ${searchFocused ? 'border-black dark:border-white shadow-md bg-white dark:bg-zinc-900' : 'border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-500'}`}>
-                  <Search className="ml-5 mr-3 h-5 w-5 text-zinc-400 shrink-0" strokeWidth={1.5} />
+                <div className={`flex items-center rounded-[25px] border transition-all duration-200 h-[44px] ${searchFocused ? 'border-blue-400 bg-[#16223D] shadow-lg shadow-black/30' : 'border-[#1E2C4F] bg-[#101B36] hover:border-[#2C3E6B]'}`}>
+                  <Search className="ml-4 mr-2.5 h-4.5 w-4.5 text-zinc-400 shrink-0" strokeWidth={1.5} />
                   <input
                     ref={searchInputRef}
                     type="text"
@@ -271,13 +459,13 @@ const Navbar = () => {
                     onChange={(e) => { setSearchQuery(e.target.value); setSelectedSuggestionIdx(-1); }}
                     onFocus={() => setSearchFocused(true)}
                     placeholder="Search products..."
-                    className="flex-1 bg-transparent text-[15px] text-zinc-800 dark:text-white placeholder:text-zinc-400 focus:outline-none min-w-[180px] max-w-[220px] lg:min-w-[220px] text-left normal-case"
+                    className="flex-1 bg-transparent text-[14px] text-white placeholder:text-zinc-400 focus:outline-none min-w-[170px] max-w-[210px] lg:min-w-[210px] text-left normal-case"
                   />
                   {searchQuery && (
                     <button
                       type="button"
                       onClick={() => setSearchQuery('')}
-                      className="mr-2 p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded-full transition-colors cursor-pointer"
+                      className="mr-2 p-1 hover:bg-[#1E2C4F] rounded-full transition-colors cursor-pointer"
                     >
                       <X className="h-4 w-4 text-zinc-400" strokeWidth={2} />
                     </button>
@@ -293,7 +481,7 @@ const Navbar = () => {
                     animate={{ opacity: 1, y: 0, scaleY: 1 }}
                     exit={{ opacity: 0, y: -8, scaleY: 0.95 }}
                     transition={{ duration: 0.15 }}
-                    className="absolute top-full mt-2 left-0 right-0 bg-white dark:bg-zinc-900 rounded-xl shadow-xl border border-zinc-200 dark:border-zinc-700 overflow-hidden z-50"
+                    className="absolute top-full mt-2 left-0 right-0 bg-[#0F182E] rounded-xl shadow-2xl border border-[#1E2C4F] overflow-hidden z-50"
                     style={{ transformOrigin: 'top center' }}
                   >
                     <div className="py-2">
@@ -314,10 +502,10 @@ const Navbar = () => {
                                     to={item.to}
                                     onClick={() => { setSearchFocused(false); setSearchQuery(''); }}
                                     onMouseEnter={() => setSelectedSuggestionIdx(i)}
-                                    className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${selectedSuggestionIdx === i ? 'bg-zinc-100 dark:bg-zinc-800' : 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
+                                    className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${selectedSuggestionIdx === i ? 'bg-[#1E2C4F]' : 'hover:bg-[#16223D]'}`}
                                   >
                                     <Search className="h-3.5 w-3.5 text-zinc-400 shrink-0" strokeWidth={1.5} />
-                                    <span>{highlightMatch(item.label)}</span>
+                                    <span className="text-zinc-200">{highlightMatch(item.label)}</span>
                                   </Link>
                                 );
                               }
@@ -328,20 +516,20 @@ const Navbar = () => {
                                     to={item.to}
                                     onClick={() => { setSearchFocused(false); setSearchQuery(''); }}
                                     onMouseEnter={() => setSelectedSuggestionIdx(i)}
-                                    className={`flex items-center gap-3 px-4 py-2.5 transition-colors ${selectedSuggestionIdx === i ? 'bg-zinc-100 dark:bg-zinc-800' : 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
+                                    className={`flex items-center gap-3 px-4 py-2.5 transition-colors ${selectedSuggestionIdx === i ? 'bg-[#1E2C4F]' : 'hover:bg-[#16223D]'}`}
                                   >
-                                    <div className="w-10 h-12 shrink-0 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 overflow-hidden rounded">
+                                    <div className="w-10 h-12 shrink-0 bg-[#16223D] border border-[#25365E] overflow-hidden rounded">
                                       {item.image && (
                                         <img src={item.image} alt="" className="w-full h-full object-cover" />
                                       )}
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                      <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200 truncate">
+                                      <p className="text-sm font-medium text-white truncate">
                                         {highlightMatch(item.label)}
                                       </p>
-                                      <p className="text-xs text-zinc-500 mt-0.5 truncate">{item.category}</p>
+                                      <p className="text-xs text-zinc-400 mt-0.5 truncate">{item.category}</p>
                                     </div>
-                                    <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 shrink-0">{item.price}</span>
+                                    <span className="text-sm font-semibold text-blue-300 shrink-0">{item.price}</span>
                                   </Link>
                                 );
                               }
@@ -352,9 +540,9 @@ const Navbar = () => {
                         {/* Empty */}
                         {!isSearchFetching && products.length === 0 && debouncedQuery.length >= 2 && (
                           <div className="px-4 py-8 text-center">
-                            <Search className="h-6 w-6 mx-auto mb-2 text-zinc-300 dark:text-zinc-600" strokeWidth={1.5} />
-                            <p className="text-sm text-zinc-500">No products found for "{debouncedQuery}"</p>
-                            <p className="text-xs text-zinc-400 mt-1">Try a different search term</p>
+                            <Search className="h-6 w-6 mx-auto mb-2 text-zinc-500" strokeWidth={1.5} />
+                            <p className="text-sm text-zinc-400">No products found for "{debouncedQuery}"</p>
+                            <p className="text-xs text-zinc-500 mt-1">Try a different search term</p>
                           </div>
                         )}
                       </div>
@@ -365,23 +553,23 @@ const Navbar = () => {
 
             {/* Mobile Search Trigger */}
             <button
-              className="md:hidden flex items-center justify-center w-11 h-11 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors cursor-pointer"
+              className="md:hidden flex items-center justify-center w-10 h-10 hover:bg-[#1E2C4F] rounded-full transition-colors cursor-pointer text-zinc-300 hover:text-white"
               onClick={() => setMobileSearchOpen(true)}
               aria-label="Search"
             >
-              <Search className="h-6 w-6" strokeWidth={1.5} />
+              <Search className="h-5.5 w-5.5" strokeWidth={1.5} />
             </button>
 
             {/* Theme Toggle */}
-            <div className="hidden md:flex items-center justify-center w-11 h-11 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors cursor-pointer">
+            <div className="hidden md:flex items-center justify-center w-10 h-10 hover:bg-[#1E2C4F] rounded-full transition-colors cursor-pointer text-zinc-300 hover:text-white">
               <ThemeToggle />
             </div>
 
             {/* Wishlist */}
-            <Link to="/wishlist" className="hidden md:flex relative items-center justify-center w-11 h-11 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors group">
-              <Heart className="h-6 w-6 text-zinc-600 dark:text-zinc-400 group-hover:scale-105 transition-transform duration-200" strokeWidth={1.5} />
+            <Link to="/wishlist" className="hidden md:flex relative items-center justify-center w-10 h-10 hover:bg-[#1E2C4F] rounded-full transition-colors group text-zinc-300 hover:text-white">
+              <Heart className="h-5.5 w-5.5 group-hover:scale-105 transition-transform duration-200" strokeWidth={1.5} />
               {wishlistCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 h-[20px] w-[20px] bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full shadow-sm">
+                <span className="absolute -top-0.5 -right-0.5 h-[18px] w-[18px] bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full shadow-sm">
                   {wishlistCount}
                 </span>
               )}
@@ -391,8 +579,8 @@ const Navbar = () => {
             <div className="relative" ref={profileRef}>
               <button
                 onClick={() => setProfileOpen(!profileOpen)}
-                className="relative flex items-center justify-center w-11 h-11 rounded-full transition-all duration-200 cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800 group"
-                style={{ backgroundColor: userInfo ? '#111111' : 'transparent' }}
+                className="relative flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200 cursor-pointer hover:bg-[#1E2C4F] text-zinc-300 hover:text-white group"
+                style={{ backgroundColor: userInfo ? '#16223D' : 'transparent' }}
                 aria-label="Profile"
               >
                 {userInfo ? (
@@ -401,7 +589,7 @@ const Navbar = () => {
                     {(userInfo.lastName?.[0] || '')}
                   </span>
                 ) : (
-                  <UserRound className="h-6 w-6 text-zinc-600 dark:text-zinc-400 group-hover:scale-105 transition-all duration-200" strokeWidth={1.5} />
+                  <UserRound className="h-5.5 w-5.5 group-hover:scale-105 transition-all duration-200" strokeWidth={1.5} />
                 )}
               </button>
 
@@ -509,12 +697,12 @@ const Navbar = () => {
             {/* Cart */}
             <button
               onClick={() => setMiniCartOpen(true)}
-              className="relative flex items-center justify-center w-11 h-11 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors group cursor-pointer"
+              className="relative flex items-center justify-center w-10 h-10 hover:bg-[#1E2C4F] rounded-full transition-colors group cursor-pointer text-zinc-300 hover:text-white"
               aria-label="Open cart"
             >
-              <ShoppingBag className="h-6 w-6 text-zinc-600 dark:text-zinc-400 group-hover:scale-105 transition-transform duration-200" strokeWidth={1.5} />
+              <ShoppingBag className="h-5.5 w-5.5 group-hover:scale-105 transition-transform duration-200" strokeWidth={1.5} />
               {cartCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 min-w-[20px] px-1 h-[20px] bg-[#f97316] text-white text-[10px] font-bold flex items-center justify-center rounded-full shadow-sm">
+                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] px-1 h-[18px] bg-[#f97316] text-white text-[10px] font-bold flex items-center justify-center rounded-full shadow-sm">
                   {cartCount > 99 ? '99+' : cartCount}
                 </span>
               )}
@@ -522,11 +710,11 @@ const Navbar = () => {
 
             {/* Mobile menu toggle (Right side) */}
             <button
-              className="lg:hidden flex items-center justify-center w-11 h-11 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors cursor-pointer ml-1"
+              className="lg:hidden flex items-center justify-center w-10 h-10 hover:bg-[#1E2C4F] rounded-full transition-colors cursor-pointer ml-1 text-zinc-300 hover:text-white"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label="Toggle menu"
             >
-              {mobileMenuOpen ? <X className="h-6 w-6" strokeWidth={1.5} /> : <Menu className="h-6 w-6" strokeWidth={1.5} />}
+              {mobileMenuOpen ? <X className="h-5.5 w-5.5" strokeWidth={1.5} /> : <Menu className="h-5.5 w-5.5" strokeWidth={1.5} />}
             </button>
           </div>
         </div>
@@ -586,14 +774,14 @@ const Navbar = () => {
 
               {/* Nav links */}
               <p className="px-3 py-2 text-[10px] font-semibold tracking-widest text-zinc-400 uppercase">Shop</p>
-              {navItems.map((item) => (
+              {navCategories.map((cat) => (
                 <Link
-                  key={item.to}
-                  to={item.to}
+                  key={cat.to}
+                  to={cat.to}
                   onClick={() => setMobileMenuOpen(false)}
                   className="block px-4 py-3 text-[17px] font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:text-black dark:hover:text-white rounded-lg transition-colors"
                 >
-                  {item.label}
+                  {cat.label}
                 </Link>
               ))}
 

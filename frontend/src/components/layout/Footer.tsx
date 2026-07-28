@@ -19,10 +19,11 @@ const Footer = () => {
           {/* Brand Column */}
           <div className="space-y-4 sm:space-y-5">
             <Link to="/" className="inline-block">
-              <span className="text-3xl sm:text-4xl font-black tracking-tighter text-white uppercase">VASTRA</span>
+              <span className="text-2xl sm:text-3xl font-black tracking-widest text-white uppercase font-sans">NAREDI.IN</span>
+              <span className="block text-[10px] tracking-[0.2em] text-zinc-400 font-bold uppercase mt-1">AUTOMOTIVE TOOLS</span>
             </Link>
             <p className="text-sm sm:text-base text-zinc-400 leading-relaxed max-w-sm">
-              Elevating everyday fashion with premium quality, modern design, and timeless Indian craftsmanship.
+              Your premier destination for professional automotive diagnostic equipment, battery chargers, jump starters, and additives.
             </p>
           </div>
 
@@ -30,16 +31,31 @@ const Footer = () => {
           <div className="col-span-1 sm:col-span-2 lg:col-span-2 grid grid-cols-2 gap-8 sm:gap-10">
             {/* Shop Navigation */}
             <div className="space-y-4 sm:space-y-5">
-              <h4 className="text-xs sm:text-sm font-bold tracking-[0.2em] text-zinc-300 uppercase">Shop</h4>
-              <ul className="space-y-3 text-sm sm:text-base font-medium">
+              <h4 className="text-xs sm:text-sm font-bold tracking-[0.2em] text-zinc-300 uppercase">Shop Categories</h4>
+              <ul className="space-y-2 text-sm font-medium">
                 <li>
-                  <Link to="/collections/men" className="text-zinc-400 hover:text-white transition-colors duration-200 block py-1">
-                    Men's Collection
+                  <Link to="/collections/battery-chargers" className="text-zinc-400 hover:text-white transition-colors duration-200 block py-0.5">
+                    Battery Chargers
                   </Link>
                 </li>
                 <li>
-                  <Link to="/collections/women" className="text-zinc-400 hover:text-white transition-colors duration-200 block py-1">
-                    Women's Collection
+                  <Link to="/collections/battery-testers" className="text-zinc-400 hover:text-white transition-colors duration-200 block py-0.5">
+                    Battery Testers
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/collections/performance-additives" className="text-zinc-400 hover:text-white transition-colors duration-200 block py-0.5">
+                    Performance Additives
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/collections/jump-starters" className="text-zinc-400 hover:text-white transition-colors duration-200 block py-0.5">
+                    Jump Starters
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/collections/obd-tools" className="text-zinc-400 hover:text-white transition-colors duration-200 block py-0.5">
+                    OBD Tools
                   </Link>
                 </li>
               </ul>

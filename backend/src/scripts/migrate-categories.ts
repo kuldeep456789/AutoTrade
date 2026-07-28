@@ -4,7 +4,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../app.module';
 import { Model } from 'mongoose';
 import { Product } from '../modules/products/schemas/product.schema';
-import { getCategoryInfoById } from '../modules/cj/collections';
+import { getCategoryById } from '../modules/cj/collections';
 
 async function bootstrap() {
   const app = await NestFactory.createApplicationContext(AppModule);
@@ -15,17 +15,16 @@ async function bootstrap() {
 
   let updatedCount = 0;
   for (const product of products) {
-    const mapping = getCategoryInfoById(product.categoryId);
+    const mapping = getCategoryById(product.categoryId);
 
-    if (mapping && mapping.subcategoryName) {
+    if (mapping) {
+      const { parentCategory, item } = mapping;
       if (
-        product.subcategoryName !== mapping.subcategoryName ||
-        product.gender !== mapping.gender ||
-        product.collectionType !== mapping.collectionType
+        product.subcategoryName !== item.name ||
+        product.collectionType !== parentCategory
       ) {
-        product.subcategoryName = mapping.subcategoryName;
-        product.gender = mapping.gender;
-        product.collectionType = mapping.collectionType;
+        product.subcategoryName = item.name;
+        product.collectionType = parentCategory;
         await product.save();
         updatedCount++;
       }

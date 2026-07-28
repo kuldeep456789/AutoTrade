@@ -5,43 +5,34 @@ import { ProductsService } from './products.service';
 export class CollectionsController {
   constructor(private readonly productsService: ProductsService) {}
 
-  @Get('men')
-  async getMenCollection(@Query() query: any) {
-    return this.productsService.getProducts({ ...query, gender: 'men' });
+  @Get('all')
+  async getAllCollection(@Query() query: any) {
+    return this.productsService.getProducts(query);
   }
 
-  @Get('women')
-  async getWomenCollection(@Query() query: any) {
-    return this.productsService.getProducts({ ...query, gender: 'women' });
-  }
-
-  @Get(':gender/:categorySlug')
-  async getCategoryCollection(
-    @Param('gender') gender: string,
-    @Param('categorySlug') categorySlug: string,
+  @Get(':collectionSlug')
+  async getCollection(
+    @Param('collectionSlug') collectionSlug: string,
     @Query() query: any,
   ) {
-    if (
-      gender.toLowerCase() === 'men' &&
-      categorySlug.toLowerCase() === 'jeans'
-    ) {
-      throw new (require('@nestjs/common').NotFoundException)(
-        'The /jeans API endpoint is removed. Please use /men-jeans instead.',
-      );
-    }
-
-    let resolvedCategorySlug = categorySlug;
-    if (
-      gender.toLowerCase() === 'men' &&
-      categorySlug.toLowerCase() === 'men-jeans'
-    ) {
-      resolvedCategorySlug = 'jeans';
-    }
-
+    const subcategoryName = collectionSlug.replace(/-/g, ' ');
     return this.productsService.getProducts({
       ...query,
-      gender,
-      subcategoryName: resolvedCategorySlug.replace(/-/g, ' '),
+      subcategoryName,
+    });
+  }
+
+  @Get(':parentCategory/:subcategorySlug')
+  async getSubcategoryCollection(
+    @Param('parentCategory') parentCategory: string,
+    @Param('subcategorySlug') subcategorySlug: string,
+    @Query() query: any,
+  ) {
+    const subcategoryName = subcategorySlug.replace(/-/g, ' ');
+    return this.productsService.getProducts({
+      ...query,
+      collectionType: parentCategory.replace(/-/g, ' '),
+      subcategoryName,
     });
   }
 }
