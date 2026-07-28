@@ -42,11 +42,11 @@ const HomePage = () => {
   const carouselRef = useRef<HTMLDivElement>(null);
 
   const heroImages = [
-    '/video/one.png',
-    '/video/two.png',
-    '/video/three.png',
-    '/video/four.png',
-    '/video/five.png'
+    '/img/one.png',
+    '/img/two.png',
+    '/img/three.png',
+    '/img/four.png',
+    '/img/five.png'
   ];
 
   const [currentHeroIdx, setCurrentHeroIdx] = useState(0);

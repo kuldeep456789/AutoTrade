@@ -15,11 +15,11 @@ const Footer = () => {
       {/* Main Footer Links */}
       <div className="max-w-7xl mx-auto px-6 sm:px-8 py-12 sm:py-20">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 sm:gap-12">
-          
+
           {/* Brand Column */}
           <div className="space-y-4 sm:space-y-5">
             <Link to="/" className="inline-block">
-              <span className="text-2xl sm:text-3xl font-black tracking-widest text-white uppercase font-sans">NAREDI.IN</span>
+              {/* <span className="text-2xl sm:text-3xl font-black tracking-widest text-white uppercase font-sans">NAREDI.IN</span> */}
               <span className="block text-[10px] tracking-[0.2em] text-zinc-400 font-bold uppercase mt-1">AUTOMOTIVE TOOLS</span>
             </Link>
             <p className="text-sm sm:text-base text-zinc-400 leading-relaxed max-w-sm">
