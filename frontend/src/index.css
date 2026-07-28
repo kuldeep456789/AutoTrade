@@ -1,0 +1,354 @@
+/* stylelint-disable at-rule-no-unknown */
+@import "tailwindcss";
+
+/* ── Tailwind v4: dark mode via .dark class ── */
+@variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* Font families */
+  --font-family-sans: "Space Grotesk", "Inter", sans-serif;
+  --font-family-mono: "JetBrains Mono", monospace;
+
+  /* Brand colors */
+  --color-brand-dark: #000000;
+  --color-brand-light: #ffffff;
+
+  /* Global theme mappings */
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
+  /* Map red to orange for a consistent, premium orange-accented layout across the codebase */
+  --color-red-50: var(--color-orange-50);
+  --color-red-100: var(--color-orange-100);
+  --color-red-200: var(--color-orange-200);
+  --color-red-300: var(--color-orange-300);
+  --color-red-400: var(--color-orange-400);
+  --color-red-500: var(--color-orange-500);
+  --color-red-600: var(--color-orange-600);
+  --color-red-700: var(--color-orange-700);
+  --color-red-800: var(--color-orange-800);
+  --color-red-900: var(--color-orange-900);
+  --color-red-950: var(--color-orange-950);
+}
+
+@layer base {
+  :root {
+    --background: 240 10% 99%;
+    --foreground: 240 10% 4%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 4%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 4%;
+
+    --primary: 24 95% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 240 5% 96%;
+    --secondary-foreground: 240 10% 4%;
+
+    --muted: 240 5% 96%;
+    --muted-foreground: 240 4% 45%;
+
+    --accent: 24 95% 97%;
+    --accent-foreground: 24 95% 35%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 240 6% 90%;
+    --input: 240 6% 90%;
+    --ring: 24 95% 50%;
+
+    --radius: 8px;
+  }
+
+  .dark {
+    --background: 240 10% 6%;
+    --foreground: 240 5% 98%;
+
+    --card: 240 8% 10%;
+    --card-foreground: 240 5% 98%;
+
+    --popover: 240 8% 10%;
+    --popover-foreground: 240 5% 98%;
+
+    --primary: 24 95% 53%;
+    --primary-foreground: 240 10% 4%;
+
+    --secondary: 240 6% 12%;
+    --secondary-foreground: 240 5% 98%;
+
+    --muted: 240 6% 12%;
+    --muted-foreground: 240 5% 65%;
+
+    --accent: 240 6% 12%;
+    --accent-foreground: 240 5% 98%;
+
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 240 6% 18%;
+    --input: 240 6% 18%;
+    --ring: 24 95% 53%;
+
+    /* Redefine Tailwind's default dark backgrounds to match a premium charcoal aesthetic rather than pitch black */
+    --color-zinc-950: hsl(240 10% 6%);
+    --color-zinc-900: hsl(240 8% 10%);
+    --color-zinc-800: hsl(240 6% 14%);
+    --color-zinc-700: hsl(240 5% 24%);
+    --color-gray-900: hsl(240 8% 10%);
+    --color-gray-800: hsl(240 6% 14%);
+    --color-gray-950: hsl(240 10% 6%);
+
+    /* Override Tailwind shadow colors for dark mode */
+    --tw-shadow-color: 240 6% 3%;
+    --tw-shadow: 0 4px 6px -1px rgba(0,0,0,0.4), 0 2px 4px -2px rgba(0,0,0,0.3);
+  }
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
+  *,
+  *::before,
+  *::after {
+    border-color: hsl(var(--border));
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: "Outfit", "Space Grotesk", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Instant responsive feedback & clean caret cursor placement */
+  button,
+  a,
+  input,
+  textarea,
+  select {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  input,
+  textarea,
+  select {
+    text-align: left !important;
+    direction: ltr !important;
+    text-transform: none;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    text-align: left !important;
+    text-transform: none;
+  }
+
+  img {
+    transition: opacity 250ms ease, transform 150ms ease;
+  }
+
+  ::selection {
+    background-color: #1a1a1a;
+    color: #fff;
+  }
+
+  .dark ::selection {
+    background-color: #fff;
+    color: #1a1a1a;
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: -468px 0; }
+  100% { background-position: 468px 0; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.25s ease-out;
+}
+
+.shimmer {
+  background: linear-gradient(
+    to right,
+    hsl(var(--secondary)) 4%,
+    hsl(var(--accent)) 25%,
+    hsl(var(--secondary)) 36%
+  );
+  background-size: 1000px 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground)); }
+
+/* ── Image quality ── */
+img {
+  image-rendering: auto;
+  -ms-interpolation-mode: bicubic;
+}
+
+/* ── Product Description (CJ HTML) ── */
+.product-description {
+  max-width: 100%;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.product-description h1 {
+  font-size: 1.25rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: hsl(var(--foreground));
+  margin: 1.5rem 0 0.75rem;
+  text-transform: uppercase;
+}
+
+.product-description h2 {
+  font-size: 1.125rem;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  color: hsl(var(--foreground));
+  margin: 1.25rem 0 0.5rem;
+}
+
+.product-description h3 {
+  font-size: 1rem;
+  font-weight: 800;
+  color: hsl(var(--foreground));
+  margin: 1rem 0 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.product-description p {
+  margin: 0.5rem 0;
+  line-height: 1.7;
+}
+
+.product-description ol {
+  list-style: decimal;
+  padding-left: 1.5rem;
+  margin: 0.75rem 0;
+}
+
+.product-description ul {
+  list-style: disc;
+  padding-left: 1.5rem;
+  margin: 0.75rem 0;
+}
+
+.product-description li {
+  margin: 0.4rem 0;
+  line-height: 1.6;
+}
+
+.product-description b,
+.product-description strong {
+  font-weight: 800;
+  color: hsl(var(--foreground));
+}
+
+.product-description img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+  border: 2px solid hsl(var(--border));
+  margin: 1rem 0;
+  display: block;
+}
+
+.product-description a {
+  color: hsl(var(--primary));
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.product-description a:hover {
+  opacity: 0.8;
+}
+
+.product-description br + br {
+  display: none;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.6s ease-out;
+}
+
+@keyframes popupFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Hide scrollbar utility classes */
+.hide-scrollbar,
+.scrollbar-hide,
+.no-scrollbar {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+.hide-scrollbar::-webkit-scrollbar,
+.scrollbar-hide::-webkit-scrollbar,
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Razorpay Modal Responsive Overlay Fixes */
+.razorpay-container {
+  z-index: 999999 !important;
+}
+iframe.razorpay-checkout-frame {
+  max-width: 100vw !important;
+  max-height: 100vh !important;
+}
