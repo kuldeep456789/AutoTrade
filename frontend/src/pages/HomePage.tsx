@@ -23,38 +23,16 @@ const HomePage = () => {
     }
   }, [location.state]);
 
-  /**
-   * Two warehouse fetches: one for men, one for women.
-   * RTK Query caches both for 10 minutes. CollectionPage, Navbar search,
-   * and any other component that calls useGetProductsQuery with the same
-   * args will reuse the same cached response — no extra network requests.
-   */
-  const { data: menData } = useGetProductsQuery({
-    gender: 'men',
+
+  // Fetch latest products for the featured carousel
+  const { data: latestProductsData } = useGetProductsQuery({
     pageNum: 1,
-    pageSize: 200,
+    pageSize: 10,
   });
 
-  const { data: womenData } = useGetProductsQuery({
-    gender: 'women',
-    pageNum: 1,
-    pageSize: 200,
-  });
-
-  const menProducts = Array.isArray(menData?.products) ? menData.products : [];
-  const womenProducts = Array.isArray(womenData?.products) ? womenData.products : [];
-
-
-
-  // Featured carousel — mix of first 5 men + 5 women products
-  const carouselProducts = useMemo(() => {
-    const mixed: any[] = [];
-    const max = Math.min(menProducts.length, womenProducts.length, 5);
-    for (let i = 0; i < max; i++) {
-      mixed.push(menProducts[i], womenProducts[i]);
-    }
-    return mixed.slice(0, 10);
-  }, [menProducts, womenProducts]);
+  const carouselProducts = Array.isArray(latestProductsData?.products) 
+    ? latestProductsData.products 
+    : [];
 
   const carouselRef = useRef<HTMLDivElement>(null);
 
@@ -193,18 +171,18 @@ const HomePage = () => {
               </div>
             </div>
             <div className="relative group">
-              <div 
+              <div
                 ref={carouselRef}
                 className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-4 -mx-6 px-6 sm:-mx-10 sm:px-10 lg:-mx-16 lg:px-16"
                 style={{ scrollBehavior: 'smooth', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
               >
-                  {carouselProducts.map((product: any, index: number) => (
-                    <div key={`${product.pid || product._id || product.id}-${index}`} className="flex-shrink-0 w-[280px] sm:w-[320px] lg:w-[calc(25%-12px)] snap-start">
-                      <ProductCard product={product} />
-                    </div>
-                  ))}
+                {carouselProducts.map((product: any, index: number) => (
+                  <div key={`${product.pid || product._id || product.id}-${index}`} className="flex-shrink-0 w-[280px] sm:w-[320px] lg:w-[calc(25%-12px)] snap-start">
+                    <ProductCard product={product} />
+                  </div>
+                ))}
               </div>
-              
+
               {carouselProducts.length > 0 && (
                 <div className="flex justify-end mt-4 gap-3">
                   <button
@@ -238,7 +216,7 @@ const HomePage = () => {
 
 
       {/* Empty state — warehouse not yet populated */}
-      {menProducts.length === 0 && womenProducts.length === 0 && (
+      {carouselProducts.length === 0 && (
         <section className="py-24 text-center border-b-2 border-black dark:border-white">
           <p className="text-2xl font-black tracking-widest text-zinc-400">SYNCING PRODUCTS...</p>
           <p className="mt-3 text-sm text-zinc-500 font-normal normal-case">Products will appear once the hourly sync completes.</p>
