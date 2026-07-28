@@ -28,75 +28,75 @@ const navCategories: NavCategory[] = [
     label: 'Exterior Accessories',
     to: '/collections/exterior-accessories',
     subs: [
-      { label: 'Car Stickers',               to: '/collections/car-stickers' },
-      { label: 'Other Exterior Accessories',  to: '/collections/other-exterior-accessories' },
-      { label: 'Car Covers',                  to: '/collections/car-covers' },
+      { label: 'Car Stickers', to: '/collections/car-stickers' },
+      { label: 'Other Exterior Accessories', to: '/collections/other-exterior-accessories' },
+      { label: 'Car Covers', to: '/collections/car-covers' },
     ],
   },
   {
     label: 'Interior Accessories',
     to: '/collections/interior-accessories',
     subs: [
-      { label: 'Floor Mats',              to: '/collections/floor-mats' },
-      { label: 'Car Aromatherapy',        to: '/collections/car-aromatherapy' },
-      { label: 'Car Perfume',             to: '/collections/car-perfume' },
-      { label: 'Key Case for Car',        to: '/collections/key-case-for-car' },
-      { label: 'Steering Covers',         to: '/collections/steering-covers' },
+      { label: 'Floor Mats', to: '/collections/floor-mats' },
+      { label: 'Car Aromatherapy', to: '/collections/car-aromatherapy' },
+      { label: 'Car Perfume', to: '/collections/car-perfume' },
+      { label: 'Key Case for Car', to: '/collections/key-case-for-car' },
+      { label: 'Steering Covers', to: '/collections/steering-covers' },
       { label: 'Automobiles Seat Covers', to: '/collections/automobiles-seat-covers' },
-      { label: 'Stowing Tidying',         to: '/collections/stowing-tidying' },
+      { label: 'Stowing Tidying', to: '/collections/stowing-tidying' },
     ],
   },
   {
     label: 'Tools, Maintenance & Care',
     to: '/collections/tools-maintenance-care',
     subs: [
-      { label: 'Car Washer',                to: '/collections/car-washer' },
-      { label: 'Diagnostic Tools',          to: '/collections/diagnostic-tools' },
-      { label: 'Paint Care',                to: '/collections/paint-care' },
-      { label: 'Other Maintenance Products',to: '/collections/other-maintenance-products' },
+      { label: 'Car Washer', to: '/collections/car-washer' },
+      { label: 'Diagnostic Tools', to: '/collections/diagnostic-tools' },
+      { label: 'Paint Care', to: '/collections/paint-care' },
+      { label: 'Other Maintenance Products', to: '/collections/other-maintenance-products' },
     ],
   },
   {
     label: 'Car Electronics',
     to: '/collections/car-electronics',
     subs: [
-      { label: 'Vehicle Camera',          to: '/collections/vehicle-camera' },
-      { label: 'DVR & Dash Camera',       to: '/collections/dvr-dash-camera' },
-      { label: 'Car Monitors',            to: '/collections/car-monitors' },
-      { label: 'Vehicle GPS',             to: '/collections/vehicle-gps' },
-      { label: 'Car Mirror Video',        to: '/collections/car-mirror-video' },
-      { label: 'Car Radios',              to: '/collections/car-radios' },
-      { label: 'GPS Trackers',            to: '/collections/gps-trackers' },
-      { label: 'Car Multimedia Player',   to: '/collections/car-multimedia-player' },
-      { label: 'Alarm Systems & Security',to: '/collections/alarm-systems-security' },
-      { label: 'Jump Starter',            to: '/collections/jump-starter' },
+      { label: 'Vehicle Camera', to: '/collections/vehicle-camera' },
+      { label: 'DVR & Dash Camera', to: '/collections/dvr-dash-camera' },
+      { label: 'Car Monitors', to: '/collections/car-monitors' },
+      { label: 'Vehicle GPS', to: '/collections/vehicle-gps' },
+      { label: 'Car Mirror Video', to: '/collections/car-mirror-video' },
+      { label: 'Car Radios', to: '/collections/car-radios' },
+      { label: 'GPS Trackers', to: '/collections/gps-trackers' },
+      { label: 'Car Multimedia Player', to: '/collections/car-multimedia-player' },
+      { label: 'Alarm Systems & Security', to: '/collections/alarm-systems-security' },
+      { label: 'Jump Starter', to: '/collections/jump-starter' },
     ],
   },
   {
     label: 'Motorcycle Accessories & Parts',
     to: '/collections/motorcycle-accessories',
     subs: [
-      { label: 'Lighting',                     to: '/collections/motorcycle-lighting' },
-      { label: 'Exhaust & Exhaust Systems',     to: '/collections/exhaust-systems' },
-      { label: 'Motor Brake System',            to: '/collections/motor-brake-system' },
-      { label: 'Motorcycle Seat Covers',        to: '/collections/motorcycle-seat-covers' },
-      { label: 'Other Motorcycle Accessories',  to: '/collections/other-motorcycle-accessories' },
-      { label: 'Helmet Headset',                to: '/collections/helmet-headset' },
-      { label: 'Body & Frame',                  to: '/collections/body-frame' },
+      { label: 'Lighting', to: '/collections/motorcycle-lighting' },
+      { label: 'Exhaust & Exhaust Systems', to: '/collections/exhaust-systems' },
+      { label: 'Motor Brake System', to: '/collections/motor-brake-system' },
+      { label: 'Motorcycle Seat Covers', to: '/collections/motorcycle-seat-covers' },
+      { label: 'Other Motorcycle Accessories', to: '/collections/other-motorcycle-accessories' },
+      { label: 'Helmet Headset', to: '/collections/helmet-headset' },
+      { label: 'Body & Frame', to: '/collections/body-frame' },
     ],
   },
   {
     label: 'Auto Replacement Parts',
     to: '/collections/auto-replacement-parts',
     subs: [
-      { label: 'Interior Parts',                  to: '/collections/interior-parts' },
-      { label: 'Car Brake System',                to: '/collections/car-brake-system' },
-      { label: 'Spark Plugs & Ignition System',   to: '/collections/spark-plugs-ignition' },
-      { label: 'Automobiles Sensors',             to: '/collections/automobiles-sensors' },
-      { label: 'Exterior Parts',                  to: '/collections/exterior-parts' },
-      { label: 'Other Replacement Parts',         to: '/collections/other-replacement-parts' },
-      { label: 'Car Lights',                      to: '/collections/car-lights' },
-      { label: 'Windscreen Wipers & Windows',     to: '/collections/windscreen-wipers-windows' },
+      { label: 'Interior Parts', to: '/collections/interior-parts' },
+      { label: 'Car Brake System', to: '/collections/car-brake-system' },
+      { label: 'Spark Plugs & Ignition System', to: '/collections/spark-plugs-ignition' },
+      { label: 'Automobiles Sensors', to: '/collections/automobiles-sensors' },
+      { label: 'Exterior Parts', to: '/collections/exterior-parts' },
+      { label: 'Other Replacement Parts', to: '/collections/other-replacement-parts' },
+      { label: 'Car Lights', to: '/collections/car-lights' },
+      { label: 'Windscreen Wipers & Windows', to: '/collections/windscreen-wipers-windows' },
     ],
   },
 ];
@@ -328,7 +328,7 @@ const Navbar = () => {
           {/* Left - Logo */}
           <Link to="/" className="shrink-0 flex items-center group">
             <img
-              src="/img/logo.jpg"
+              src="/img/logo.png"
               alt="AutoTrade"
               className="h-12 w-auto object-contain transition-transform duration-200 group-hover:scale-105"
             />
@@ -352,20 +352,18 @@ const Navbar = () => {
                   {/* Nav button */}
                   <Link
                     to={cat.to}
-                    className={`flex items-center gap-1 px-2.5 xl:px-3 py-2 rounded-md text-[12.5px] xl:text-[13px] font-semibold tracking-wide transition-all duration-150 whitespace-nowrap ${
-                      active
+                    className={`flex items-center gap-1 px-2.5 xl:px-3 py-2 rounded-md text-[12.5px] xl:text-[13px] font-semibold tracking-wide transition-all duration-150 whitespace-nowrap ${active
                         ? 'text-red-400'
                         : isOpen
-                        ? 'text-white bg-white/5'
-                        : 'text-zinc-300 hover:text-white hover:bg-white/5'
-                    }`}
+                          ? 'text-white bg-white/5'
+                          : 'text-zinc-300 hover:text-white hover:bg-white/5'
+                      }`}
                   >
                     {cat.label}
                     {hasSubs && (
                       <ChevronDown
-                        className={`h-3.5 w-3.5 shrink-0 transition-transform duration-200 ${
-                          isOpen ? 'rotate-180 text-red-400' : 'text-zinc-400'
-                        }`}
+                        className={`h-3.5 w-3.5 shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180 text-red-400' : 'text-zinc-400'
+                          }`}
                         strokeWidth={2.5}
                       />
                     )}
@@ -392,22 +390,19 @@ const Navbar = () => {
                             return (
                               <div
                                 key={c.label}
-                                className={`flex items-center justify-between px-5 py-3 cursor-pointer transition-colors duration-100 group/item ${
-                                  isHighlighted
+                                className={`flex items-center justify-between px-5 py-3 cursor-pointer transition-colors duration-100 group/item ${isHighlighted
                                     ? 'bg-orange-50'
                                     : 'hover:bg-gray-50'
-                                }`}
+                                  }`}
                                 onMouseEnter={() => setHoveredSub(c.label + '__')}
                               >
-                                <span className={`text-[13px] font-medium ${
-                                  isHighlighted ? 'text-orange-500 font-semibold' : 'text-gray-800 group-hover/item:text-orange-500'
-                                }`}>
+                                <span className={`text-[13px] font-medium ${isHighlighted ? 'text-orange-500 font-semibold' : 'text-gray-800 group-hover/item:text-orange-500'
+                                  }`}>
                                   {c.label}
                                 </span>
                                 {c.subs.length > 0 && (
-                                  <ChevronRight className={`h-3.5 w-3.5 shrink-0 ${
-                                    isHighlighted ? 'text-orange-500' : 'text-gray-400 group-hover/item:text-orange-500'
-                                  }`} strokeWidth={2.5} />
+                                  <ChevronRight className={`h-3.5 w-3.5 shrink-0 ${isHighlighted ? 'text-orange-500' : 'text-gray-400 group-hover/item:text-orange-500'
+                                    }`} strokeWidth={2.5} />
                                 )}
                               </div>
                             );
@@ -495,61 +490,61 @@ const Navbar = () => {
                           <Loader2 className="h-5 w-5 animate-spin text-zinc-400" strokeWidth={1.5} />
                         </div>
                       )}
-                        {/* Results */}
-                        {!isSearchFetching && (suggestionList.length > 0) && (
-                          <div>
-                            {suggestionList.map((item: any, i: number) => {
-                              if (item.type === 'category') {
-                                return (
-                                  <Link
-                                    key={`cat-${item.label}-${i}`}
-                                    to={item.to}
-                                    onClick={() => { setSearchFocused(false); setSearchQuery(''); }}
-                                    onMouseEnter={() => setSelectedSuggestionIdx(i)}
-                                    className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${selectedSuggestionIdx === i ? 'bg-[#1E2C4F]' : 'hover:bg-[#16223D]'}`}
-                                  >
-                                    <Search className="h-3.5 w-3.5 text-zinc-400 shrink-0" strokeWidth={1.5} />
-                                    <span className="text-zinc-200">{highlightMatch(item.label)}</span>
-                                  </Link>
-                                );
-                              }
-                              if (item.type === 'product') {
-                                return (
-                                  <Link
-                                    key={`prod-${item.to}-${i}`}
-                                    to={item.to}
-                                    onClick={() => { setSearchFocused(false); setSearchQuery(''); }}
-                                    onMouseEnter={() => setSelectedSuggestionIdx(i)}
-                                    className={`flex items-center gap-3 px-4 py-2.5 transition-colors ${selectedSuggestionIdx === i ? 'bg-[#1E2C4F]' : 'hover:bg-[#16223D]'}`}
-                                  >
-                                    <div className="w-10 h-12 shrink-0 bg-[#16223D] border border-[#25365E] overflow-hidden rounded">
-                                      {item.image && (
-                                        <img src={item.image} alt="" className="w-full h-full object-cover" />
-                                      )}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <p className="text-sm font-medium text-white truncate">
-                                        {highlightMatch(item.label)}
-                                      </p>
-                                      <p className="text-xs text-zinc-400 mt-0.5 truncate">{item.category}</p>
-                                    </div>
-                                    <span className="text-sm font-semibold text-blue-300 shrink-0">{item.price}</span>
-                                  </Link>
-                                );
-                              }
-                              return null;
-                            })}
-                          </div>
-                        )}
-                        {/* Empty */}
-                        {!isSearchFetching && products.length === 0 && debouncedQuery.length >= 2 && (
-                          <div className="px-4 py-8 text-center">
-                            <Search className="h-6 w-6 mx-auto mb-2 text-zinc-500" strokeWidth={1.5} />
-                            <p className="text-sm text-zinc-400">No products found for "{debouncedQuery}"</p>
-                            <p className="text-xs text-zinc-500 mt-1">Try a different search term</p>
-                          </div>
-                        )}
-                      </div>
+                      {/* Results */}
+                      {!isSearchFetching && (suggestionList.length > 0) && (
+                        <div>
+                          {suggestionList.map((item: any, i: number) => {
+                            if (item.type === 'category') {
+                              return (
+                                <Link
+                                  key={`cat-${item.label}-${i}`}
+                                  to={item.to}
+                                  onClick={() => { setSearchFocused(false); setSearchQuery(''); }}
+                                  onMouseEnter={() => setSelectedSuggestionIdx(i)}
+                                  className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${selectedSuggestionIdx === i ? 'bg-[#1E2C4F]' : 'hover:bg-[#16223D]'}`}
+                                >
+                                  <Search className="h-3.5 w-3.5 text-zinc-400 shrink-0" strokeWidth={1.5} />
+                                  <span className="text-zinc-200">{highlightMatch(item.label)}</span>
+                                </Link>
+                              );
+                            }
+                            if (item.type === 'product') {
+                              return (
+                                <Link
+                                  key={`prod-${item.to}-${i}`}
+                                  to={item.to}
+                                  onClick={() => { setSearchFocused(false); setSearchQuery(''); }}
+                                  onMouseEnter={() => setSelectedSuggestionIdx(i)}
+                                  className={`flex items-center gap-3 px-4 py-2.5 transition-colors ${selectedSuggestionIdx === i ? 'bg-[#1E2C4F]' : 'hover:bg-[#16223D]'}`}
+                                >
+                                  <div className="w-10 h-12 shrink-0 bg-[#16223D] border border-[#25365E] overflow-hidden rounded">
+                                    {item.image && (
+                                      <img src={item.image} alt="" className="w-full h-full object-cover" />
+                                    )}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-white truncate">
+                                      {highlightMatch(item.label)}
+                                    </p>
+                                    <p className="text-xs text-zinc-400 mt-0.5 truncate">{item.category}</p>
+                                  </div>
+                                  <span className="text-sm font-semibold text-blue-300 shrink-0">{item.price}</span>
+                                </Link>
+                              );
+                            }
+                            return null;
+                          })}
+                        </div>
+                      )}
+                      {/* Empty */}
+                      {!isSearchFetching && products.length === 0 && debouncedQuery.length >= 2 && (
+                        <div className="px-4 py-8 text-center">
+                          <Search className="h-6 w-6 mx-auto mb-2 text-zinc-500" strokeWidth={1.5} />
+                          <p className="text-sm text-zinc-400">No products found for "{debouncedQuery}"</p>
+                          <p className="text-xs text-zinc-500 mt-1">Try a different search term</p>
+                        </div>
+                      )}
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
