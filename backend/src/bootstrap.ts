@@ -15,8 +15,8 @@ export async function bootstrap() {
     credentials: true,
   });
   const config = new DocumentBuilder()
-    .setTitle('VASTRA API')
-    .setDescription('API documentation for VASTRA')
+    .setTitle('AutoTrade API')
+    .setDescription('API documentation for AutoTrade')
     .setVersion('1.0')
     .addBearerAuth()
     .build();

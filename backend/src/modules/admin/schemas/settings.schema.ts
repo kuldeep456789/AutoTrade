@@ -5,10 +5,10 @@ export type SettingsDocument = HydratedDocument<Settings>;
 
 @Schema({ timestamps: true })
 export class Settings {
-  @Prop({ default: 'Vastra' })
+  @Prop({ default: 'AutoTrade' })
   storeName: string;
 
-  @Prop({ default: 'hello@vastra.in' })
+  @Prop({ default: 'hello@autotrade.in' })
   storeEmail: string;
 
   @Prop({ default: 'INR' })

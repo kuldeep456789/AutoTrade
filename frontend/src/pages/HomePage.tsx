@@ -145,17 +145,17 @@ const HomePage = () => {
         <div className="relative z-10 flex flex-col justify-center h-full w-full max-w-[1920px] mx-auto px-6 sm:px-10 lg:px-16 pt-10">
           <div className="max-w-2xl w-full">
             <h1 className="text-6xl sm:text-8xl lg:text-[100px] font-black leading-[0.85] tracking-tighter text-white drop-shadow-2xl">
-              VASTRA
+              AutoTrade
             </h1>
             <p className="mt-6 sm:mt-8 text-lg sm:text-xl text-white/95 max-w-lg leading-relaxed font-medium normal-case tracking-normal drop-shadow-md">
-              Elevating Everyday Fashion with Premium Quality, Modern Design, and Timeless Style.
+              Drive Business Forward with Premium Automotive Accessories, Electronics & High-Performance Replacement Parts.
             </p>
             <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row gap-4 sm:gap-5 items-center w-full sm:w-auto">
-              <Link to="/collections/men" className="inline-flex w-full sm:w-auto items-center justify-center h-[56px] sm:h-[64px] px-10 sm:px-14 bg-white text-black text-[15px] sm:text-[16px] font-bold tracking-widest transition-all duration-300 hover:bg-zinc-200 border-2 border-white hover:scale-105 active:scale-95 shadow-[0_4px_20px_rgba(255,255,255,0.2)]">
-                SHOP MEN
+              <Link to="/collections/exterior-accessories" className="inline-flex w-full sm:w-auto items-center justify-center h-[56px] sm:h-[64px] px-10 sm:px-14 bg-red-600 text-white text-[15px] sm:text-[16px] font-bold tracking-widest transition-all duration-300 hover:bg-red-700 border-2 border-red-600 hover:scale-105 active:scale-95 shadow-[0_4px_20px_rgba(255,0,0,0.3)]">
+                EXPLORE ACCESSORIES
               </Link>
-              <Link to="/collections/women" className="inline-flex w-full sm:w-auto items-center justify-center h-[56px] sm:h-[64px] px-10 sm:px-14 text-white text-[15px] sm:text-[16px] font-bold tracking-widest transition-all duration-300 hover:bg-white hover:text-black border-2 border-white hover:scale-105 active:scale-95 shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
-                SHOP WOMEN
+              <Link to="/collections/car-electronics" className="inline-flex w-full sm:w-auto items-center justify-center h-[56px] sm:h-[64px] px-10 sm:px-14 text-white text-[15px] sm:text-[16px] font-bold tracking-widest transition-all duration-300 hover:bg-white hover:text-black border-2 border-white hover:scale-105 active:scale-95 shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
+                ELECTRONICS & PARTS
               </Link>
             </div>
           </div>

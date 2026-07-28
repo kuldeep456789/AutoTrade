@@ -34,7 +34,7 @@ const ContactPage = () => {
   }, [userInfo]);
 
   const handleCopyEmail = () => {
-    navigator.clipboard.writeText('support@vastra.in');
+    navigator.clipboard.writeText('support@autotrade.in');
     setCopiedEmail(true);
     toast.success('Email copied to clipboard!');
     setTimeout(() => setCopiedEmail(false), 3000);
@@ -100,8 +100,8 @@ const ContactPage = () => {
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-bold tracking-widest text-zinc-400 uppercase">EMAIL ADDRESS</p>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <a href="mailto:support@vastra.in" className="text-base font-semibold text-zinc-900 dark:text-white hover:text-amber-600 transition-colors">
-                        support@vastra.in
+                      <a href="mailto:support@autotrade.in" className="text-base font-semibold text-zinc-900 dark:text-white hover:text-amber-600 transition-colors">
+                        support@autotrade.in
                       </a>
                       <button
                         type="button"
@@ -137,7 +137,7 @@ const ContactPage = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-bold tracking-widest text-zinc-400 uppercase">HEADQUARTERS</p>
-                    <p className="text-base font-semibold text-zinc-900 dark:text-white mt-0.5">VASTRA HQ</p>
+                    <p className="text-base font-semibold text-zinc-900 dark:text-white mt-0.5">AutoTrade HQ</p>
                     <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
                       HSR Layout, Bangalore - 560102<br />Karnataka, India
                     </p>

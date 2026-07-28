@@ -56,7 +56,7 @@ export default function AdminLayout() {
       >
         <div className="px-6 py-6 lg:py-8 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-white tracking-tight">VASTRA</h1>
+            <h1 className="text-2xl lg:text-3xl font-bold text-white tracking-tight">AutoTrade</h1>
             <p className="text-xs font-mono text-[#cbdbf5] opacity-60 uppercase tracking-widest mt-1">Enterprise Admin</p>
           </div>
           <button 

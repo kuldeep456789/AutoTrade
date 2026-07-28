@@ -668,8 +668,8 @@ const Navbar = () => {
                           <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
                             <UserRound className="h-6 w-6 text-zinc-500" strokeWidth={1.5} />
                           </div>
-                          <h3 className="text-base font-semibold text-zinc-800 dark:text-zinc-100">Welcome to VASTRA</h3>
-                          <p className="text-xs text-zinc-500 mt-1">Discover premium minimal fashion.</p>
+                          <h3 className="text-base font-semibold text-zinc-800 dark:text-zinc-100">Welcome to AutoTrade</h3>
+                          <p className="text-xs text-zinc-500 mt-1">Discover premium automotive parts & accessories.</p>
                         </div>
                         <div className="px-4 py-4 space-y-2">
                           <Link
@@ -749,7 +749,7 @@ const Navbar = () => {
                       <UserRound className="h-5 w-5 text-zinc-500" strokeWidth={1.5} />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">Welcome to VASTRA</p>
+                      <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">Welcome to AutoTrade</p>
                       <p className="text-xs text-zinc-500">Sign in for exclusive access</p>
                     </div>
                   </div>

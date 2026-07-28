@@ -34,7 +34,7 @@ export class UsersService implements OnModuleInit {
 
   async onModuleInit() {
     try {
-      const adminEmail = 'admin@vastra.app';
+      const adminEmail = 'admin@autotrade.app';
       const existing = await this.userModel
         .findOne({ email: adminEmail })
         .exec();
@@ -48,7 +48,7 @@ export class UsersService implements OnModuleInit {
           phone: '+919999999999',
         });
         console.log(
-          '[UsersService] Default Admin user created: admin@vastra.app / password123',
+          '[UsersService] Default Admin user created: admin@autotrade.app / password123',
         );
       } else if (existing.role !== 'admin') {
         await this.userModel

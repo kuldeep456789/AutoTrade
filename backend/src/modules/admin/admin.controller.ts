@@ -522,8 +522,8 @@ export class AdminController {
     let settings = await this.settingsModel.findOne().lean().exec();
     if (!settings) {
       settings = await this.settingsModel.create({
-        storeName: 'Vastra',
-        storeEmail: 'hello@vastra.in',
+        storeName: 'AutoTrade',
+        storeEmail: 'hello@autotrade.in',
         currency: 'INR',
         heroBannerImages: [],
         maintenanceMode: false,

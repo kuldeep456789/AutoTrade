@@ -70,7 +70,7 @@ const OrderSuccessPage = () => {
             Order Placed!
           </h1>
           <p className="text-[16px] text-zinc-500 dark:text-zinc-400 max-w-md mx-auto">
-            Thank you for shopping with <span className="font-semibold text-zinc-900 dark:text-white">VASTRA</span>.
+            Thank you for shopping with <span className="font-semibold text-zinc-900 dark:text-white">AutoTrade</span>.
           </p>
 
           {/* Order ID badge */}

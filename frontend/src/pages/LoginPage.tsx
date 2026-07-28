@@ -31,7 +31,7 @@ const LoginPage = () => {
   // Admin Modal state
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
   const [adminSecretCode, setAdminSecretCode] = useState('');
-  const [adminEmail, setAdminEmail] = useState('admin@vastra.app');
+  const [adminEmail, setAdminEmail] = useState('admin@autotrade.app');
   const [adminPassword, setAdminPassword] = useState('');
   const [showAdminPassword, setShowAdminPassword] = useState(false);
   const [adminError, setAdminError] = useState('');
@@ -232,7 +232,7 @@ const LoginPage = () => {
         toast.success('Administrator account created! Directing to dashboard...');
         navigate('/admin');
       } else {
-        toast.success('Registration successful! Welcome to VASTRA');
+        toast.success('Registration successful! Welcome to AutoTrade');
         navigate(redirect);
       }
     } catch (err: any) {
@@ -250,25 +250,25 @@ const LoginPage = () => {
         {/* Left — Premium fashion image with brand overlay */}
         <section className="relative hidden overflow-hidden lg:block animate-fade-in">
           <img
-            src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1920&q=80"
-            alt="VASTRA fashion"
+            src="https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=1920&q=80"
+            alt="AutoTrade automotive"
             className="absolute inset-0 h-full w-full object-cover"
           />
-          <div className="absolute inset-0 bg-black/35" />
+          <div className="absolute inset-0 bg-black/50" />
           <div className="relative z-10 flex h-full flex-col justify-between p-14">
-            <Link to="/" className="text-2xl font-black tracking-tight text-white">VASTRA</Link>
+            <Link to="/" className="text-2xl font-black tracking-tight text-white">AutoTrade</Link>
             <div className="max-w-lg">
               <h1 className="text-6xl font-black leading-none tracking-tight text-white">
-                VASTRA
+                AutoTrade
               </h1>
               <p className="mt-4 text-xl font-light text-white/80 tracking-wide">
-                Elevate Your Everyday Style
+                Drive Business Forward
               </p>
               <p className="mt-5 text-sm leading-7 text-white/60 max-w-md normal-case tracking-normal">
-                Discover premium fashion crafted with timeless design, exceptional comfort, and modern elegance.
+                Discover premium automotive accessories, electronics, motorcycle parts, and replacement components.
               </p>
               <p className="mt-3 text-sm leading-6 text-white/50 max-w-md normal-case tracking-normal">
-                Sign in to explore your personalized shopping experience.
+                Sign in to explore your personalized dashboard and orders.
               </p>
             </div>
           </div>
@@ -279,13 +279,11 @@ const LoginPage = () => {
           <div className="w-full max-w-md">
 
             {/* Mobile brand */}
-            <Link to="/" className="mb-8 block text-2xl font-black tracking-tight lg:hidden">VASTRA</Link>
-
-
+            <Link to="/" className="mb-8 block text-2xl font-black tracking-tight lg:hidden">AutoTrade</Link>
 
             <div className="mb-8">
               <h2 className="text-4xl font-black tracking-tight">
-                {isRegister ? 'Join VASTRA' : 'Sign in'}
+                {isRegister ? 'Join AutoTrade' : 'Sign in'}
               </h2>
               <p className="mt-3 text-sm leading-6 text-zinc-500 dark:text-zinc-400 normal-case tracking-normal">
                 {isRegister
@@ -512,7 +510,7 @@ const LoginPage = () => {
                     type="email"
                     value={adminEmail}
                     onChange={(e) => setAdminEmail(e.target.value)}
-                    placeholder="admin@vastra.app"
+                    placeholder="admin@autotrade.app"
                     required
                     className="w-full h-12 pl-11 pr-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 text-sm font-medium focus:outline-none focus:border-zinc-900 dark:focus:border-white transition-colors text-left normal-case"
                   />

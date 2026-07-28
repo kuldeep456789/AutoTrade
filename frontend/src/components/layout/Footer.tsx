@@ -89,9 +89,9 @@ const Footer = () => {
             <h4 className="text-xs sm:text-sm font-bold tracking-[0.2em] text-zinc-300 uppercase">Contact Us</h4>
             <ul className="space-y-3.5 text-sm sm:text-base">
               <li>
-                <a href="mailto:vastra3456@gmail.com" className="flex items-center gap-3 text-zinc-400 hover:text-white transition-colors py-0.5 break-all">
+                <a href="mailto:support@autotrade.in" className="flex items-center gap-3 text-zinc-400 hover:text-white transition-colors py-0.5 break-all">
                   <Mail size={18} className="shrink-0 text-zinc-400" />
-                  <span className="truncate">vastra3456@gmail.com</span>
+                  <span className="truncate">support@autotrade.in</span>
                 </a>
               </li>
               <li>

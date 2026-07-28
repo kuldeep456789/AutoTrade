@@ -81,7 +81,7 @@ const PlaceOrderPage = () => {
         key: razorpayRes.keyId,
         amount: razorpayRes.gatewayOrder.amount,
         currency: razorpayRes.gatewayOrder.currency || 'INR',
-        name: 'VASTRA',
+        name: 'AutoTrade',
         description: `Order #${orderId}`,
         order_id: razorpayRes.gatewayOrder.id,
         handler: async (response: any) => {

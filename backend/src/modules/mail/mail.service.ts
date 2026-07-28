@@ -16,7 +16,7 @@ export class MailService {
     this.fromEmail =
       process.env.MAIL_FROM ||
       process.env.FROM_EMAIL ||
-      `VASTRA <${mailUser || 'noreply@vastra.com'}>`;
+      `AutoTrade <${mailUser || 'noreply@autotrade.com'}>`;
 
     if (mailUser && mailPass) {
       this.transporter = nodemailer.createTransport({
@@ -73,7 +73,7 @@ export class MailService {
       if (templateName === 'otp' || templateName === 'forgot-password') {
         return `
           <div style="font-family: Arial, sans-serif; padding: 24px; max-width: 480px; margin: 0 auto; border: 1px solid #e4e4e7; border-radius: 16px;">
-            <h2 style="color: #111; margin-bottom: 8px;">VASTRA Verification</h2>
+            <h2 style="color: #111; margin-bottom: 8px;">AutoTrade Verification</h2>
             <p style="color: #555; font-size: 14px;">Hello ${variables.name || 'User'},</p>
             <p style="color: #555; font-size: 14px;">Your 6-digit verification code is:</p>
             <div style="background: #f4f4f5; font-size: 32px; font-weight: bold; letter-spacing: 6px; text-align: center; padding: 16px; margin: 24px 0; border-radius: 12px; color: #111;">
@@ -134,13 +134,13 @@ export class MailService {
   ) {
     const html = this.loadTemplate('otp', { name, otp, expiry });
     if (!html) return;
-    await this.sendEmail(email, 'Your VASTRA Verification Code', html);
+    await this.sendEmail(email, 'Your AutoTrade Verification Code', html);
   }
 
   async sendWelcome(name: string, email: string) {
     const html = this.loadTemplate('welcome', { name });
     if (!html) return;
-    await this.sendEmail(email, 'Welcome to VASTRA!', html);
+    await this.sendEmail(email, 'Welcome to AutoTrade!', html);
   }
 
   async sendForgotPassword(
@@ -151,7 +151,7 @@ export class MailService {
   ) {
     const html = this.loadTemplate('forgot-password', { name, otp, expiry });
     if (!html) return;
-    await this.sendEmail(email, 'Reset your VASTRA password', html);
+    await this.sendEmail(email, 'Reset your AutoTrade password', html);
   }
 
   async sendOrderConfirmation(

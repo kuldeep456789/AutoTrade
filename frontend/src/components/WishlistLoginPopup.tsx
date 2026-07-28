@@ -9,7 +9,7 @@ import {
 } from '../store/slices/userApiSlice';
 import toast from 'react-hot-toast';
 
-const FALLBACK_IMAGE = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1000" viewBox="0 0 800 1000"><rect width="100%" height="100%" fill="%2318181b"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="48" font-weight="900" fill="%23c9922f" letter-spacing="6">VASTRA</text></svg>';
+const FALLBACK_IMAGE = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1000" viewBox="0 0 800 1000"><rect width="100%" height="100%" fill="%2318181b"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="48" font-weight="900" fill="%23c9922f" letter-spacing="6">AutoTrade</text></svg>';
 
 interface WishlistProduct {
   _id: string;
@@ -115,13 +115,10 @@ export default function WishlistLoginPopup({ product, onClose }: WishlistLoginPo
           <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent" />
           <div className="absolute bottom-8 left-8 right-8 z-10">
             <h3 className="text-2xl font-black tracking-tight text-white drop-shadow-sm">
-              VASTRA
+              AutoTrade
             </h3>
-            {/* <p className="mt-1 text-lg font-light text-white/90 drop-shadow-sm">
-              Premium Fashion
-            </p> */}
             <p className="text-sm text-white/70 drop-shadow-sm leading-6 mt-2 max-w-xs normal-case tracking-normal">
-              Elevating Everyday Fashion with Premium Quality, Modern Design, and Timeless Style.
+              Drive Business Forward with Premium Automotive Parts & Accessories.
             </p>
           </div>
         </div>

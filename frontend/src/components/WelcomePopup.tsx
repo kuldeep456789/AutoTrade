@@ -4,7 +4,7 @@ import { useSelector } from 'react-redux';
 import type { RootState } from '../store/store';
 import { X, ArrowRight } from 'lucide-react';
 
-const LS_KEY = 'vastra_welcome_seen';
+const LS_KEY = 'autotrade_welcome_seen';
 
 const WelcomePopup = () => {
   const navigate = useNavigate();
@@ -36,7 +36,7 @@ const WelcomePopup = () => {
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
       <div className="relative bg-white dark:bg-zinc-900 w-full max-w-md rounded-3xl shadow-2xl border border-zinc-200 dark:border-zinc-700 overflow-hidden animate-[fadeIn_0.4s_ease-out,scaleIn_0.4s_ease-out]">
         {/* Gradient top bar */}
-        <div className="h-1.5 w-full bg-gradient-to-r from-zinc-900 via-zinc-500 to-zinc-900 dark:from-white dark:via-zinc-400 dark:to-white" />
+        <div className="h-1.5 w-full bg-gradient-to-r from-red-600 via-zinc-500 to-red-600" />
 
         <button
           onClick={dismiss}
@@ -53,11 +53,11 @@ const WelcomePopup = () => {
           <h2 className="text-3xl font-black tracking-tight text-zinc-900 dark:text-white leading-tight">
             Welcome to
           </h2>
-          <h2 className="text-3xl font-black tracking-tight text-zinc-900 dark:text-white leading-tight mb-3">
-            VASTRA
+          <h2 className="text-3xl font-black tracking-tight text-red-500 leading-tight mb-3">
+            AutoTrade
           </h2>
           <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-xs mx-auto leading-relaxed">
-            Premium minimal fashion crafted for those who value timeless design and effortless style.
+            Premium automotive parts & accessories crafted for quality and reliability.
           </p>
 
           {/* Divider */}

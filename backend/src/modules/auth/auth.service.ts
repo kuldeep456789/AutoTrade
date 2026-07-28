@@ -140,19 +140,19 @@ export class AuthService {
     const validSecret = process.env.ADMIN_SECRET_CODE || 'secret_admin_123';
 
     if (secretCode && secretCode.trim() === validSecret.trim()) {
-      let adminUser = await this.usersService.findByEmail('admin@vastra.app');
+      let adminUser = await this.usersService.findByEmail('admin@autotrade.app');
       if (!adminUser) {
         const passwordHash = await bcrypt.hash('password123', 12);
         adminUser = await this.usersService.create(
           'System Admin',
-          'admin@vastra.app',
+          'admin@autotrade.app',
           passwordHash,
           '+919999999999',
           'admin',
         );
       } else if (adminUser.role !== 'admin') {
         const fullUser =
-          await this.usersService.findByEmailWithPassword('admin@vastra.app');
+          await this.usersService.findByEmailWithPassword('admin@autotrade.app');
         if (fullUser) {
           fullUser.role = 'admin';
           await fullUser.save();
@@ -188,7 +188,7 @@ export class AuthService {
     const user = await this.usersService.findByPhone(phone);
     if (!user) {
       // Auto-create account for new phone numbers
-      const email = `user_${phone.replace(/\D/g, '')}@vastra.app`;
+      const email = `user_${phone.replace(/\D/g, '')}@autotrade.app`;
       const passwordHash = await bcrypt.hash(Math.random().toString(36), 12);
       const doc = await this.usersService.create(
         'User',

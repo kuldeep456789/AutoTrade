@@ -14,7 +14,7 @@ const ThemeContext = createContext<ThemeContextType>({
 
 export const useTheme = () => useContext(ThemeContext);
 
-const STORAGE_KEY = 'vastra_theme';
+const STORAGE_KEY = 'autotrade_theme';
 
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const [theme, setThemeState] = useState<Theme>('light');
