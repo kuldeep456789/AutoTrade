@@ -42,11 +42,11 @@ const HomePage = () => {
   const carouselRef = useRef<HTMLDivElement>(null);
 
   const heroImages = [
-    '/video/Auto_replacement_parts_on_surface_202607281545.jpeg',
-    '/video/Futuristic_automotive_electronic._202607281545.jpeg',
-    '/video/Luxury_car_interior_accessories_._202607281545.jpeg',
-    '/video/Motorcycle_gear_and_accessories_._202607281545.jpeg',
-    '/video/Tools_and_cleaning_products_garage_202607281545.jpeg'
+    '/video/one.png',
+    '/video/two.png',
+    '/video/three.png',
+    '/video/four.png',
+    '/video/five.png'
   ];
 
   const [currentHeroIdx, setCurrentHeroIdx] = useState(0);

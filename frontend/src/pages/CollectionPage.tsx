@@ -49,7 +49,7 @@ const CollectionPage = () => {
 
   const { data: allProductsData, isLoading, error } = useGetProductsQuery({
     pageNum: 1,
-    pageSize: 50000, // Fetch full warehouse pool to derive category tabs & paginate
+    pageSize: 15000, // Fetch full warehouse pool to derive category tabs & paginate
   });
 
   const productsPool = Array.isArray(allProductsData?.products) ? allProductsData.products : [];
