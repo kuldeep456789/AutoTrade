@@ -46,7 +46,6 @@ const ProductDetailsPage = () => {
   const productId = product ? getProductId(product) || id || '' : '';
   const isWishlisted = product ? wishlistItems.some((item: any) => item._id === productId) : false;
   const [selectedImage, setSelectedImage] = useState(0);
-  const [selectedSize, setSelectedSize] = useState('');
   const [selectedColor, setSelectedColor] = useState('');
   const [isAdded, setIsAdded] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -130,16 +129,11 @@ const ProductDetailsPage = () => {
       ? product.colors
       : [...new Set(variants.map((v: any) => v.color).filter(Boolean))];
 
-  const sizes =
-    product?.sizes?.length
-      ? product.sizes
-      : [...new Set(variants.map((v: any) => v.size).filter(Boolean))];
   const productName = String(product?.name || product?.title || '').trim();
 
   console.log("Product:", product);
   console.log("Variants:", product?.variants);
   console.log("Colors:", colors);
-  console.log("Sizes:", sizes);
 
   const discountPct =
     product.discountPrice && product.price > product.discountPrice
@@ -147,8 +141,8 @@ const ProductDetailsPage = () => {
       : 0;
 
   const handleAddToCart = () => {
-    if (!selectedSize || !selectedColor) {
-      setErrorMsg('Please select a size and color');
+    if (!selectedColor) {
+      setErrorMsg('Please select a color');
       setTimeout(() => setErrorMsg(''), 3000);
       return;
     }
@@ -159,7 +153,7 @@ const ProductDetailsPage = () => {
         price: product.discountPrice || product.price,
         image: product?.images?.[0] || '',
         qty: 1,
-        variant: { color: selectedColor, size: selectedSize },
+        variant: { color: selectedColor, size: 'One Size' },
       };
       sessionStorage.setItem('pendingCartItem', JSON.stringify(pendingItem));
       navigate(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
@@ -173,7 +167,7 @@ const ProductDetailsPage = () => {
         image: product?.images?.[0] || '',
         qty: 1,
         increment: true,
-        variant: { color: selectedColor, size: selectedSize },
+        variant: { color: selectedColor, size: 'One Size' },
       })
     );
     setIsAdded(true);
@@ -182,8 +176,8 @@ const ProductDetailsPage = () => {
   };
 
   const handleBuyNow = () => {
-    if (!selectedSize || !selectedColor) {
-      setErrorMsg('Please select a size and color');
+    if (!selectedColor) {
+      setErrorMsg('Please select a color');
       setTimeout(() => setErrorMsg(''), 3000);
       return;
     }
@@ -195,7 +189,7 @@ const ProductDetailsPage = () => {
         image: product?.images?.[0] || '',
         qty: 1,
         increment: true,
-        variant: { color: selectedColor, size: selectedSize },
+        variant: { color: selectedColor, size: 'One Size' },
       })
     );
     navigate('/cart');
@@ -536,26 +530,7 @@ const ProductDetailsPage = () => {
                 </div>
               )}
 
-              {/* Size */}
-              <div className="pb-8">
-                <div className="flex justify-between items-end mb-2">
-                  <p className="text-[16px] font-medium text-[#111111] dark:text-zinc-200">Select Size</p>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  {sizes.map((size: any) => (
-                    <button
-                      key={size}
-                      onClick={() => setSelectedSize(size)}
-                      className={`h-[48px] rounded-md border text-[16px] transition-all duration-200 cursor-pointer active:scale-[0.98] ${selectedSize === size
-                          ? 'border-black dark:border-white text-black dark:text-white ring-1 ring-black dark:ring-white'
-                          : 'border-zinc-200 dark:border-zinc-700 text-[#111111] dark:text-white hover:border-black dark:hover:border-white'
-                        }`}
-                    >
-                      {size}
-                    </button>
-                  ))}
-                </div>
-              </div>
+
 
               {/* Action Buttons */}
               <div className="flex flex-col space-y-3 pt-2">
