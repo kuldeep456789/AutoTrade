@@ -3,6 +3,5 @@ export class UpdateProfileDto {
   email?: string;
   phone?: string;
   avatar?: string;
-  gender?: string;
   dateOfBirth?: string;
 }

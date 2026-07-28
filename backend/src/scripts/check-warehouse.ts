@@ -32,19 +32,13 @@ async function checkWarehouse() {
   };
 
   // ── Warehouse Counts ──────────────────────────────────────────────────────
-  const [menVal, womenVal, allVal] = await Promise.all([
-    client.get<any>('products:men'),
-    client.get<any>('products:women'),
+  const [allVal] = await Promise.all([
     client.get<any>('products:all'),
   ]);
 
-  const menCount = getLength(menVal);
-  const womenCount = getLength(womenVal);
   const allCount = getLength(allVal);
 
   console.log('\n📦 WAREHOUSE TOTALS');
-  console.log(`  Men:     ${menCount} products`);
-  console.log(`  Women:   ${womenCount} products`);
   console.log(`  All:     ${allCount} products`);
 
   // ── Per-Category Keys ─────────────────────────────────────────────────────
@@ -52,7 +46,7 @@ async function checkWarehouse() {
   const currentCatKeys = catKeys.filter(
     (k) =>
       !k.includes(':next:') &&
-      !['products:men', 'products:women', 'products:all'].includes(k),
+      !['products:all'].includes(k),
   );
 
   if (currentCatKeys.length > 0) {

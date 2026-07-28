@@ -60,7 +60,6 @@ export interface AdminUser {
   phone?: string;
   role: string;
   avatar?: string;
-  gender?: string;
   createdAt: string;
 }
 

@@ -4,8 +4,6 @@ import { ArrowRight } from 'lucide-react';
 import ProductCard from './ProductCard';
 
 interface CategorySectionProps {
-  /** The slug used to build the "View All" link, e.g. "men" | "women" */
-  gender: string;
   /** Display name shown as the large heading */
   categoryName: string;
   /** Products for this category — passed in from the parent so no extra API call is needed */
@@ -13,7 +11,7 @@ interface CategorySectionProps {
 }
 
 
-const CategorySection: React.FC<CategorySectionProps> = ({ gender, categoryName, products }) => {
+const CategorySection: React.FC<CategorySectionProps> = ({ categoryName, products }) => {
   const ref = useRef<HTMLElement>(null);
   const [isVisible, setIsVisible] = useState(false);
 
@@ -47,7 +45,7 @@ const CategorySection: React.FC<CategorySectionProps> = ({ gender, categoryName,
       <div className="px-6 sm:px-10 py-10 flex items-end justify-between gap-4 border-b-2 border-black dark:border-white">
         <h2 className="text-5xl sm:text-7xl font-black tracking-tighter uppercase">{categoryName}</h2>
         <Link
-          to={`/collections/${gender}/${categorySlug}`}
+          to={`/collections/${categorySlug}`}
           className="hidden sm:inline-flex items-center gap-2 text-sm font-black tracking-widest hover:text-red-600 transition-colors"
         >
           VIEW ALL <ArrowRight size={16} strokeWidth={2.5} />

@@ -15,7 +15,6 @@ import { ProductsService } from './products.service';
 type ProductQueryDto = {
   categoryId?: string;
   collectionType?: string;
-  gender?: string;
   subcategoryName?: string;
   q?: string;
   minPrice?: string;

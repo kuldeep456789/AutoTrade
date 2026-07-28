@@ -19,7 +19,6 @@ type ProductQuery = {
   categoryId?: string;
   collectionType?: string;
   subcategoryName?: string;
-  gender?: string;
   q?: string;
   minPrice?: string;
   maxPrice?: string;
@@ -136,7 +135,6 @@ export class ProductsService implements OnModuleInit {
       // 1. Try finding products from the same subcategory
       if (subcategoryName) {
         const warehouseResult = await this.cjService.getWarehouseProducts(
-          'all',
           1,
           16,
           undefined,
@@ -149,7 +147,7 @@ export class ProductsService implements OnModuleInit {
 
       // 2. Fallback: if no products found in subcategory, return items from main warehouse pool
       if (products.length === 0) {
-        const fallbackResult = await this.cjService.getWarehouseProducts('all', 1, 16);
+        const fallbackResult = await this.cjService.getWarehouseProducts(1, 16);
         if (fallbackResult && fallbackResult.products.length > 0) {
           products = fallbackResult.products.filter((p: any) => (p.pid || p.id || p._id) !== id);
         }
@@ -205,8 +203,6 @@ export class ProductsService implements OnModuleInit {
   }
 
   private async fetchFromWarehouse(query: ProductQuery) {
-    const gender = (query.gender ?? '').toLowerCase() as
-      'men' | 'women' | 'all' | '';
     const pageNum = Math.max(1, Number(query.pageNum || query.page || 1));
     const pageSize = Math.min(
       Math.max(1, Number(query.pageSize || query.limit || 20)),
@@ -224,9 +220,8 @@ export class ProductsService implements OnModuleInit {
       const searchTerm = searchQueryStr.toLowerCase();
       const searchTerms = searchTerm.split(/\s+/).filter(Boolean);
       const warehouseResult = await this.cjService.getWarehouseProducts(
-        gender || 'all',
-        1,
-        50000,
+        pageNum,
+        pageSize,
       );
 
       if (!warehouseResult || warehouseResult.products.length === 0) {
@@ -245,7 +240,6 @@ export class ProductsService implements OnModuleInit {
           p._category,
           p.subcategoryName,
           p.categoryName,
-          p.gender,
           p.collectionType,
           ...(p.tags ?? []),
         ]
@@ -268,9 +262,8 @@ export class ProductsService implements OnModuleInit {
       };
     }
 
-    // ── Category / gender listing: read from warehouse ─────────────────────
+    // ── Category / collection listing: read from warehouse ─────────────────────
     const warehouseResult = await this.cjService.getWarehouseProducts(
-      gender || 'all',
       pageNum,
       pageSize,
       query.categoryId,
@@ -279,7 +272,7 @@ export class ProductsService implements OnModuleInit {
 
     if (warehouseResult && warehouseResult.products.length > 0) {
       this.logger.log(
-        `[Products] Warehouse HIT gender=${gender} sub=${query.subcategoryName ?? '-'} page=${pageNum} → ${warehouseResult.products.length}/${warehouseResult.total}`,
+        `[Products] Warehouse HIT sub=${query.subcategoryName ?? '-'} page=${pageNum} → ${warehouseResult.products.length}/${warehouseResult.total}`,
       );
       return {
         products: warehouseResult.products,
@@ -290,7 +283,7 @@ export class ProductsService implements OnModuleInit {
 
     // ── Warehouse empty — do NOT fall back to CJ ───────────────────────────
     this.logger.warn(
-      `[Products] Warehouse MISS gender=${gender} sub=${query.subcategoryName ?? '-'} — returning empty (no CJ fallback)`,
+      `[Products] Warehouse MISS sub=${query.subcategoryName ?? '-'} — returning empty (no CJ fallback)`,
     );
     return {
       products: [],

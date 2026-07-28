@@ -22,7 +22,6 @@ export type SafeUser = {
   phone?: string;
   role: string;
   avatar?: string;
-  gender?: string;
   dateOfBirth?: Date;
 };
 
@@ -139,7 +138,6 @@ export class UsersService implements OnModuleInit {
       phone: user.phone,
       role: user.role || 'customer',
       avatar: user.avatar,
-      gender: user.gender,
       dateOfBirth: user.dateOfBirth,
     };
   }
@@ -174,7 +172,6 @@ export class UsersService implements OnModuleInit {
       user.phone = trimmedPhone || undefined;
     }
     if (data.avatar !== undefined) user.avatar = data.avatar || undefined;
-    if (data.gender !== undefined) user.gender = data.gender || undefined;
     if (data.dateOfBirth !== undefined)
       user.dateOfBirth = data.dateOfBirth
         ? new Date(data.dateOfBirth)

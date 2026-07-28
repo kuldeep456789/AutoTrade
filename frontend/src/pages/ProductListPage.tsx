@@ -8,17 +8,8 @@ import Pagination from '../components/Pagination';
 
 const ITEMS_PER_PAGE = 10;
 
-const getCollectionFromPath = (pathname: string) =>
-  pathname.includes('/men') ? 'Men' as const
-    : pathname.includes('/women') ? 'Women' as const
-      : pathname.includes('/new-arrivals') ? undefined
-      : undefined;
-
 const getActiveTabFromPath = (pathname: string) =>
-  pathname.includes('/new-arrivals') ? 'ALL'
-    : pathname.includes('/men') ? 'MEN'
-    : pathname.includes('/women') ? 'WOMEN'
-      : 'ALL';
+  pathname.includes('/new-arrivals') ? 'ALL' : 'ALL';
 
 const ProductListPage = () => {
   const location = useLocation();
@@ -27,7 +18,6 @@ const ProductListPage = () => {
   const categoryParam = searchParams.get('category') || '';
 
   const [page, setPage] = useState(1);
-  const collectionType = getCollectionFromPath(location.pathname);
   const isNewArrivals = location.pathname.includes('/new-arrivals');
   const [sortBy] = useState(isNewArrivals ? 'Newest' : 'Popularity');
   const [activeTab, setActiveTab] = useState(() => getActiveTabFromPath(location.pathname));
@@ -48,7 +38,6 @@ const ProductListPage = () => {
     {
       ...(activeCategoryId ? { categoryId: activeCategoryId } : {}),
       ...(keyword ? { q: keyword } : {}),
-      ...(collectionType ? { collectionType } : {}),
       ...(isNewArrivals ? { sort: 'newest' } : {}),
       pageNum: 1,
       pageSize: 100,
@@ -56,13 +45,6 @@ const ProductListPage = () => {
   );
 
   let filteredProducts = productsData?.products || [];
-
-  // Tab filtering
-  if (!keyword && activeTab === 'MEN') {
-    filteredProducts = filteredProducts.filter((p: any) => p.collectionType === 'Men');
-  } else if (!keyword && activeTab === 'WOMEN') {
-    filteredProducts = filteredProducts.filter((p: any) => p.collectionType === 'Women');
-  }
 
   const sortedProducts = [...filteredProducts].sort((a: any, b: any) => {
     const aPrice = a.discountPrice || a.price;
@@ -81,8 +63,6 @@ const ProductListPage = () => {
     ? 'NEW ARRIVALS'
     : keyword
     ? `Search: "${keyword}"`
-    : collectionType
-    ? `${collectionType} Collections`
     : 'Our Shop';
 
 

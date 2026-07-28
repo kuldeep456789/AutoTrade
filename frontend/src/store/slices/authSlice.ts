@@ -14,7 +14,6 @@ export interface UserInfo {
   profileImage?: string;
   provider?: string;
   isVerified?: boolean;
-  gender?: string;
   dateOfBirth?: string;
   accessToken?: string;
 }

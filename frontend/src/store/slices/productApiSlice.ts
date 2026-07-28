@@ -14,13 +14,12 @@ export const productApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     /**
      * Generic product listing — reads from Redis warehouse via NestJS.
-     * Supports gender, subcategoryName, q (search), page, etc.
+     * Supports subcategoryName, q (search), page, etc.
      */
     getProducts: builder.query({
       query: (params: {
         categoryId?: string;
         collectionType?: string;
-        gender?: string;
         subcategoryName?: string;
         q?: string;
         minPrice?: string;
@@ -39,29 +38,6 @@ export const productApiSlice = apiSlice.injectEndpoints({
       transformResponse: transformListResponse,
       providesTags: ['Product'],
       // Keep cache for 10 minutes — warehouse refreshes hourly so this is safe
-      keepUnusedDataFor: 600,
-    }),
-
-    /**
-     * Dedicated endpoints for Men's and Women's collections as per Master Prompt
-     */
-    getMenCollection: builder.query({
-      query: (params: any = {}) => ({
-        url: '/api/collections/men',
-        params,
-      }),
-      transformResponse: transformListResponse,
-      providesTags: ['Product'],
-      keepUnusedDataFor: 600,
-    }),
-
-    getWomenCollection: builder.query({
-      query: (params: any = {}) => ({
-        url: '/api/collections/women',
-        params,
-      }),
-      transformResponse: transformListResponse,
-      providesTags: ['Product'],
       keepUnusedDataFor: 600,
     }),
 
@@ -102,7 +78,7 @@ export const productApiSlice = apiSlice.injectEndpoints({
     }),
 
     /**
-     * @deprecated — prefer useGetProductsQuery with { gender, subcategoryName }.
+     * @deprecated — prefer useGetProductsQuery with { subcategoryName }.
      * Kept for any legacy usage.
      */
     getProductsByCategory: builder.query({
@@ -145,6 +121,4 @@ export const {
   useCreateReviewMutation,
   useGetProductCountQuery,
   useGetSyncStatusQuery,
-  useGetMenCollectionQuery,
-  useGetWomenCollectionQuery,
 } = productApiSlice;

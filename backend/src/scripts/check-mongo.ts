@@ -18,17 +18,6 @@ async function check() {
     const totalCount = await db.collection('products').countDocuments();
     console.log(`\n🍃 Total Products in MongoDB: ${totalCount}`);
 
-    const menCount = await db.collection('products').countDocuments({
-      $or: [{ gender: 'men' }, { collectionType: 'Men' }],
-    });
-
-    const womenCount = await db.collection('products').countDocuments({
-      $or: [{ gender: 'women' }, { collectionType: 'Women' }],
-    });
-
-    console.log(`👨 Men Products in DB: ${menCount}`);
-    console.log(`👩 Women Products in DB: ${womenCount}`);
-
     await mongoose.disconnect();
   } catch (err) {
     console.error('Error:', err);

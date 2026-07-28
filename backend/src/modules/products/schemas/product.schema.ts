@@ -24,9 +24,6 @@ export class Product {
   @Prop({ default: '' })
   subcategoryId!: string;
 
-  @Prop({ default: '' })
-  gender!: string;
-
   @Prop({ default: 0 })
   price!: number;
 

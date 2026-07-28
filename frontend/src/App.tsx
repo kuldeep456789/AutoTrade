@@ -79,11 +79,8 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/collections" element={<CollectionPage />} />
           <Route path="/collections/all" element={<CollectionPage />} />
-          <Route path="/collections/:gender" element={<CollectionPage />} />
-          <Route path="/collections/:gender/:subcategory" element={<CollectionPage />} />
+          <Route path="/collections/:subcategory" element={<CollectionPage />} />
           <Route path="/new-arrivals" element={<ProductListPage />} />
-          <Route path="/men" element={<ProductListPage />} />
-          <Route path="/women" element={<ProductListPage />} />
           <Route path="/accessories" element={<ProductListPage />} />
           <Route path="/search" element={<ProductListPage />} />
           <Route path="/trending" element={<ProductListPage />} />

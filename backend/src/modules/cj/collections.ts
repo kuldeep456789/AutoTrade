@@ -103,11 +103,10 @@ export function getCategoryById(categoryId: string): { parentCategory: string; i
 
 export function getCategoryInfoById(
   categoryId: string,
-): { gender: string; subcategoryName: string; collectionType: string } | null {
+): { subcategoryName: string; collectionType: string } | null {
   const info = getCategoryById(categoryId);
   if (!info) return null;
   return {
-    gender: info.parentCategory,
     subcategoryName: info.item.name,
     collectionType: info.parentCategory,
   };

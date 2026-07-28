@@ -20,7 +20,6 @@ const EditProfileModal = ({ isOpen, onClose, user }: EditProfileModalProps) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [gender, setGender] = useState('');
   const [avatar, setAvatar] = useState<string | null>(null);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -30,7 +29,6 @@ const EditProfileModal = ({ isOpen, onClose, user }: EditProfileModalProps) => {
       setName(user.firstName && user.lastName ? `${user.firstName} ${user.lastName}`.trim() : user.name || '');
       setEmail(user.email);
       setPhone(user.phone || '');
-      setGender(user.gender || '');
       setAvatar(user.avatar || (user as any).image || user.profileImage || null);
       setErrors({});
     }
@@ -70,7 +68,6 @@ const EditProfileModal = ({ isOpen, onClose, user }: EditProfileModalProps) => {
         name: name.trim(),
         email: email.trim(),
         phone: phone.trim() || undefined,
-        gender: gender || undefined,
         avatar: avatar || undefined,
       }).unwrap();
       const updatedUser = {
@@ -198,23 +195,6 @@ const EditProfileModal = ({ isOpen, onClose, user }: EditProfileModalProps) => {
             </div>
           </div>
 
-          {/* Gender */}
-          <div>
-            <label className="block text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">Gender (optional)</label>
-            <div className="relative">
-              <Users2 size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" strokeWidth={1.5} />
-              <select
-                value={gender}
-                onChange={(e) => setGender(e.target.value)}
-                className="w-full h-[48px] pl-10 pr-4 rounded-xl border border-zinc-200 dark:border-[#2A2A2A] bg-zinc-50 dark:bg-[#0F0F10] text-zinc-900 dark:text-white text-[15px] outline-none focus:ring-2 focus:ring-zinc-900/20 dark:focus:ring-white/20 transition-all appearance-none"
-              >
-                <option value="">Prefer not to say</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-          </div>
         </div>
 
         {/* Footer */}

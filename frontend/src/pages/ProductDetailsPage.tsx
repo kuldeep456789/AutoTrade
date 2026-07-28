@@ -297,18 +297,10 @@ const ProductDetailsPage = () => {
           <div className="flex gap-2 items-center text-xs font-medium text-zinc-400">
             <Link to="/" className="hover:text-black dark:hover:text-white transition-colors">HOME</Link>
             <ChevronRight size={10} strokeWidth={2} />
-            {product.gender && (
+            {product.subcategoryName && (
               <>
-                <Link to={`/collections/${product.gender}`} className="hover:text-black dark:hover:text-white transition-colors">
-                  {String(product.gender).toUpperCase()} COLLECTIONS
-                </Link>
-                <ChevronRight size={10} strokeWidth={2} />
-              </>
-            )}
-            {product.subcategory && (
-              <>
-                <Link to={`/collections/${product.gender}/${normalizeSlug(String(product.subcategory))}`} className="hover:text-black dark:hover:text-white transition-colors">
-                  {product.subcategory}
+                <Link to={`/collections/${normalizeSlug(String(product.subcategoryName))}`} className="hover:text-black dark:hover:text-white transition-colors">
+                  {product.subcategoryName}
                 </Link>
                 <ChevronRight size={10} strokeWidth={2} />
               </>

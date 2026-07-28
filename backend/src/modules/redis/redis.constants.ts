@@ -1,6 +1,5 @@
 export const REDIS_CACHE_KEYS = {
   PRODUCTS_ALL: 'products:all',
-  PRODUCTS_GENDER: (gender: string) => `products:${gender.toLowerCase()}`,
   PRODUCTS_QUERY: (queryKey: string) => `products:query:${queryKey}`,
   PRODUCT_DETAIL: (id: string) => `products:detail:${id}`,
   CATEGORIES_ALL: 'categories:all',

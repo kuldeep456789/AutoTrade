@@ -362,7 +362,6 @@ export class CjService {
 
   //warehouse
   async getWarehouseProducts(
-    _gender: 'men' | 'women' | 'all' | '' = 'all',
     pageNum = 1,
     pageSize = 160,
     categoryId?: string,
@@ -487,33 +486,19 @@ export class CjService {
         `[Cron] Products Fetched & Interleaved — Total: ${allProducts.length}`,
       );
 
-      // Write to :next buffer without TTL to make it persistent
-      await this.redisService.setJson(WAREHOUSE_NEXT_ALL, balancedAll);
+      // Write directly to the live key — no temp buffer needed
+      await this.redisService.setJson(WAREHOUSE_KEY_ALL, balancedAll);
+      this.logger.log(`[Cron] Wrote ${balancedAll.length} products → ${WAREHOUSE_KEY_ALL}`);
 
-      // Write per-category keys to :next buffer without TTL
+      // Write per-category keys directly
       const categoryGroups = this.groupByCategory(allProducts);
       const catWriteOps: Promise<void>[] = [];
       for (const [catKey, catProducts] of Object.entries(categoryGroups)) {
         catWriteOps.push(
-          this.redisService.setJson(`products:next:${catKey}`, catProducts),
+          this.redisService.setJson(`products:${catKey}`, catProducts),
         );
       }
       await Promise.all(catWriteOps);
-
-      // Atomic swap: :next → :current
-      await this.redisService.rename(WAREHOUSE_NEXT_ALL, WAREHOUSE_KEY_ALL);
-
-      // Swap per-category keys
-      const catSwapOps: Promise<void>[] = [];
-      for (const catKey of Object.keys(categoryGroups)) {
-        catSwapOps.push(
-          this.redisService.rename(
-            `products:next:${catKey}`,
-            `products:${catKey}`,
-          ),
-        );
-      }
-      await Promise.all(catSwapOps);
 
       // Automatically invalidate stale API response cache keys so GET /api/products returns fresh 137k warehouse data immediately
       await this.clearApiCache();
@@ -1045,7 +1030,6 @@ export class CjService {
     );
     // if (EXCLUDED_PRODUCT_PIDS.has(pid)) return null;
 
-    const gender = product._gender || query?._gender;
     const subcategoryName = product._category || query?._category;
     const collectionType = product._collectionType || query?._collectionType;
 
@@ -1106,7 +1090,6 @@ export class CjService {
       categoryId,
       categoryName,
       subcategoryName,
-      gender,
       category: categoryName || categoryId,
       collectionType: product?.collectionType ?? collectionType,
       tags: Array.isArray(product?.tags) ? product.tags : [],
@@ -1188,7 +1171,6 @@ export class CjService {
     'sizes',
     'q',
     'collectionType',
-    'gender',
     'subcategoryName',
   ]);
 

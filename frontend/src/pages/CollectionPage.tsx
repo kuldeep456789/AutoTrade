@@ -19,10 +19,8 @@ const toSlug = (value: string) => normalizeSlug(value);
 const fromSlug = (value: string) => value.replace(/-/g, ' ');
 
 const CollectionPage = () => {
-  const { gender, subcategory } = useParams();
-  const normalizedGender = gender?.toLowerCase() || '';
+  const { subcategory } = useParams();
   const normalizedSubcategory = subcategory?.toLowerCase() || '';
-  const isAllGender = normalizedGender === 'all' || normalizedGender === '';
   const [page, setPage] = useState(1);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -30,7 +28,7 @@ const CollectionPage = () => {
 
   useEffect(() => {
     setPage(1);
-  }, [normalizedGender, normalizedSubcategory]);
+  }, [normalizedSubcategory]);
 
   const checkScroll = () => {
     const el = scrollRef.current;
@@ -50,9 +48,8 @@ const CollectionPage = () => {
 
 
   const { data: allProductsData, isLoading, error } = useGetProductsQuery({
-    ...(isAllGender ? {} : { gender: normalizedGender }),
     pageNum: 1,
-    pageSize: 50000, // Fetch active warehouse pool for this gender to derive category tabs & paginate
+    pageSize: 50000, // Fetch full warehouse pool to derive category tabs & paginate
   });
 
   const productsPool = Array.isArray(allProductsData?.products) ? allProductsData.products : [];
@@ -80,9 +77,6 @@ const CollectionPage = () => {
   const activeCategory = normalizedSubcategory
     ? derivedTabs.find(tab => {
       let tabSlug = toSlug(tab.name);
-      if (normalizedGender === 'men' && tabSlug === 'jeans') {
-        tabSlug = 'men-jeans';
-      }
       return tabSlug === toSlug(fromSlug(normalizedSubcategory));
     })
     : undefined;
@@ -105,9 +99,7 @@ const CollectionPage = () => {
     ? activeCategory.name.toUpperCase()
     : subcategory
       ? fromSlug(subcategory).toUpperCase()
-      : isAllGender
-        ? 'ALL COLLECTIONS'
-        : `${gender?.toUpperCase()} COLLECTIONS`;
+      : 'ALL COLLECTIONS';
 
   const headerCount = activeCategory ? activeCategory.count : productsPool.length;
 
@@ -119,12 +111,6 @@ const CollectionPage = () => {
           <div className="flex items-center gap-2 pt-5 pb-2 text-[11px] font-semibold text-zinc-400 dark:text-zinc-500">
             <Link to="/" className="hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors">HOME</Link>
             <ChevronRight size={10} strokeWidth={2.5} />
-            {gender && (
-              <>
-                <Link to={`/collections/${gender}`} className="hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors">{gender.toUpperCase()}</Link>
-                {subcategory && <ChevronRight size={10} strokeWidth={2.5} />}
-              </>
-            )}
             {subcategory && (
               <span className="text-zinc-700 dark:text-zinc-300">{pageTitle}</span>
             )}
@@ -175,11 +161,8 @@ const CollectionPage = () => {
             >
               {derivedTabs.map((tab) => {
                 let tabSlug = toSlug(tab.name);
-                if (gender?.toLowerCase() === 'men' && tabSlug === 'jeans') {
-                  tabSlug = 'men-jeans';
-                }
                 const isActive = activeCategory?.name === tab.name;
-                const linkTo = gender ? `/collections/${gender}/${tabSlug}` : `/collections/${tabSlug}`;
+                const linkTo = `/collections/${tabSlug}`;
 
                 return (
                   <Link

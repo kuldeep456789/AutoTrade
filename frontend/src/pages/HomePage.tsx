@@ -23,16 +23,21 @@ const HomePage = () => {
     }
   }, [location.state]);
 
-
-  // Fetch latest products for the featured carousel
-  const { data: latestProductsData } = useGetProductsQuery({
+  /**
+   * Fetch automotive products for the homepage carousel.
+   * RTK Query caches this for 10 minutes.
+   */
+  const { data: autoData } = useGetProductsQuery({
     pageNum: 1,
-    pageSize: 10,
+    pageSize: 200,
   });
 
-  const carouselProducts = Array.isArray(latestProductsData?.products) 
-    ? latestProductsData.products 
-    : [];
+  const autoProducts = Array.isArray(autoData?.products) ? autoData.products : [];
+
+  // Featured carousel — first 10 products
+  const carouselProducts = useMemo(() => {
+    return autoProducts.slice(0, 10);
+  }, [autoProducts]);
 
   const carouselRef = useRef<HTMLDivElement>(null);
 
@@ -107,7 +112,7 @@ const HomePage = () => {
           </div>
         ))}
         <div className="absolute inset-0 bg-black/35" />
-        <div className="relative z-10 flex flex-col justify-center h-full w-full max-w-[1920px] mx-auto px-6 sm:px-10 lg:px-16 pt-10">
+        {/* <div className="relative z-10 flex flex-col justify-center h-full w-full max-w-[1920px] mx-auto px-6 sm:px-10 lg:px-16 pt-10">
           <div className="max-w-2xl w-full">
             <h1 className="text-6xl sm:text-8xl lg:text-[100px] font-black leading-[0.85] tracking-tighter text-white drop-shadow-2xl">
               AutoTrade
@@ -121,7 +126,7 @@ const HomePage = () => {
               </Link>
             </div>
           </div>
-        </div>
+        </div> */}
 
         {/* Navigation Dots */}
         <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20 flex gap-3">
@@ -216,7 +221,7 @@ const HomePage = () => {
 
 
       {/* Empty state — warehouse not yet populated */}
-      {carouselProducts.length === 0 && (
+      {autoProducts.length === 0 && (
         <section className="py-24 text-center border-b-2 border-black dark:border-white">
           <p className="text-2xl font-black tracking-widest text-zinc-400">SYNCING PRODUCTS...</p>
           <p className="mt-3 text-sm text-zinc-500 font-normal normal-case">Products will appear once the hourly sync completes.</p>
