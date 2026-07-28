@@ -246,14 +246,11 @@ const HomePage = () => {
               <Link
                 key={idx}
                 to={cat.to}
-                className="group relative rounded-2xl bg-[#0a0d14] border border-zinc-800/80 hover:border-red-500/70 shadow-xl hover:shadow-[0_0_25px_rgba(239,68,68,0.3)] transition-all duration-300 flex flex-col items-center justify-between text-center p-4 sm:p-5"
+                className="group relative rounded-2xl bg-[#0a0d14] border border-zinc-800/80 hover:border-zinc-700 shadow-md hover:shadow-xl transition-all duration-300 flex flex-col items-center justify-between text-center p-4 sm:p-5"
               >
-                {/* Background Glow Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-b from-red-950/10 via-transparent to-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl" />
-
-                {/* Top: Glowing Icon Badge */}
+                {/* Top: Icon Badge */}
                 <div className="relative z-10 my-1">
-                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-2 border-red-500/70 shadow-[0_0_18px_rgba(239,68,68,0.5)] flex items-center justify-center text-white bg-black/40 group-hover:scale-110 group-hover:border-red-500 group-hover:shadow-[0_0_25px_rgba(239,68,68,0.85)] transition-all duration-300">
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-2 border-zinc-700 flex items-center justify-center text-white bg-black/40 group-hover:scale-105 group-hover:border-red-500 transition-all duration-300">
                     <cat.icon className="w-7 h-7 stroke-[2]" />
                   </div>
                 </div>

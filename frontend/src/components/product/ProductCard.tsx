@@ -133,7 +133,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
 
   return (
     <div
-      className="group relative flex flex-col w-full bg-[#0e121b] border border-zinc-800/80 hover:border-red-500/60 rounded-2xl overflow-hidden shadow-xl hover:shadow-[0_10px_30px_rgba(239,68,68,0.2)] transition-all duration-500 cursor-pointer"
+      className="group relative flex flex-col w-full bg-[#0e121b] border border-zinc-800/80 hover:border-zinc-700 rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >

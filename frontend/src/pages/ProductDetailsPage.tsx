@@ -633,17 +633,16 @@ const ProductDetailsPage = () => {
             </div>
 
             {/* Action Buttons */}
-            <div className="space-y-2.5 pt-1">
+            <div className="space-y-3 pt-1">
               <button
                 onClick={handleAddToCart}
-                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bold text-sm uppercase tracking-wider shadow-lg hover:shadow-[0_0_20px_rgba(239,68,68,0.3)] transition-all active:scale-[0.99] cursor-pointer flex items-center justify-center gap-2"
+                className="w-full py-4 rounded-full bg-[#f5a623] hover:bg-[#e0951a] text-black font-bold text-sm uppercase tracking-wider shadow-lg transition-all active:scale-[0.99] cursor-pointer flex items-center justify-center gap-2"
               >
-                <ShoppingBag size={16} />
                 <span>{isAdded ? 'Added to cart' : 'Add to cart'}</span>
               </button>
               <button
                 onClick={handleBuyNow}
-                className="w-full py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-sm uppercase tracking-wider shadow-lg transition-all active:scale-[0.99] cursor-pointer flex items-center justify-center gap-2"
+                className="w-full py-4 rounded-full bg-[#f3af38] hover:bg-[#e09f29] text-black font-bold text-sm uppercase tracking-wider shadow-lg transition-all active:scale-[0.99] cursor-pointer flex items-center justify-center gap-2"
               >
                 <span>Buy it now</span>
               </button>

@@ -143,12 +143,9 @@ const CartPage = () => {
             <p className="text-[15px] text-zinc-500 dark:text-zinc-400 mb-8 leading-relaxed">
               Looks like you haven't added anything yet. Browse our latest arrivals to find something you love.
             </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-              <Link to="/collections/men" className="h-[52px] px-8 rounded-xl bg-[hsl(var(--foreground))] text-[hsl(var(--background))] text-[13px] font-bold tracking-wider flex items-center justify-center hover:opacity-90 transition-all duration-200 w-full sm:w-auto">
-                SHOP MEN
-              </Link>
-              <Link to="/collections/women" className="h-[52px] px-8 rounded-xl border-2 border-zinc-300 dark:border-zinc-600 text-[13px] font-bold tracking-wider flex items-center justify-center hover:border-[hsl(var(--foreground))] transition-all duration-200 w-full sm:w-auto">
-                SHOP WOMEN
+            <div className="flex items-center justify-center">
+              <Link to="/collections/all" className="h-[50px] px-8 rounded-full bg-[#f5a623] hover:bg-[#e0951a] text-black text-xs font-bold uppercase tracking-wider flex items-center justify-center transition-all duration-200 w-full sm:w-auto shadow-md">
+                CONTINUE SHOPPING
               </Link>
             </div>
           </motion.div>
