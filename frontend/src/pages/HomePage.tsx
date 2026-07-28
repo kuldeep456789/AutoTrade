@@ -58,24 +58,25 @@ const HomePage = () => {
 
   const carouselRef = useRef<HTMLDivElement>(null);
 
-  const heroVideos = [
-    '/video/Create_a_premium_cinematic_fas.mp4',
-    // The second video is not yet present in the folder, so we reuse the first or add a placeholder
-    '/video/Luxury_cinematic_clothing_comm.mp4'
+  const heroImages = [
+    '/video/Auto_replacement_parts_on_surface_202607281545.jpeg',
+    '/video/Futuristic_automotive_electronic._202607281545.jpeg',
+    '/video/Luxury_car_interior_accessories_._202607281545.jpeg',
+    '/video/Motorcycle_gear_and_accessories_._202607281545.jpeg',
+    '/video/Tools_and_cleaning_products_garage_202607281545.jpeg'
   ];
 
   const [currentHeroIdx, setCurrentHeroIdx] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [countdown, setCountdown] = useState(10);
-  const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
 
   useEffect(() => {
     let heroTimer: ReturnType<typeof setInterval>;
     if (isPlaying) {
       heroTimer = setInterval(() => {
-        setCurrentHeroIdx((prev) => (prev + 1) % heroVideos.length);
-      }, 10000);
+        setCurrentHeroIdx((prev) => (prev + 1) % heroImages.length);
+      }, 5000);
     }
 
     if (!userInfo) {
@@ -88,27 +89,16 @@ const HomePage = () => {
     return () => {
       if (heroTimer) clearInterval(heroTimer);
     };
-  }, [heroVideos.length, userInfo, isPlaying]);
+  }, [heroImages.length, userInfo, isPlaying]);
 
-  useEffect(() => {
-    // Play the current video, pause the others
-    videoRefs.current.forEach((video, idx) => {
-      if (!video) return;
-      if (idx === currentHeroIdx && isPlaying) {
-        video.currentTime = 0; // Reset video to start when it becomes active
-        video.play().catch(e => console.log('Autoplay blocked', e));
-      } else {
-        video.pause();
-      }
-    });
-  }, [currentHeroIdx, isPlaying]);
+
 
   const handleNextHero = () => {
-    setCurrentHeroIdx((prev) => (prev + 1) % heroVideos.length);
+    setCurrentHeroIdx((prev) => (prev + 1) % heroImages.length);
   };
 
   const handlePrevHero = () => {
-    setCurrentHeroIdx((prev) => (prev - 1 + heroVideos.length) % heroVideos.length);
+    setCurrentHeroIdx((prev) => (prev - 1 + heroImages.length) % heroImages.length);
   };
 
   useEffect(() => {
@@ -126,17 +116,14 @@ const HomePage = () => {
     <div className="w-full bg-[hsl(var(--background))] text-[hsl(var(--foreground))] font-sans uppercase">
       {/* ───────── HERO ───────── */}
       <section className="relative h-[550px] sm:h-[650px] lg:h-[720px] overflow-hidden bg-black text-white">
-        {heroVideos.map((vid: string, idx: number) => (
+        {heroImages.map((imgSrc: string, idx: number) => (
           <div
             key={idx}
             className={`absolute inset-0 h-full w-full transition-opacity duration-1000 ease-in-out ${idx === currentHeroIdx ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
           >
-            <video
-              ref={(el) => { videoRefs.current[idx] = el; }}
-              src={vid}
-              muted
-              playsInline
-              loop={heroVideos.length === 1} // Loop if there's only one video
+            <img
+              src={imgSrc}
+              alt="AutoTrade Banner"
               className="h-full w-full object-cover object-center"
             />
           </div>
@@ -147,9 +134,6 @@ const HomePage = () => {
             <h1 className="text-6xl sm:text-8xl lg:text-[100px] font-black leading-[0.85] tracking-tighter text-white drop-shadow-2xl">
               AutoTrade
             </h1>
-            <p className="mt-6 sm:mt-8 text-lg sm:text-xl text-white/95 max-w-lg leading-relaxed font-medium normal-case tracking-normal drop-shadow-md">
-              Drive Business Forward with Premium Automotive Accessories, Electronics & High-Performance Replacement Parts.
-            </p>
             <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row gap-4 sm:gap-5 items-center w-full sm:w-auto">
               <Link to="/collections/exterior-accessories" className="inline-flex w-full sm:w-auto items-center justify-center h-[56px] sm:h-[64px] px-10 sm:px-14 bg-red-600 text-white text-[15px] sm:text-[16px] font-bold tracking-widest transition-all duration-300 hover:bg-red-700 border-2 border-red-600 hover:scale-105 active:scale-95 shadow-[0_4px_20px_rgba(255,0,0,0.3)]">
                 EXPLORE ACCESSORIES
@@ -163,7 +147,7 @@ const HomePage = () => {
 
         {/* Navigation Dots */}
         <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20 flex gap-3">
-          {heroVideos.map((_: string, idx: number) => (
+          {heroImages.map((_: string, idx: number) => (
             <button
               key={idx}
               onClick={() => setCurrentHeroIdx(idx)}
@@ -214,8 +198,8 @@ const HomePage = () => {
                 className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-4 -mx-6 px-6 sm:-mx-10 sm:px-10 lg:-mx-16 lg:px-16"
                 style={{ scrollBehavior: 'smooth', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
               >
-                  {carouselProducts.map((product: any) => (
-                    <div key={product.pid || product._id} className="flex-shrink-0 w-[280px] sm:w-[320px] lg:w-[calc(25%-12px)] snap-start">
+                  {carouselProducts.map((product: any, index: number) => (
+                    <div key={`${product.pid || product._id || product.id}-${index}`} className="flex-shrink-0 w-[280px] sm:w-[320px] lg:w-[calc(25%-12px)] snap-start">
                       <ProductCard product={product} />
                     </div>
                   ))}
