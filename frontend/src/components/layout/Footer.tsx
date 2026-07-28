@@ -34,28 +34,33 @@ const Footer = () => {
               <h4 className="text-xs sm:text-sm font-bold tracking-[0.2em] text-zinc-300 uppercase">Shop Categories</h4>
               <ul className="space-y-2 text-sm font-medium">
                 <li>
-                  <Link to="/collections/battery-chargers" className="text-zinc-400 hover:text-white transition-colors duration-200 block py-0.5">
-                    Battery Chargers
+                  <Link to="/collections/exterior-accessories" className="text-zinc-400 hover:text-white transition-colors duration-200 block py-0.5">
+                    Exterior Accessories
                   </Link>
                 </li>
                 <li>
-                  <Link to="/collections/battery-testers" className="text-zinc-400 hover:text-white transition-colors duration-200 block py-0.5">
-                    Battery Testers
+                  <Link to="/collections/interior-accessories" className="text-zinc-400 hover:text-white transition-colors duration-200 block py-0.5">
+                    Interior Accessories
                   </Link>
                 </li>
                 <li>
-                  <Link to="/collections/performance-additives" className="text-zinc-400 hover:text-white transition-colors duration-200 block py-0.5">
-                    Performance Additives
+                  <Link to="/collections/tools-maintenance-care" className="text-zinc-400 hover:text-white transition-colors duration-200 block py-0.5">
+                    Tools, Maintenance & Care
                   </Link>
                 </li>
                 <li>
-                  <Link to="/collections/jump-starters" className="text-zinc-400 hover:text-white transition-colors duration-200 block py-0.5">
-                    Jump Starters
+                  <Link to="/collections/car-electronics" className="text-zinc-400 hover:text-white transition-colors duration-200 block py-0.5">
+                    Car Electronics
                   </Link>
                 </li>
                 <li>
-                  <Link to="/collections/obd-tools" className="text-zinc-400 hover:text-white transition-colors duration-200 block py-0.5">
-                    OBD Tools
+                  <Link to="/collections/motorcycle-accessories" className="text-zinc-400 hover:text-white transition-colors duration-200 block py-0.5">
+                    Motorcycle Accessories & Parts
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/collections/auto-replacement-parts" className="text-zinc-400 hover:text-white transition-colors duration-200 block py-0.5">
+                    Auto Replacement Parts
                   </Link>
                 </li>
               </ul>
