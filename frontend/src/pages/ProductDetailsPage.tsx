@@ -580,43 +580,45 @@ const ProductDetailsPage = () => {
             </div>
 
             {/* Quantity Selector */}
-            <div className="flex flex-col gap-2 pt-1.5">
-              <span className="text-[10px] sm:text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest block mb-0.5">Order Quantity (Units)</span>
-              <div className="flex items-center justify-between border border-zinc-200 dark:border-zinc-800 rounded-2xl w-[120px] bg-zinc-50 dark:bg-zinc-900/60 h-10 px-1 shadow-sm transition-all duration-200 focus-within:ring-2 focus-within:ring-amber-500/30 focus-within:border-amber-500">
+            <div className="flex flex-col gap-1.5 pt-1.5">
+              <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200 block">Quantity</span>
+              <div className="flex items-center border border-zinc-200 dark:border-zinc-800 rounded-lg w-[130px] bg-zinc-50 dark:bg-black overflow-hidden h-10">
                 <button
                   onClick={() => setQty((q) => Math.max(1, q - 1))}
-                  className="text-zinc-500 hover:text-zinc-900 dark:hover:text-white font-bold text-lg w-8 h-8 flex items-center justify-center cursor-pointer transition-colors active:scale-90 select-none"
+                  className="w-10 h-full flex items-center justify-center bg-zinc-100 dark:bg-zinc-900/60 hover:bg-zinc-200 dark:hover:bg-zinc-900/90 text-zinc-700 dark:text-zinc-300 border-r border-zinc-200 dark:border-zinc-800 transition-colors select-none cursor-pointer"
                 >
-                  -
+                  <span className="text-lg font-medium leading-none mb-0.5">-</span>
                 </button>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={qty === 0 ? '' : qty}
-                  onChange={(e) => {
-                    const cleanVal = e.target.value.replace(/[^0-9]/g, '');
-                    if (cleanVal === '') {
-                      setQty(0);
-                    } else {
-                      const val = parseInt(cleanVal, 10);
-                      if (!isNaN(val) && val >= 1) {
-                        setQty(val);
+                <div className="flex-1 h-full bg-white dark:bg-black flex items-center justify-center">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={qty === 0 ? '' : qty}
+                    onChange={(e) => {
+                      const cleanVal = e.target.value.replace(/[^0-9]/g, '');
+                      if (cleanVal === '') {
+                        setQty(0);
+                      } else {
+                        const val = parseInt(cleanVal, 10);
+                        if (!isNaN(val) && val >= 1) {
+                          setQty(val);
+                        }
                       }
-                    }
-                  }}
-                  onBlur={() => {
-                    if (qty < 1 || isNaN(qty)) {
-                      setQty(1);
-                    }
-                  }}
-                  className="font-bold text-zinc-900 dark:text-white w-10 text-center select-all bg-transparent focus:outline-none text-sm p-0 m-0 border-none flex-1"
-                />
+                    }}
+                    onBlur={() => {
+                      if (qty < 1 || isNaN(qty)) {
+                        setQty(1);
+                      }
+                    }}
+                    className="font-semibold text-zinc-900 dark:text-white w-full text-center bg-transparent focus:outline-none text-sm p-0 m-0 border-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                </div>
                 <button
                   onClick={() => setQty((q) => (q === 0 ? 1 : q + 1))}
-                  className="text-zinc-500 hover:text-zinc-900 dark:hover:text-white font-bold text-lg w-8 h-8 flex items-center justify-center cursor-pointer transition-colors active:scale-90 select-none"
+                  className="w-10 h-full flex items-center justify-center bg-zinc-100 dark:bg-zinc-900/60 hover:bg-zinc-200 dark:hover:bg-zinc-900/90 text-zinc-700 dark:text-zinc-300 border-l border-zinc-200 dark:border-zinc-800 transition-colors select-none cursor-pointer"
                 >
-                  +
+                  <span className="text-lg font-medium leading-none mb-0.5">+</span>
                 </button>
               </div>
             </div>

@@ -142,18 +142,18 @@ const HomePage = () => {
 
         {/* Hero Content Overlay */}
         <div className="relative z-10 h-full max-w-[1920px] mx-auto px-6 sm:px-10 lg:px-16 flex items-center">
-          <div className="max-w-2xl text-left space-y-5 sm:space-y-6">
-            <h1 className="text-3xl sm:text-3xl lg:text-3xl font-black tracking-tight leading-[1.1] uppercase">
+          <div className="max-w-2xl text-left space-y-6 sm:space-y-7">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.1] uppercase">
               Performance Starts <br className="hidden sm:inline" />
-              With <span className="text-orange-300">The Right Part</span>
+              With <span className="text-[#FF7A00]">The Right Part</span>
             </h1>
-            <p className="text-sm sm:text-lg text-zinc-400 font-medium normal-case max-w-lg leading-relaxed">
+            <p className="text-sm sm:text-base text-zinc-300 font-medium normal-case max-w-lg leading-relaxed">
               Explore 10,000+ genuine automotive parts and accessories for every make and model. Engineered for excellence.
             </p>
             <div className="pt-2 flex flex-wrap gap-4 items-center">
               <Link
                 to="/collections/exterior-accessories"
-                className="px-6 py-3.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-xs sm:text-sm font-bold tracking-wider uppercase transition-all duration-300 shadow-lg shadow-orange-500/20 active:scale-95 flex items-center gap-2 cursor-pointer"
+                className="px-7 py-4 rounded-full bg-gradient-to-r from-[#FF7A00] to-[#FF9E00] hover:from-[#FF9E00] hover:to-[#FF7A00] text-white text-xs sm:text-sm font-bold tracking-wider uppercase transition-all duration-300 shadow-[0_4px_20px_rgba(255,122,0,0.3)] hover:shadow-[0_4px_25px_rgba(255,122,0,0.45)] active:scale-95 flex items-center gap-2 cursor-pointer"
               >
                 <span>Shop Now</span>
                 <ArrowRight size={16} />
@@ -163,7 +163,7 @@ const HomePage = () => {
                   const el = document.getElementById('collections-showcase');
                   if (el) el.scrollIntoView({ behavior: 'smooth' });
                 }}
-                className="px-6 py-3.5 rounded-xl border border-white/20 hover:border-white/50 hover:bg-white/5 text-white text-xs sm:text-sm font-bold tracking-wider uppercase transition-all duration-300 active:scale-95 cursor-pointer backdrop-blur-sm"
+                className="px-7 py-4 rounded-full border border-white/20 hover:border-white/50 bg-white/5 hover:bg-white/10 text-white text-xs sm:text-sm font-bold tracking-wider uppercase transition-all duration-300 active:scale-95 cursor-pointer backdrop-blur-md"
               >
                 Explore Categories
               </button>

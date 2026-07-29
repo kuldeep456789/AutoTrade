@@ -78,42 +78,44 @@ export default function QuantitySelector({
   };
 
   return (
-    <div className={`flex items-center ${className}`}>
+    <div className={`flex items-center border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden bg-zinc-50 dark:bg-black h-8 w-[100px] shrink-0 ${className}`}>
       <button
         onClick={onDecrement}
         disabled={value <= min}
-        className="w-8 h-full flex items-center justify-center transition-colors duration-150 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent cursor-pointer"
+        className="w-8 h-full flex items-center justify-center bg-zinc-100 dark:bg-zinc-900/60 hover:bg-zinc-200 dark:hover:bg-zinc-900/90 text-zinc-700 dark:text-zinc-300 border-r border-zinc-200 dark:border-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer select-none"
       >
-        <Minus size={14} strokeWidth={2} />
+        <Minus size={11} strokeWidth={2.5} />
       </button>
 
-      {editing ? (
-        <input
-          ref={inputRef}
-          type="text"
-          inputMode="numeric"
-          value={editValue}
-          onChange={handleChange}
-          onBlur={commitEdit}
-          onKeyDown={handleKeyDown}
-          className="w-10 h-full text-center text-sm font-semibold bg-transparent outline-none border-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-        />
-      ) : (
-        <button
-          onClick={startEditing}
-          className="w-10 h-full text-center text-sm font-semibold select-none cursor-text"
-          title="Click to edit quantity"
-        >
-          {value}
-        </button>
-      )}
+      <div className="flex-1 h-full bg-white dark:bg-black flex items-center justify-center">
+        {editing ? (
+          <input
+            ref={inputRef}
+            type="text"
+            inputMode="numeric"
+            value={editValue}
+            onChange={handleChange}
+            onBlur={commitEdit}
+            onKeyDown={handleKeyDown}
+            className="w-full h-full text-center text-xs font-semibold bg-transparent outline-none border-none text-zinc-900 dark:text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          />
+        ) : (
+          <button
+            onClick={startEditing}
+            className="w-full h-full text-center text-xs font-semibold select-none cursor-text text-zinc-900 dark:text-white"
+            title="Click to edit quantity"
+          >
+            {value}
+          </button>
+        )}
+      </div>
 
       <button
         onClick={onIncrement}
         disabled={value >= max}
-        className="w-8 h-full flex items-center justify-center transition-colors duration-150 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent cursor-pointer"
+        className="w-8 h-full flex items-center justify-center bg-zinc-100 dark:bg-zinc-900/60 hover:bg-zinc-200 dark:hover:bg-zinc-900/90 text-zinc-700 dark:text-zinc-300 border-l border-zinc-200 dark:border-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer select-none"
       >
-        <Plus size={14} strokeWidth={2} />
+        <Plus size={11} strokeWidth={2.5} />
       </button>
     </div>
   );

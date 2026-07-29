@@ -257,37 +257,37 @@ const Navbar = () => {
             />
           </Link>
 
-          {/* Center - Long Search Bar */}
-          <div ref={searchContainerRef} className="hidden md:block flex-1 max-w-2xl mx-4 lg:mx-8 relative">
+          {/* Right - Search Bar (Shifted to right, compact & professional) */}
+          <div ref={searchContainerRef} className="hidden md:block w-60 lg:w-68 relative ml-auto mr-3">
             <form
               onSubmit={handleSearchSubmit}
               className="relative w-full"
             >
-              <div className={`flex items-center rounded-full border transition-all duration-200 h-[44px] bg-zinc-100 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 focus-within:border-orange-500 overflow-hidden`}>
+              <div className={`flex items-center rounded-full border transition-all duration-200 h-[38px] bg-zinc-100 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 focus-within:border-orange-500 overflow-hidden`}>
                 <input
                   ref={searchInputRef}
                   type="text"
                   value={searchQuery}
                   onChange={(e) => { setSearchQuery(e.target.value); setSelectedSuggestionIdx(-1); }}
                   onFocus={() => setSearchFocused(true)}
-                  placeholder="Search for parts, brands, categories..."
-                  className="flex-1 bg-transparent text-[14px] px-5 text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-zinc-400 focus:outline-none text-left normal-case"
+                  placeholder="Search parts, categories..."
+                  className="flex-1 bg-transparent text-[13px] px-4 text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-zinc-400 focus:outline-none text-left normal-case"
                 />
                 {searchQuery && (
                   <button
                     type="button"
                     onClick={() => setSearchQuery('')}
-                    className="mr-2 p-1 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-full transition-colors cursor-pointer"
+                    className="mr-1.5 p-1 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-full transition-colors cursor-pointer"
                   >
-                    <X className="h-4 w-4 text-zinc-500" strokeWidth={2.5} />
+                    <X className="h-3.5 w-3.5 text-zinc-500" strokeWidth={2.5} />
                   </button>
                 )}
                 <button
                   type="submit"
-                  className="bg-orange-500 hover:bg-orange-600 text-white px-5 h-full flex items-center justify-center transition-colors cursor-pointer rounded-r-full shrink-0"
+                  className="bg-orange-500 hover:bg-orange-600 text-white px-4 h-full flex items-center justify-center transition-colors cursor-pointer rounded-r-full shrink-0"
                   aria-label="Submit search"
                 >
-                  <Search className="h-4.5 w-4.5 text-white" strokeWidth={2.5} />
+                  <Search className="h-4 w-4 text-white" strokeWidth={2.5} />
                 </button>
               </div>
             </form>
