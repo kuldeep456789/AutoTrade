@@ -10,7 +10,7 @@ export interface CjCreateOrderDto {
   shippingCity: string;
   shippingProvince: string;
   shippingCountryCode: string;
-  shippingCountry: string;
+  shippingCountry?: string;
   shippingZip: string;
   shippingPhone: string;
   logisticName?: string;
@@ -18,3 +18,4 @@ export interface CjCreateOrderDto {
   platform?: string;
   products: CjOrderProductItem[];
 }
+

@@ -61,7 +61,7 @@ export class CjService {
     this.logger.log('[CJ] POST /v1/authentication/getAccessToken');
     return this.scheduleRequest('/v1/authentication/getAccessToken', {
       method: 'POST',
-      data: { email, api_key: apiKey, password: apiKey },
+      data: { email, api_key: apiKey },
     });
   }
 
