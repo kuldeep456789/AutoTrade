@@ -124,21 +124,21 @@ const CollectionPage = () => {
       {/* Compact Senior Developer Header */}
       <div className="border-b border-zinc-200 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-zinc-900/40 backdrop-blur-sm">
         <div className="max-w-[1920px] mx-auto px-6 sm:px-10 py-5">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex flex-wrap items-center gap-2 text-sm font-semibold text-zinc-500 dark:text-zinc-400">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
+            <div className="flex flex-wrap items-center gap-1.5 text-xs sm:text-sm font-semibold text-zinc-500 dark:text-zinc-400">
               <Link to="/" className="hover:text-orange-500 dark:hover:text-orange-400 transition-colors">Home</Link>
-              <ChevronRight size={14} strokeWidth={2.5} className="text-zinc-400 dark:text-zinc-600" />
+              <ChevronRight size={12} strokeWidth={2.5} className="text-zinc-400 dark:text-zinc-600" />
               <Link to="/collections/exterior-accessories" className="hover:text-orange-500 dark:hover:text-orange-400 transition-colors">Collections</Link>
               {subcategory && (
                 <>
-                  <ChevronRight size={14} strokeWidth={2.5} className="text-zinc-400 dark:text-zinc-600" />
+                  <ChevronRight size={12} strokeWidth={2.5} className="text-zinc-400 dark:text-zinc-600" />
                   <span className="text-zinc-900 dark:text-white font-extrabold">{pageTitle}</span>
                 </>
               )}
             </div>
-            <div className="flex items-center gap-3 shrink-0">
+            <div className="flex items-center gap-3 shrink-0 self-start sm:self-auto">
               <span className="inline-flex items-center px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-bold bg-orange-500/10 text-orange-500 border border-orange-500/20">
-                {isLoading ? 'Loading...' : `${headerCount} Products Available`}
+                {isLoading ? 'Loading...' : `${headerCount} AVL`}
               </span>
             </div>
           </div>

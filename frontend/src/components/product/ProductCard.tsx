@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { Heart, ShoppingBag, Check } from 'lucide-react';
+import { Heart, ShoppingCart, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { addToCart } from '../../store/slices/cartSlice';
 import { toggleWishlist } from '../../store/slices/wishlistSlice';
@@ -17,12 +17,12 @@ interface ProductCardProps {
 const PLACEHOLDER_IMAGE = 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=600&auto=format&fit=crop&q=80';
 
 export const ProductCardSkeleton = () => (
-  <div className="flex flex-col w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden shadow-sm animate-pulse">
-    <div className="aspect-square w-full bg-zinc-200 dark:bg-zinc-800" />
-    <div className="p-4 space-y-3">
-      <div className="h-3 w-1/3 bg-zinc-200 dark:bg-zinc-800 rounded" />
-      <div className="h-4 w-3/4 bg-zinc-200 dark:bg-zinc-800 rounded" />
-      <div className="h-5 w-1/2 bg-zinc-200 dark:bg-zinc-800 rounded pt-2" />
+  <div className="flex flex-col w-full bg-[#111111] border border-[#262626] rounded-[20px] overflow-hidden shadow-sm animate-pulse h-[380px]">
+    <div className="aspect-square w-full bg-[#1c1c1e]" />
+    <div className="p-5 space-y-3">
+      <div className="h-3 w-2/3 bg-[#262626] rounded" />
+      <div className="h-4 w-1/3 bg-[#262626] rounded" />
+      <div className="h-3 w-1/2 bg-[#262626] rounded pt-1" />
     </div>
   </div>
 );
@@ -54,6 +54,23 @@ const ProductCard = ({ product }: ProductCardProps) => {
   const discountPct = originalPrice && originalPrice > currentPrice
     ? Math.round(((originalPrice - currentPrice) / originalPrice) * 100)
     : 0;
+
+  // Stable Mock Rating Generator
+  const getMockRating = (name: string) => {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const score = 4.3 + (Math.abs(hash % 7) / 10); // 4.3 to 4.9
+    const count = 15 + Math.abs(hash % 140); // 15 to 155 reviews
+    return {
+      score: score.toFixed(1),
+      count: count,
+    };
+  };
+
+  const ratingVal = getMockRating(productName);
+  const numStars = Math.round(Number(ratingVal.score));
 
   // ── Hide products with no meaningful price (₹0 – ₹1) ───────────────────────
   if (!currentPrice || Number(currentPrice) <= 1) return null;
@@ -104,78 +121,43 @@ const ProductCard = ({ product }: ProductCardProps) => {
         price: currentPrice,
         image: primaryImage,
         qty: 1,
-        increment: true,
         variant: { color: product.colors?.[0] || 'Default', size: 'One Size' },
       })
     );
-
     setIsAdded(true);
-    toast.success('Added to Bag');
+    toast.success('Added to Cart');
     setTimeout(() => setIsAdded(false), 2000);
   };
 
   return (
     <div
-      className="group relative flex flex-col w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden shadow-sm transition-all duration-200 cursor-pointer"
+      className="group relative flex flex-col w-full bg-white dark:bg-[#111111] border border-zinc-200 dark:border-[#262626] rounded-[20px] overflow-hidden transition-all duration-300 ease-in-out hover:scale-[1.03] hover:border-[#FF7A00]"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      {/* Product Image Box */}
-      <Link to={`/product/${productId}`} className="relative block aspect-square w-full bg-zinc-50 dark:bg-zinc-950 overflow-hidden p-2.5 sm:p-3 transition-colors duration-200">
-        {imageFailed ? (
-          <div className="flex h-full w-full flex-col items-center justify-center bg-zinc-100 dark:bg-zinc-900 px-6 text-center">
-            <span className="mt-2 line-clamp-2 text-sm font-bold text-zinc-900 dark:text-white">
-              {productName}
-            </span>
-          </div>
-        ) : (
-          <>
-            {/* Primary image */}
-            <img
-              src={usePlaceholder ? PLACEHOLDER_IMAGE : primaryImage}
-              alt={productName}
-              loading="lazy"
-              onError={() => {
-                if (!usePlaceholder) {
-                  setUsePlaceholder(true);
-                } else {
-                  setImageFailed(true);
-                }
-              }}
-              className={`h-full w-full object-cover object-center transform group-hover:scale-105 transition-all duration-500 ${
-                hovered && hoverImage ? 'opacity-0' : 'opacity-100'
-              }`}
-            />
-            {/* Secondary hover image */}
-            {hoverImage && (
-              <img
-                src={hoverImage}
-                alt={`${productName} hover view`}
-                loading="lazy"
-                className={`absolute inset-0 h-full w-full object-cover object-center p-2.5 sm:p-3 transform group-hover:scale-105 transition-all duration-500 ${
-                  hovered ? 'opacity-100' : 'opacity-0'
-                }`}
-              />
-            )}
-          </>
-        )}
-
-        {/* Top Badges */}
+      {/* Product Image Area (takes ~70% visual focus) */}
+      <Link to={`/product/${productId}`} className="relative block aspect-square w-full bg-zinc-50 dark:bg-[#161616] overflow-hidden">
         {discountPct > 0 && (
-          <div className="absolute top-2.5 left-2.5 flex flex-col gap-1.5 z-10 pointer-events-none">
-            <span className="bg-red-600 text-white font-bold text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-md shadow-md">
-              -{discountPct}%
-            </span>
-          </div>
+          <span className="absolute top-4 left-4 z-10 px-2 py-0.5 rounded-md bg-[#FF7A00] text-[10px] font-bold text-white tracking-wider uppercase">
+            -{discountPct}% OFF
+          </span>
         )}
 
-        {/* Wishlist Button */}
+        <img
+          src={usePlaceholder || imageFailed ? PLACEHOLDER_IMAGE : (hovered && hoverImage ? hoverImage : primaryImage)}
+          alt={productName}
+          onError={() => setImageFailed(true)}
+          className="w-full h-full object-cover transition-transform duration-300 ease-in-out scale-100 group-hover:scale-105"
+          loading="lazy"
+        />
+
+        {/* Circular glass wishlist button */}
         <button
           onClick={handleWishlistClick}
-          className={`absolute top-2.5 right-2.5 z-10 flex h-8 w-8 items-center justify-center rounded-full backdrop-blur-md transition-all duration-300 shadow-md hover:scale-110 active:scale-95 ${
+          className={`absolute top-4 right-4 z-10 flex items-center justify-center w-9 h-9 rounded-full border bg-white/5 backdrop-blur-md transition-all duration-300 cursor-pointer group-hover:rotate-12 ${
             isWishlisted
-              ? 'bg-red-600 text-white'
-              : 'bg-white/80 dark:bg-black/60 text-zinc-700 dark:text-zinc-300 hover:bg-red-600 hover:text-white'
+              ? 'text-red-500 border-red-500/20 bg-red-500/10'
+              : 'text-zinc-400 border-white/10 hover:text-red-500 hover:border-red-500/20'
           }`}
           aria-label="Wishlist"
         >
@@ -184,47 +166,44 @@ const ProductCard = ({ product }: ProductCardProps) => {
       </Link>
 
       {/* Product Content Details */}
-      <div className="flex flex-col flex-1 p-3 sm:p-4 justify-between bg-white dark:bg-zinc-900 transition-colors duration-200">
-        <Link to={`/product/${productId}`} className="space-y-1.5">
+      <div className="flex flex-col flex-1 p-5 justify-between bg-white dark:bg-[#111111]">
+        <Link to={`/product/${productId}`} className="block">
           {/* Product Title */}
-          <h3 className="text-sm sm:text-[15px] font-medium text-zinc-900 dark:text-white group-hover:text-orange-500 transition-colors line-clamp-2 leading-snug tracking-tight">
+          <h3 className="text-[14.5px] sm:text-[15.5px] font-inter font-semibold text-zinc-900 dark:text-white group-hover:text-[#FF7A00] transition-colors line-clamp-1 leading-snug tracking-tight normal-case">
             {productName}
           </h3>
         </Link>
 
-        {/* Price & Quick Add Button */}
-        <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800/80 mt-3 flex items-center justify-between gap-2">
-          <div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-base sm:text-lg font-semibold text-zinc-900 dark:text-white">
+        {/* Price, Rating & Quick Add Row */}
+        <div className="mt-3.5 flex items-end justify-between gap-2">
+          <div className="space-y-1">
+            {/* Price */}
+            <div className="flex items-baseline gap-2 flex-wrap">
+              <span className="text-[16px] sm:text-[18px] font-inter font-bold text-zinc-950 dark:text-white">
                 {formatINR(currentPrice)}
               </span>
               {originalPrice && (
-                <span className="text-xs text-zinc-400 dark:text-zinc-500 line-through">
+                <span className="text-[11px] font-inter font-normal text-zinc-400 dark:text-zinc-500 line-through">
                   {formatINR(originalPrice)}
                 </span>
               )}
             </div>
+
           </div>
 
           <button
             onClick={handleQuickAdd}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all duration-300 shadow-sm active:scale-95 cursor-pointer ${
+            className={`w-9.5 h-9.5 rounded-full flex items-center justify-center transition-all duration-300 active:scale-95 cursor-pointer shrink-0 border hover:-translate-y-0.5 ${
               isAdded
-                ? 'bg-emerald-600 text-white'
-                : 'bg-orange-500/10 text-orange-600 dark:text-orange-400 hover:bg-orange-500 hover:text-white border border-orange-500/30'
+                ? 'bg-zinc-950 dark:bg-white border-transparent text-white dark:text-zinc-950'
+                : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-[#262626] text-zinc-800 dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800'
             }`}
+            aria-label="Add to cart"
           >
             {isAdded ? (
-              <>
-                <Check size={14} strokeWidth={3} />
-                <span>ADDED</span>
-              </>
+              <Check size={15} strokeWidth={3} className="text-white dark:text-zinc-950" />
             ) : (
-              <>
-                <ShoppingBag size={14} />
-                <span>ADD</span>
-              </>
+              <ShoppingCart size={15} strokeWidth={2} />
             )}
           </button>
         </div>

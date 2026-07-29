@@ -101,46 +101,15 @@ const HomePage = () => {
 
   const carouselRef = useRef<HTMLDivElement>(null);
 
-  const heroImages = [
-    '/img/one.jpeg',
-    '/img/two.jpeg',
-    '/img/three.jpeg',
-    '/img/four.jpeg',
-    '/img/five.jpeg'
-  ];
-
-  const [currentHeroIdx, setCurrentHeroIdx] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(true);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [countdown, setCountdown] = useState(10);
 
   useEffect(() => {
-    let heroTimer: ReturnType<typeof setInterval>;
-    if (isPlaying) {
-      heroTimer = setInterval(() => {
-        setCurrentHeroIdx((prev) => (prev + 1) % heroImages.length);
-      }, 5000);
-    }
-
     if (!userInfo) {
       const popupTimer = setTimeout(() => setShowLoginPopup(true), 10000);
-      return () => {
-        if (heroTimer) clearInterval(heroTimer);
-        clearTimeout(popupTimer);
-      };
+      return () => clearTimeout(popupTimer);
     }
-    return () => {
-      if (heroTimer) clearInterval(heroTimer);
-    };
-  }, [heroImages.length, userInfo, isPlaying]);
-
-  const handleNextHero = () => {
-    setCurrentHeroIdx((prev) => (prev + 1) % heroImages.length);
-  };
-
-  const handlePrevHero = () => {
-    setCurrentHeroIdx((prev) => (prev - 1 + heroImages.length) % heroImages.length);
-  };
+  }, [userInfo]);
 
   useEffect(() => {
     if (showLoginPopup) setCountdown(10);
@@ -155,67 +124,61 @@ const HomePage = () => {
 
   return (
     <div className="w-full bg-[hsl(var(--background))] text-[hsl(var(--foreground))] font-sans uppercase">
-      {/* ───────── HERO ───────── */}
+      {/* ───────── HERO VIDEO BANNER ───────── */}
       <section className="relative h-[550px] sm:h-[650px] lg:h-[720px] overflow-hidden bg-black text-white">
-        {heroImages.map((imgSrc: string, idx: number) => (
-          <div
-            key={idx}
-            className={`absolute inset-0 h-full w-full transition-opacity duration-1000 ease-in-out ${idx === currentHeroIdx ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-          >
-            <img
-              src={imgSrc}
-              alt="AutoTrade Banner"
-              className="h-full w-full object-cover object-center"
-            />
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover"
+        >
+          <source src="/img/Apex-9_interactive_assembly_journey_202607292346.mp4" type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
+        {/* Soft vignette overlay */}
+        <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/45 to-transparent" />
+        <div className="absolute inset-0 bg-black/25" />
+
+        {/* Hero Content Overlay */}
+        <div className="relative z-10 h-full max-w-[1920px] mx-auto px-6 sm:px-10 lg:px-16 flex items-center">
+          <div className="max-w-2xl text-left space-y-5 sm:space-y-6">
+            <h1 className="text-3xl sm:text-3xl lg:text-3xl font-black tracking-tight leading-[1.1] uppercase">
+              Performance Starts <br className="hidden sm:inline" />
+              With <span className="text-orange-300">The Right Part</span>
+            </h1>
+            <p className="text-sm sm:text-lg text-zinc-400 font-medium normal-case max-w-lg leading-relaxed">
+              Explore 10,000+ genuine automotive parts and accessories for every make and model. Engineered for excellence.
+            </p>
+            <div className="pt-2 flex flex-wrap gap-4 items-center">
+              <Link
+                to="/collections/exterior-accessories"
+                className="px-6 py-3.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-xs sm:text-sm font-bold tracking-wider uppercase transition-all duration-300 shadow-lg shadow-orange-500/20 active:scale-95 flex items-center gap-2 cursor-pointer"
+              >
+                <span>Shop Now</span>
+                <ArrowRight size={16} />
+              </Link>
+              <button
+                onClick={() => {
+                  const el = document.getElementById('collections-showcase');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="px-6 py-3.5 rounded-xl border border-white/20 hover:border-white/50 hover:bg-white/5 text-white text-xs sm:text-sm font-bold tracking-wider uppercase transition-all duration-300 active:scale-95 cursor-pointer backdrop-blur-sm"
+              >
+                Explore Categories
+              </button>
+            </div>
           </div>
-        ))}
-        <div className="absolute inset-0 bg-black/35" />
-
-        {/* Navigation Dots */}
-        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20 flex gap-3">
-          {heroImages.map((_: string, idx: number) => (
-            <button
-              key={idx}
-              onClick={() => setCurrentHeroIdx(idx)}
-              className={`w-2 h-2 rounded-full transition-all duration-300 cursor-pointer ${idx === currentHeroIdx ? 'bg-white w-6' : 'bg-white/40 hover:bg-white/60'}`}
-              aria-label={`Slide ${idx + 1}`}
-            />
-          ))}
-        </div>
-
-        {/* Bottom Right Controls */}
-        <div className="absolute bottom-8 right-8 lg:right-16 z-20 flex gap-3 items-center">
-          <button
-            className="w-10 h-10 rounded-full border border-white/40 flex items-center justify-center hover:border-white hover:bg-white/10 transition-colors cursor-pointer text-white"
-            onClick={() => setIsPlaying(!isPlaying)}
-            aria-label={isPlaying ? "Pause video" : "Play video"}
-          >
-            {isPlaying ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" />}
-          </button>
-          <button
-            className="w-10 h-10 rounded-full border border-white/40 flex items-center justify-center hover:border-white hover:bg-white/10 transition-colors cursor-pointer text-white"
-            onClick={handlePrevHero}
-            aria-label="Previous video"
-          >
-            <ChevronLeft size={20} />
-          </button>
-          <button
-            className="w-10 h-10 rounded-full border border-white/40 flex items-center justify-center hover:border-white hover:bg-white/10 transition-colors cursor-pointer text-white"
-            onClick={handleNextHero}
-            aria-label="Next video"
-          >
-            <ChevronRight size={20} />
-          </button>
         </div>
       </section>
 
-      {/* ───────── CATEGORY SHOWCASE (1 SINGLE ROW OF ALL 8 CATEGORIES) ───────── */}
-      <section className="bg-zinc-50 dark:bg-zinc-950 py-12 sm:py-16 border-b border-zinc-200 dark:border-zinc-800 transition-colors duration-200">
+      {/* ───────── CATEGORY SHOWCASE ───────── */}
+      <section id="collections-showcase" className="bg-zinc-50 dark:bg-zinc-950 py-12 sm:py-16 border-b border-zinc-200 dark:border-zinc-800 transition-colors duration-200">
         <div className="max-w-[1920px] mx-auto px-6 sm:px-10 lg:px-16">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 sm:mb-10 gap-4">
             <div>
-              <h3 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-zinc-800 dark:text-white uppercase">
-                Categories
+              <h3 className="text-2xl sm:text-2xl lg:text-3xl font-semibold tracking-tight text-zinc-600 dark:text-white uppercase">
+                Popular Categories
               </h3>
             </div>
 
@@ -266,8 +229,8 @@ const HomePage = () => {
             <div className="flex items-end justify-between mb-6 sm:mb-8">
               <div>
 
-                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight leading-none text-zinc-900 dark:text-white">
-                  Collection
+                <h2 className="text-2xl sm:text-2xl lg:text-3xl font-semibold tracking-tight text-zinc-600 dark:text-white uppercase">
+                  Trending Accessories
                 </h2>
               </div>
             </div>

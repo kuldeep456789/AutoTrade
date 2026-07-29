@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { RotateCcw, RefreshCw, X } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { RotateCcw, RefreshCw, X, ChevronRight } from 'lucide-react';
 import { adminApi, type AdminReturn } from '../../services/adminApi';
 import toast from 'react-hot-toast';
 
@@ -13,7 +13,13 @@ export default function AdminReturnRequests() {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [reviewModalReturn, setReviewModalReturn] = useState<AdminReturn | null>(null);
   const [adminNote, setAdminNote] = useState('');
+  const tabsRef = useRef<HTMLDivElement>(null);
 
+  const scrollTabs = () => {
+    if (tabsRef.current) {
+      tabsRef.current.scrollBy({ left: 160, behavior: 'smooth' });
+    }
+  };
   const closeReviewModal = () => {
     setReviewModalReturn(null);
     setAdminNote('');
@@ -93,34 +99,52 @@ export default function AdminReturnRequests() {
 
       <div className="bg-white dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xl overflow-hidden backdrop-blur-md transition-colors duration-200">
         {/* Filter tabs */}
-        <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 flex flex-wrap gap-2">
-          <button
-            onClick={() => setSelectedStatus('')}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-              !selectedStatus 
-                ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20' 
-                : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-800'
-            }`}
+        <div className="relative border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 flex items-center pr-12">
+          {/* Scrollable tabs container */}
+          <div
+            ref={tabsRef}
+            className="flex-1 overflow-x-auto scrollbar-hide flex gap-2 py-3.5 px-4 whitespace-nowrap scroll-smooth"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
-            All
-          </button>
-          {statusFlow.map(s => {
-            const count = returns.filter((r) => r.status === s).length;
-            const isSelected = selectedStatus === s;
-            return (
-              <button
-                key={s}
-                onClick={() => setSelectedStatus(s)}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                  isSelected 
-                    ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20' 
-                    : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-800'
-                }`}
-              >
-                <span className="capitalize">{s.replace(/_/g, ' ')}</span> {count > 0 && <span className="ml-1 opacity-80 font-bold">({count})</span>}
-              </button>
-            );
-          })}
+            <button
+              onClick={() => setSelectedStatus('')}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer shrink-0 ${
+                !selectedStatus 
+                  ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20' 
+                  : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-800'
+              }`}
+            >
+              All
+            </button>
+            {statusFlow.map(s => {
+              const count = returns.filter((r) => r.status === s).length;
+              const isSelected = selectedStatus === s;
+              return (
+                <button
+                  key={s}
+                  onClick={() => setSelectedStatus(s)}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer shrink-0 ${
+                    isSelected 
+                      ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20' 
+                      : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-800'
+                  }`}
+                >
+                  <span className="capitalize">{s.replace(/_/g, ' ')}</span> {count > 0 && <span className="ml-1 opacity-80 font-bold">({count})</span>}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Right Arrow Scroll Button with Fade Gradient */}
+          <div className="absolute right-0 top-0 bottom-0 flex items-center pr-2 pl-8 bg-gradient-to-l from-zinc-50 dark:from-zinc-950 via-zinc-50/90 dark:via-zinc-950/90 to-transparent pointer-events-none z-10">
+            <button
+              onClick={scrollTabs}
+              className="w-7 h-7 rounded-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-md hover:shadow-lg flex items-center justify-center pointer-events-auto transition-all hover:scale-105 active:scale-95 cursor-pointer"
+              aria-label="Scroll tabs right"
+            >
+              <ChevronRight className="h-3.5 w-3.5 text-zinc-600 dark:text-zinc-300" strokeWidth={2.5} />
+            </button>
+          </div>
         </div>
 
         {loading ? (

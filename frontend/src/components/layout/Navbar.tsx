@@ -246,7 +246,7 @@ const Navbar = () => {
   return (
     <>
       <header className={`fixed top-0 left-0 right-0 z-50 w-full bg-black text-white transition-all duration-300 font-sans border-b border-zinc-800 ${scrolled ? 'shadow-xl shadow-black/40' : 'shadow-none'}`}>
-        <div className="flex items-center justify-between h-[72px] max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-10">
+        <div className="flex items-center justify-between h-[72px] max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-10 gap-6">
 
           {/* Left - Logo */}
           <Link to="/" className="shrink-0 flex items-center group">
@@ -257,230 +257,121 @@ const Navbar = () => {
             />
           </Link>
 
-          {/* Center - Nav with Mega Dropdowns (Desktop) */}
-          <nav className="hidden lg:flex items-center gap-1 xl:gap-2">
-            {navCategories.map((cat) => {
-              const hasSubs = cat.subs.length > 0;
-              const isOpen = openDropdown === cat.label;
-              const active = isActive(cat.to);
-              const activeSub = hoveredSub ?? (cat.subs[0]?.label ?? null);
-              const subItems = cat.subs;
-              return (
-                <div
-                  key={cat.to}
-                  className="relative"
-                  onMouseEnter={() => handleNavEnter(cat.label)}
-                  onMouseLeave={handleNavLeave}
-                >
-                  {/* Nav button */}
-                  <Link
-                    to={cat.to}
-                    className={`flex items-center gap-1 px-2.5 xl:px-3 py-2 rounded-md text-[12.5px] xl:text-[13px] font-semibold tracking-wide transition-all duration-150 whitespace-nowrap ${active
-                        ? 'text-red-400'
-                        : isOpen
-                          ? 'text-white bg-white/5'
-                          : 'text-zinc-300 hover:text-white hover:bg-white/5'
-                      }`}
+          {/* Center - Long Search Bar */}
+          <div ref={searchContainerRef} className="hidden md:block flex-1 max-w-2xl mx-4 lg:mx-8 relative">
+            <form
+              onSubmit={handleSearchSubmit}
+              className="relative w-full"
+            >
+              <div className={`flex items-center rounded-full border transition-all duration-200 h-[44px] bg-zinc-100 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 focus-within:border-orange-500 overflow-hidden`}>
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => { setSearchQuery(e.target.value); setSelectedSuggestionIdx(-1); }}
+                  onFocus={() => setSearchFocused(true)}
+                  placeholder="Search for parts, brands, categories..."
+                  className="flex-1 bg-transparent text-[14px] px-5 text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-zinc-400 focus:outline-none text-left normal-case"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="mr-2 p-1 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-full transition-colors cursor-pointer"
                   >
-                    {cat.label}
-                    {hasSubs && (
-                      <ChevronDown
-                        className={`h-3.5 w-3.5 shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180 text-red-400' : 'text-zinc-400'
-                          }`}
-                        strokeWidth={2.5}
-                      />
-                    )}
-                  </Link>
+                    <X className="h-4 w-4 text-zinc-500" strokeWidth={2.5} />
+                  </button>
+                )}
+                <button
+                  type="submit"
+                  className="bg-orange-500 hover:bg-orange-600 text-white px-5 h-full flex items-center justify-center transition-colors cursor-pointer rounded-r-full shrink-0"
+                  aria-label="Submit search"
+                >
+                  <Search className="h-4.5 w-4.5 text-white" strokeWidth={2.5} />
+                </button>
+              </div>
+            </form>
 
-                  {/* Mega Dropdown */}
-                  <AnimatePresence>
-                    {isOpen && hasSubs && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -6, scaleY: 0.97 }}
-                        animate={{ opacity: 1, y: 0, scaleY: 1 }}
-                        exit={{ opacity: 0, y: -6, scaleY: 0.97 }}
-                        transition={{ duration: 0.15, ease: 'easeOut' }}
-                        style={{ transformOrigin: 'top center' }}
-                        className="absolute top-full left-0 mt-1 z-50 flex rounded-xl overflow-hidden shadow-2xl border border-[#1C274C] bg-white"
-                        onMouseEnter={handleDropdownEnter}
-                        onMouseLeave={handleDropdownLeave}
-                      >
-                        {/* Left panel – category list */}
-                        <div className="w-[230px] border-r border-gray-100 py-2">
-                          {navCategories.map((c) => {
-                            const isThisHovered = (hoveredSub === null && c.label === cat.label) || c.label === hoveredSub?.split('__')[0];
-                            const isHighlighted = c.label === (hoveredSub?.split('__')[0] ?? cat.label);
+            {/* Search Suggestions Dropdown */}
+            <AnimatePresence>
+              {searchFocused && debouncedQuery.trim().length >= 2 && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8, scaleY: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scaleY: 1 }}
+                  exit={{ opacity: 0, y: -8, scaleY: 0.95 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute top-full mt-2 left-0 right-0 bg-zinc-950 rounded-xl shadow-2xl border border-zinc-800 overflow-hidden z-50"
+                  style={{ transformOrigin: 'top center' }}
+                >
+                  <div className="py-2">
+                    {/* Loading */}
+                    {isSearchFetching && (
+                      <div className="flex items-center justify-center py-6">
+                        <Loader2 className="h-5 w-5 animate-spin text-zinc-400" strokeWidth={1.5} />
+                      </div>
+                    )}
+                    {/* Results */}
+                    {!isSearchFetching && (suggestionList.length > 0) && (
+                      <div>
+                        {suggestionList.map((item: any, i: number) => {
+                          if (item.type === 'category') {
                             return (
-                              <div
-                                key={c.label}
-                                className={`flex items-center justify-between px-5 py-3 cursor-pointer transition-colors duration-100 group/item ${isHighlighted
-                                    ? 'bg-orange-50'
-                                    : 'hover:bg-gray-50'
-                                  }`}
-                                onMouseEnter={() => setHoveredSub(c.label + '__')}
+                              <Link
+                                key={`cat-${item.label}-${i}`}
+                                to={item.to}
+                                onClick={() => { setSearchFocused(false); setSearchQuery(''); }}
+                                onMouseEnter={() => setSelectedSuggestionIdx(i)}
+                                className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${selectedSuggestionIdx === i ? 'bg-zinc-800' : 'hover:bg-zinc-900'}`}
                               >
-                                <span className={`text-[13px] font-medium ${isHighlighted ? 'text-orange-500 font-semibold' : 'text-gray-800 group-hover/item:text-orange-500'
-                                  }`}>
-                                  {c.label}
-                                </span>
-                                {c.subs.length > 0 && (
-                                  <ChevronRight className={`h-3.5 w-3.5 shrink-0 ${isHighlighted ? 'text-orange-500' : 'text-gray-400 group-hover/item:text-orange-500'
-                                    }`} strokeWidth={2.5} />
-                                )}
-                              </div>
+                                <Search className="h-3.5 w-3.5 text-zinc-400 shrink-0" strokeWidth={1.5} />
+                                <span className="text-zinc-200">{highlightMatch(item.label)}</span>
+                              </Link>
                             );
-                          })}
-                        </div>
-
-                        {/* Right panel – subcategories of highlighted category */}
-                        {(() => {
-                          const highlightedCat = hoveredSub
-                            ? navCategories.find(c => c.label === hoveredSub.split('__')[0])
-                            : cat;
-                          if (!highlightedCat || highlightedCat.subs.length === 0) return null;
-                          return (
-                            <div className="w-[210px] py-2 bg-white">
-                              {highlightedCat.subs.map((sub) => (
-                                <Link
-                                  key={sub.to}
-                                  to={sub.to}
-                                  onClick={() => { setOpenDropdown(null); setHoveredSub(null); }}
-                                  className="block px-5 py-3 text-[13px] text-gray-800 hover:text-orange-500 hover:bg-orange-50 transition-colors duration-100 font-medium"
-                                >
-                                  {sub.label}
-                                </Link>
-                              ))}
-                            </div>
-                          );
-                        })()}
-                      </motion.div>
+                          }
+                          if (item.type === 'product') {
+                            return (
+                              <Link
+                                key={`prod-${item.to}-${i}`}
+                                to={item.to}
+                                onClick={() => { setSearchFocused(false); setSearchQuery(''); }}
+                                onMouseEnter={() => setSelectedSuggestionIdx(i)}
+                                className={`flex items-center gap-3 px-4 py-2.5 transition-colors ${selectedSuggestionIdx === i ? 'bg-zinc-800' : 'hover:bg-zinc-900'}`}
+                              >
+                                <div className="w-10 h-12 shrink-0 bg-zinc-900 border border-zinc-800 overflow-hidden rounded">
+                                  {item.image && (
+                                    <img src={item.image} alt="" className="w-full h-full object-cover" />
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-white truncate">
+                                    {highlightMatch(item.label)}
+                                  </p>
+                                  <p className="text-xs text-zinc-400 mt-0.5 truncate">{item.category}</p>
+                                </div>
+                                <span className="text-sm font-semibold text-orange-400 shrink-0">{item.price}</span>
+                              </Link>
+                            );
+                          }
+                          return null;
+                        })}
+                      </div>
                     )}
-                  </AnimatePresence>
-                </div>
-              );
-            })}
-          </nav>
+                    {/* Empty */}
+                    {!isSearchFetching && products.length === 0 && debouncedQuery.length >= 2 && (
+                      <div className="px-4 py-8 text-center">
+                        <Search className="h-6 w-6 mx-auto mb-2 text-zinc-500" strokeWidth={1.5} />
+                        <p className="text-sm text-zinc-400">No products found for "{debouncedQuery}"</p>
+                        <p className="text-xs text-zinc-500 mt-1">Try a different search term</p>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
 
           {/* Right - Actions */}
-          <div className="flex items-center gap-0.5 sm:gap-1 lg:gap-1.5">
-
-            {/* Desktop Search Bar */}
-            <div ref={searchContainerRef} className="hidden md:block relative">
-              <motion.form
-                onSubmit={handleSearchSubmit}
-                className="relative"
-                animate={searchFocused ? { scaleX: 1.05 } : { scaleX: 1 }}
-                transition={{ duration: 0.2 }}
-              >
-                <div className={`flex items-center rounded-[25px] border transition-all duration-200 h-[44px] ${searchFocused ? 'border-orange-500 bg-black shadow-lg shadow-black/50' : 'border-zinc-800 bg-zinc-900/90 hover:border-zinc-700'}`}>
-                  <Search className="ml-4 mr-2.5 h-4.5 w-4.5 text-zinc-400 shrink-0" strokeWidth={1.5} />
-                  <input
-                    ref={searchInputRef}
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => { setSearchQuery(e.target.value); setSelectedSuggestionIdx(-1); }}
-                    onFocus={() => setSearchFocused(true)}
-                    placeholder="Search products..."
-                    className="flex-1 bg-transparent text-[14px] text-white placeholder:text-zinc-400 focus:outline-none min-w-[170px] max-w-[210px] lg:min-w-[210px] text-left normal-case"
-                  />
-                  {searchQuery && (
-                    <button
-                      type="button"
-                      onClick={() => setSearchQuery('')}
-                      className="mr-2 p-1 hover:bg-zinc-800 rounded-full transition-colors cursor-pointer"
-                    >
-                      <X className="h-4 w-4 text-zinc-400" strokeWidth={2} />
-                    </button>
-                  )}
-                </div>
-              </motion.form>
-
-              {/* Search Suggestions Dropdown */}
-              <AnimatePresence>
-                {searchFocused && debouncedQuery.trim().length >= 2 && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -8, scaleY: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scaleY: 1 }}
-                    exit={{ opacity: 0, y: -8, scaleY: 0.95 }}
-                    transition={{ duration: 0.15 }}
-                    className="absolute top-full mt-2 left-0 right-0 bg-zinc-950 rounded-xl shadow-2xl border border-zinc-800 overflow-hidden z-50"
-                    style={{ transformOrigin: 'top center' }}
-                  >
-                    <div className="py-2">
-                      {/* Loading */}
-                      {isSearchFetching && (
-                        <div className="flex items-center justify-center py-6">
-                          <Loader2 className="h-5 w-5 animate-spin text-zinc-400" strokeWidth={1.5} />
-                        </div>
-                      )}
-                      {/* Results */}
-                      {!isSearchFetching && (suggestionList.length > 0) && (
-                        <div>
-                          {suggestionList.map((item: any, i: number) => {
-                            if (item.type === 'category') {
-                              return (
-                                <Link
-                                  key={`cat-${item.label}-${i}`}
-                                  to={item.to}
-                                  onClick={() => { setSearchFocused(false); setSearchQuery(''); }}
-                                  onMouseEnter={() => setSelectedSuggestionIdx(i)}
-                                  className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${selectedSuggestionIdx === i ? 'bg-zinc-800' : 'hover:bg-zinc-900'}`}
-                                >
-                                  <Search className="h-3.5 w-3.5 text-zinc-400 shrink-0" strokeWidth={1.5} />
-                                  <span className="text-zinc-200">{highlightMatch(item.label)}</span>
-                                </Link>
-                              );
-                            }
-                            if (item.type === 'product') {
-                              return (
-                                <Link
-                                  key={`prod-${item.to}-${i}`}
-                                  to={item.to}
-                                  onClick={() => { setSearchFocused(false); setSearchQuery(''); }}
-                                  onMouseEnter={() => setSelectedSuggestionIdx(i)}
-                                  className={`flex items-center gap-3 px-4 py-2.5 transition-colors ${selectedSuggestionIdx === i ? 'bg-zinc-800' : 'hover:bg-zinc-900'}`}
-                                >
-                                  <div className="w-10 h-12 shrink-0 bg-zinc-900 border border-zinc-800 overflow-hidden rounded">
-                                    {item.image && (
-                                      <img src={item.image} alt="" className="w-full h-full object-cover" />
-                                    )}
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-white truncate">
-                                      {highlightMatch(item.label)}
-                                    </p>
-                                    <p className="text-xs text-zinc-400 mt-0.5 truncate">{item.category}</p>
-                                  </div>
-                                  <span className="text-sm font-semibold text-orange-400 shrink-0">{item.price}</span>
-                                </Link>
-                              );
-                            }
-                            return null;
-                          })}
-                        </div>
-                      )}
-                      {/* Empty */}
-                      {!isSearchFetching && products.length === 0 && debouncedQuery.length >= 2 && (
-                        <div className="px-4 py-8 text-center">
-                          <Search className="h-6 w-6 mx-auto mb-2 text-zinc-500" strokeWidth={1.5} />
-                          <p className="text-sm text-zinc-400">No products found for "{debouncedQuery}"</p>
-                          <p className="text-xs text-zinc-500 mt-1">Try a different search term</p>
-                        </div>
-                      )}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* Mobile Search Trigger */}
-            <button
-              className="md:hidden flex items-center justify-center w-10 h-10 hover:bg-zinc-800 rounded-full transition-colors cursor-pointer text-zinc-300 hover:text-white"
-              onClick={() => setMobileSearchOpen(true)}
-              aria-label="Search"
-            >
-              <Search className="h-5.5 w-5.5" strokeWidth={1.5} />
-            </button>
+          <div className="flex items-center gap-0.5 sm:gap-1 lg:gap-1.5 shrink-0">
 
             {/* 1. Wishlist */}
             <Link to="/wishlist" className="hidden md:flex relative items-center justify-center w-10 h-10 hover:bg-zinc-800 rounded-full transition-colors group text-zinc-300 hover:text-white">

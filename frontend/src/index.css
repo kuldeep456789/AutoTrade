@@ -8,6 +8,8 @@
   /* Font families */
   --font-family-sans: "Space Grotesk", "Inter", sans-serif;
   --font-family-mono: "JetBrains Mono", monospace;
+  --font-space-grotesk: "Space Grotesk", sans-serif;
+  --font-inter: "Inter", sans-serif;
 
   /* Brand colors */
   --color-brand-dark: #000000;
