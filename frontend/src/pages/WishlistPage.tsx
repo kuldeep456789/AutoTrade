@@ -52,7 +52,7 @@ const WishlistPage = () => {
     if (userInfo?.accessToken) {
       removeWishlistItemBackend(item._id);
     }
-    toast('Item removed from Wishlist.', { icon: '💔' });
+    toast('Item removed from Wishlist.');
   };
 
   return (
@@ -61,9 +61,7 @@ const WishlistPage = () => {
 
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-[28px] sm:text-[36px] font-bold text-zinc-900 dark:text-white tracking-tight">
-            My Wishlist
-          </h1>
+
           {wishlistItems.length > 0 && (
             <p className="text-[14px] text-zinc-500 dark:text-zinc-400 mt-1">
               {wishlistItems.length} {wishlistItems.length === 1 ? 'item' : 'items'}
@@ -80,9 +78,7 @@ const WishlistPage = () => {
             <h2 className="text-[22px] font-bold text-zinc-900 dark:text-white mb-3">
               Your wishlist is empty
             </h2>
-            <p className="text-[14px] text-zinc-500 dark:text-zinc-400 mb-8 max-w-xs mx-auto leading-relaxed">
-              Save items you love by tapping the heart icon. They&apos;ll stay here for when you&apos;re ready to buy.
-            </p>
+
             <button
               onClick={() => navigate('/', { state: { scrollTo: 'men' } })}
               className="inline-flex items-center justify-center h-[52px] px-10 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-[13px] font-bold tracking-wider hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-all duration-200 shadow-md hover:shadow-lg active:scale-[0.98] cursor-pointer"

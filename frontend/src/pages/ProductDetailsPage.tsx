@@ -477,36 +477,6 @@ const ProductDetailsPage = () => {
                     )}
                   </div>
 
-                  {/* Floating Wishlist + Share */}
-                  <div className="absolute top-3 right-3 flex flex-col gap-2 z-20">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleWishlistToggle();
-                      }}
-                      className={`w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-md transition-all duration-200 cursor-pointer active:scale-90 shadow-md ${isWishlisted
-                        ? 'bg-red-600 text-white'
-                        : 'bg-white/80 dark:bg-black/60 text-zinc-700 dark:text-zinc-300 hover:bg-black hover:text-white'
-                        }`}
-                      aria-label="Wishlist"
-                    >
-                      <Heart className="w-[18px] h-[18px]" fill={isWishlisted ? 'currentColor' : 'none'} strokeWidth={1.5} />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (navigator.share) {
-                          navigator.share({ title: productName, url: window.location.href });
-                        } else {
-                          navigator.clipboard?.writeText(window.location.href);
-                        }
-                      }}
-                      className="w-9 h-9 rounded-full bg-white/80 dark:bg-black/60 text-zinc-700 dark:text-zinc-300 hover:bg-black hover:text-white flex items-center justify-center backdrop-blur-md transition-all duration-200 cursor-pointer active:scale-90 shadow-md"
-                      aria-label="Share"
-                    >
-                      <Share2 className="w-[16px] h-[16px]" strokeWidth={1.5} />
-                    </button>
-                  </div>
 
                   {/* Zoom hint */}
                   <div className="absolute bottom-3 left-3 bg-black/70 text-white text-[10px] font-medium px-2 py-1 rounded-md flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
@@ -584,28 +554,98 @@ const ProductDetailsPage = () => {
                   {product.subcategoryName || product.categoryName || product.category?.name}
                 </span>
               )}
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold leading-snug text-zinc-900 dark:text-white tracking-tight">
+              <h1 className="text-lg sm:text-xl lg:text-2xl font-bold leading-snug text-zinc-900 dark:text-white tracking-tight">
                 {productName}
               </h1>
 
               {/* Price */}
-              <div className="flex items-center gap-3 mt-3">
-                <span className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-white">
-                  {formatINR(product.discountPrice || product.price)}
+              <div className="mt-3">
+                <span className="text-[10px] sm:text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest block mb-1">
+                  Price
                 </span>
-                {product.discountPrice && (
-                  <>
-                    <span className="text-sm text-zinc-400 dark:text-zinc-500 line-through">{formatINR(product.price)}</span>
-                    <span className="bg-red-600 text-white font-bold text-xs px-2 py-0.5 rounded shadow">
-                      {discountPct}% OFF
-                    </span>
-                  </>
-                )}
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-white">
+                    {formatINR(product.discountPrice || product.price)}
+                  </span>
+                  {product.discountPrice && (
+                    <>
+                      <span className="text-sm text-zinc-400 dark:text-zinc-500 line-through">{formatINR(product.price)}</span>
+                      <span className="bg-red-600 text-white font-bold text-xs px-2 py-0.5 rounded shadow">
+                        {discountPct}% OFF
+                      </span>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
 
+            {/* Quantity Selector */}
+            <div className="flex flex-col gap-2 pt-1.5">
+              <span className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white">Order Quantity (Units)</span>
+              <div className="flex items-center justify-between border border-zinc-200 dark:border-zinc-800 rounded-2xl w-[120px] bg-zinc-50 dark:bg-zinc-900/60 h-10 px-1 shadow-sm transition-all duration-200 focus-within:ring-2 focus-within:ring-amber-500/30 focus-within:border-amber-500">
+                <button
+                  onClick={() => setQty((q) => Math.max(1, q - 1))}
+                  className="text-zinc-500 hover:text-zinc-900 dark:hover:text-white font-bold text-base w-8 h-8 flex items-center justify-center cursor-pointer transition-colors active:scale-90"
+                >
+                  —
+                </button>
+                <input
+                  type="number"
+                  min="1"
+                  value={qty === 0 ? '' : qty}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10);
+                    if (!isNaN(val) && val >= 1) {
+                      setQty(val);
+                    } else if (e.target.value === '') {
+                      setQty(0);
+                    }
+                  }}
+                  onBlur={() => {
+                    if (qty < 1 || isNaN(qty)) {
+                      setQty(1);
+                    }
+                  }}
+                  className="font-bold text-zinc-900 dark:text-white w-10 text-center select-all bg-transparent focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-sm flex-1"
+                />
+                <button
+                  onClick={() => setQty((q) => (q === 0 ? 1 : q + 1))}
+                  className="text-zinc-500 hover:text-zinc-900 dark:hover:text-white font-bold text-base w-8 h-8 flex items-center justify-center cursor-pointer transition-colors active:scale-90"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 pt-1.5 items-center">
+              <button
+                onClick={handleBuyNow}
+                className="flex-1 h-12 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs uppercase tracking-wider shadow-sm transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center"
+              >
+                Buy Now
+              </button>
+              <button
+                onClick={handleAddToCart}
+                className="flex-1 h-12 rounded-xl bg-zinc-50 dark:bg-zinc-900 border-2 border-amber-500 dark:border-amber-500 text-amber-500 dark:text-amber-400 font-bold text-xs uppercase tracking-wider shadow-sm hover:bg-amber-500/10 transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center"
+              >
+                {isAdded ? 'Added' : 'Add to cart'}
+              </button>
+              <button
+                onClick={handleWishlistToggle}
+                className={`w-12 h-12 rounded-xl border-2 flex items-center justify-center transition-all duration-200 cursor-pointer active:scale-95 shadow-sm shrink-0 ${
+                  isWishlisted
+                    ? 'border-red-500 bg-red-500/10 text-red-500'
+                    : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:border-zinc-400 dark:hover:border-zinc-600'
+                }`}
+                aria-label="Wishlist"
+              >
+                <Heart className="w-[18px] h-[18px]" fill={isWishlisted ? 'currentColor' : 'none'} strokeWidth={2} />
+              </button>
+            </div>
+
             {/* 4 Trust Badges Box */}
-            <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/90 p-3.5 shadow-md transition-colors duration-200">
+            <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/90 p-3.5 shadow-md transition-colors duration-200 mt-4">
               <div className="grid grid-cols-4 gap-2 text-center">
                 <div className="flex flex-col items-center">
                   <div className="w-9 h-9 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-500 mb-1.5">
@@ -636,22 +676,6 @@ const ProductDetailsPage = () => {
                   <span className="text-[9px] text-zinc-500 dark:text-zinc-400">100% authorised</span>
                 </div>
               </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="space-y-3 pt-1">
-              <button
-                onClick={handleAddToCart}
-                className="w-full py-4 rounded-full bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm uppercase tracking-wider shadow-lg transition-all active:scale-[0.99] cursor-pointer flex items-center justify-center gap-2"
-              >
-                <span>{isAdded ? 'Added to cart' : 'Add to cart'}</span>
-              </button>
-              <button
-                onClick={handleBuyNow}
-                className="w-full py-4 rounded-full bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm uppercase tracking-wider shadow-lg transition-all active:scale-[0.99] cursor-pointer flex items-center justify-center gap-2"
-              >
-                <span>Buy it now</span>
-              </button>
             </div>
 
             {/* Description & Detailed Specs Panel */}

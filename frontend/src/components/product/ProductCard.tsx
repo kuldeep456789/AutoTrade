@@ -165,7 +165,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
         {/* Wishlist Button */}
         <button
           onClick={handleWishlistClick}
-          className={`absolute top-2.5 right-2.5 z-20 flex h-8 w-8 items-center justify-center rounded-full backdrop-blur-md transition-all duration-300 shadow-md hover:scale-110 active:scale-95 ${
+          className={`absolute top-2.5 right-2.5 z-10 flex h-8 w-8 items-center justify-center rounded-full backdrop-blur-md transition-all duration-300 shadow-md hover:scale-110 active:scale-95 ${
             isWishlisted
               ? 'bg-red-600 text-white'
               : 'bg-white/80 dark:bg-black/60 text-zinc-700 dark:text-zinc-300 hover:bg-red-600 hover:text-white'
@@ -179,13 +179,6 @@ const ProductCard = ({ product }: ProductCardProps) => {
       {/* Product Content Details */}
       <div className="flex flex-col flex-1 p-3 sm:p-4 justify-between bg-white dark:bg-zinc-900 transition-colors duration-200">
         <Link to={`/product/${productId}`} className="space-y-1.5">
-          {/* Subcategory / Brand Tag */}
-          {(product.subcategoryName || product.collectionType || product.categoryName || product.category?.name) && (
-            <span className="text-[11px] font-bold text-orange-500 uppercase tracking-widest block">
-              {product.subcategoryName || product.collectionType || product.categoryName || product.category?.name}
-            </span>
-          )}
-
           {/* Product Title */}
           <h3 className="text-sm sm:text-[15px] font-bold text-zinc-900 dark:text-white group-hover:text-orange-500 transition-colors line-clamp-2 leading-snug tracking-tight">
             {productName}

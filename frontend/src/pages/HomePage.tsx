@@ -267,7 +267,7 @@ const HomePage = () => {
                 </h2>
               </div>
             </div>
-            <div className="relative group">
+            <div className="relative">
               <div
                 ref={carouselRef}
                 className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2 -mx-6 px-6 sm:-mx-10 sm:px-10 lg:-mx-16 lg:px-16"
