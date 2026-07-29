@@ -5,9 +5,8 @@ import type { RootState } from '../store/store';
 import { saveShippingAddress } from '../store/slices/cartSlice';
 import CheckoutSteps from '../components/checkout/CheckoutSteps';
 import OrderSummarySidebar from '../components/checkout/OrderSummarySidebar';
-import { MapPin, Building2, Hash, Globe, Phone, Mail, User } from 'lucide-react';
+import { MapPin, Building2, Hash, Globe, Phone, Mail, User, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
-
 
 const InputField = ({
   id, label, value, onChange, icon, required, placeholder, type, autoComplete
@@ -22,7 +21,7 @@ const InputField = ({
   return (
     <div className="relative group">
       <div className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors duration-200 z-10 ${
-        focused || hasValue ? 'text-zinc-900 dark:text-white' : 'text-zinc-400 dark:text-zinc-500'
+        focused || hasValue ? 'text-orange-500' : 'text-zinc-400 dark:text-zinc-500'
       }`}>
         {icon}
       </div>
@@ -32,7 +31,7 @@ const InputField = ({
         autoComplete={autoComplete}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
-        className="w-full h-[56px] pl-11 pr-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-[#18181B] text-[15px] font-medium text-zinc-900 dark:text-white text-left placeholder:text-left placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:border-zinc-900 dark:focus:border-white focus:ring-1 focus:ring-zinc-900/10 dark:focus:ring-white/10 transition-all duration-200"
+        className="w-full h-[54px] pl-11 pr-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm font-medium text-zinc-900 dark:text-white text-left placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 transition-all duration-200"
         placeholder={focused ? '' : (placeholder || label)}
         value={value}
         required={required}
@@ -40,9 +39,9 @@ const InputField = ({
       />
       <label
         htmlFor={id}
-        className={`absolute left-10 -top-2.5 px-1.5 text-[11px] font-semibold uppercase tracking-wider bg-white dark:bg-[#18181B] transition-all duration-200 z-10 ${
+        className={`absolute left-10 -top-2.5 px-1.5 text-[11px] font-bold uppercase tracking-wider bg-white dark:bg-zinc-900 transition-all duration-200 z-10 ${
           focused || hasValue
-            ? 'opacity-100 translate-y-0 text-zinc-700 dark:text-zinc-300'
+            ? 'opacity-100 translate-y-0 text-orange-500'
             : 'opacity-0 translate-y-2 pointer-events-none'
         }`}
       >
@@ -153,25 +152,25 @@ const ShippingPage = () => {
   const isFormValid = firstName && lastName && email && address && city && state && postalCode && country && phone;
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-[#0F0F10]">
-      <div className="mx-auto max-w-[1500px] px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+    <div className="min-h-screen bg-zinc-50 dark:bg-black text-zinc-900 dark:text-zinc-100 transition-colors duration-200">
+      <div className="mx-auto max-w-[1500px] px-4 sm:px-6 lg:px-8 py-6 lg:py-10">
         <CheckoutSteps step1 />
 
-        <div className="flex flex-col lg:flex-row gap-6 lg:gap-10 xl:gap-12 mt-2">
+        <div className="flex flex-col lg:flex-row gap-6 lg:gap-10 xl:gap-12 mt-6">
 
           {/* ── Left: Form ── */}
           <div className="w-full lg:w-[65%]">
-            <div className="rounded-2xl border border-zinc-200 dark:border-[#2A2A2A] bg-white dark:bg-[#18181B] overflow-hidden">
+            <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/90 shadow-xl overflow-hidden backdrop-blur-md">
               {/* Header */}
-              <div className="px-6 sm:px-8 pt-6 sm:pt-8 pb-4 border-b border-zinc-100 dark:border-zinc-800">
-                <span className="text-[12px] font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
-                  Step 01 / 03
+              <div className="px-6 sm:px-8 pt-6 sm:pt-8 pb-5 border-b border-zinc-100 dark:border-zinc-800/80">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-orange-500/10 text-orange-500 border border-orange-500/20">
+                  <Sparkles size={13} /> Step 01 of 03
                 </span>
-                <h1 className="mt-2 text-[28px] sm:text-[32px] font-bold text-zinc-900 dark:text-white tracking-tight">
+                <h1 className="mt-3 text-2xl sm:text-3xl font-extrabold text-zinc-900 dark:text-white tracking-tight">
                   Shipping Address
                 </h1>
-                <p className="mt-1 text-[15px] text-zinc-500 dark:text-zinc-400">
-                  Where should we send your order?
+                <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+                  Please enter your delivery address where should we send your order.
                 </p>
               </div>
 
@@ -183,53 +182,53 @@ const ShippingPage = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
                   <InputField
                     id="firstName" label="First Name" value={firstName} onChange={setFirstName}
-                    icon={<User size={15} strokeWidth={1.5} />} required autoComplete="given-name"
+                    icon={<User size={16} strokeWidth={1.75} />} required autoComplete="given-name"
                   />
                   <InputField
                     id="lastName" label="Last Name" value={lastName} onChange={setLastName}
-                    icon={<User size={15} strokeWidth={1.5} />} required autoComplete="family-name"
+                    icon={<User size={16} strokeWidth={1.75} />} required autoComplete="family-name"
                   />
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
                   <InputField
                     id="email" label="Email" value={email} onChange={setEmail}
-                    icon={<Mail size={15} strokeWidth={1.5} />} required type="email" autoComplete="email"
+                    icon={<Mail size={16} strokeWidth={1.75} />} required type="email" autoComplete="email"
                   />
                   <InputField
                     id="phone" label="Phone Number" value={phone} onChange={(val: string) => setPhone(val.replace(/[^\d+]/g, '').slice(0, 13))}
-                    icon={<Phone size={15} strokeWidth={1.5} />} required type="tel" autoComplete="tel"
+                    icon={<Phone size={16} strokeWidth={1.75} />} required type="tel" autoComplete="tel"
                   />
                 </div>
 
                 <InputField
                   id="address" label="Address Line 1" value={address} onChange={setAddress}
-                  icon={<MapPin size={15} strokeWidth={1.5} />} required autoComplete="address-line1"
+                  icon={<MapPin size={16} strokeWidth={1.75} />} required autoComplete="address-line1"
                 />
 
                 <InputField
                   id="address2" label="Address Line 2 (Optional)" value={address2} onChange={setAddress2}
-                  icon={<MapPin size={15} strokeWidth={1.5} />} autoComplete="address-line2"
+                  icon={<MapPin size={16} strokeWidth={1.75} />} autoComplete="address-line2"
                 />
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
                   <InputField
                     id="city" label="City" value={city} onChange={setCity}
-                    icon={<Building2 size={15} strokeWidth={1.5} />} required autoComplete="address-level2"
+                    icon={<Building2 size={16} strokeWidth={1.75} />} required autoComplete="address-level2"
                   />
                   <InputField
                     id="state" label="State" value={state} onChange={setState}
-                    icon={<Building2 size={15} strokeWidth={1.5} />} required autoComplete="address-level1"
+                    icon={<Building2 size={16} strokeWidth={1.75} />} required autoComplete="address-level1"
                   />
                   <InputField
                     id="postalCode" label="Postal Code" value={postalCode} onChange={setPostalCode}
-                    icon={<Hash size={15} strokeWidth={1.5} />} required autoComplete="postal-code"
+                    icon={<Hash size={16} strokeWidth={1.75} />} required autoComplete="postal-code"
                   />
                 </div>
 
                 <InputField
                   id="country" label="Country" value={country} onChange={setCountry}
-                  icon={<Globe size={15} strokeWidth={1.5} />} required autoComplete="country-name"
+                  icon={<Globe size={16} strokeWidth={1.75} />} required autoComplete="country-name"
                 />
 
                 <button type="submit" id="submit-shipping" className="hidden">Submit</button>

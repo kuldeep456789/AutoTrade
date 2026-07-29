@@ -1,7 +1,7 @@
 const AnnouncementBanner = () => {
   return (
     <div
-      className="bg-[#101B36] text-zinc-300 text-[14px] sm:text-[15px] py-2 overflow-hidden w-full flex items-center border-b border-[#1C274C] z-40"
+      className="bg-black text-zinc-300 text-[14px] sm:text-[15px] py-2 overflow-hidden w-full flex items-center border-b border-zinc-800 z-40"
       style={{ marginTop: '72px' }}
     >
       <style>

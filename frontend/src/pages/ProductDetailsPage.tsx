@@ -35,98 +35,98 @@ const ProductFeaturesAndSpecs = ({ product }: { product: any }) => {
   const brandName = String(product?.brand || 'AutoTrade Pro Series').trim();
 
   return (
-    <div className="w-full mt-6 pt-6 border-t border-zinc-800/80 bg-transparent text-white space-y-6">
+    <div className="w-full mt-6 pt-6 border-t border-zinc-200 dark:border-zinc-800/80 bg-transparent text-zinc-900 dark:text-white space-y-6">
       {/* ── Header Toggle ── */}
       <button
         onClick={() => setDescOpen(!descOpen)}
-        className="w-full py-3 flex items-center justify-between bg-transparent hover:opacity-80 transition-opacity cursor-pointer border-b border-zinc-800/80 group"
+        className="w-full py-3 flex items-center justify-between bg-transparent hover:opacity-80 transition-opacity cursor-pointer border-b border-zinc-200 dark:border-zinc-800/80 group"
       >
         <div className="flex items-center gap-3">
-          <ClipboardList className="w-5 h-5 text-amber-500 group-hover:scale-110 transition-transform" />
-          <span className="text-sm sm:text-base font-bold uppercase tracking-wider text-white">
+          <ClipboardList className="w-5 h-5 text-orange-500 group-hover:scale-110 transition-transform" />
+          <span className="text-sm sm:text-base font-bold uppercase tracking-wider text-zinc-900 dark:text-white">
             Product Description & Specs
           </span>
         </div>
-        <div className="w-7 h-7 rounded-full bg-white/5 flex items-center justify-center text-zinc-400 group-hover:text-white transition-colors">
+        <div className="w-7 h-7 rounded-full bg-zinc-100 dark:bg-white/5 flex items-center justify-center text-zinc-500 dark:text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors">
           {descOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
         </div>
       </button>
 
       {descOpen && (
-        <div className="space-y-6 bg-transparent py-1 max-h-[500px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-zinc-700/60 scrollbar-track-transparent">
+        <div className="space-y-6 bg-transparent py-1 max-h-[500px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700/60 scrollbar-track-transparent">
           
           {/* 1. Overview */}
           <div className="space-y-3">
-            <h3 className="text-sm sm:text-base font-bold text-amber-500 tracking-wider uppercase flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+            <h3 className="text-sm sm:text-base font-bold text-orange-500 tracking-wider uppercase flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
               Overview
             </h3>
-            <p className="text-zinc-300 text-xs sm:text-sm leading-relaxed font-normal normal-case">
-              The <strong className="text-white font-semibold">{productName}</strong> delivers high performance, reliability, and precision engineering for automotive enthusiasts and professional garages.
+            <p className="text-zinc-600 dark:text-zinc-300 text-xs sm:text-sm leading-relaxed font-normal normal-case">
+              The <strong className="text-zinc-900 dark:text-white font-semibold">{productName}</strong> delivers high performance, reliability, and precision engineering for automotive enthusiasts and professional garages.
             </p>
             {product?.description && (
               <div
-                className="text-zinc-300 text-xs sm:text-sm leading-relaxed normal-case mt-3 space-y-2 border-l-2 border-amber-500/50 pl-3 py-1"
+                className="text-zinc-600 dark:text-zinc-300 text-xs sm:text-sm leading-relaxed normal-case mt-3 space-y-2 border-l-2 border-orange-500/50 pl-3 py-1"
                 dangerouslySetInnerHTML={{ __html: product.description }}
               />
             )}
           </div>
 
           {/* 2. Key Features */}
-          <div className="space-y-3 pt-2 border-t border-zinc-800/60">
-            <h3 className="text-sm sm:text-base font-bold text-amber-500 tracking-wider uppercase flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+          <div className="space-y-3 pt-2 border-t border-zinc-200 dark:border-zinc-800/60">
+            <h3 className="text-sm sm:text-base font-bold text-orange-500 tracking-wider uppercase flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
               Key Features & Benefits
             </h3>
-            <ul className="space-y-2 text-xs sm:text-sm text-zinc-300 font-normal normal-case">
+            <ul className="space-y-2 text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 font-normal normal-case">
               <li className="flex items-start gap-2.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
-                <span><strong className="text-white font-semibold">Premium Build:</strong> Engineered with high-grade durable materials for extended service life.</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-orange-500 mt-1.5 shrink-0" />
+                <span><strong className="text-zinc-900 dark:text-white font-semibold">Premium Build:</strong> Engineered with high-grade durable materials for extended service life.</span>
               </li>
               <li className="flex items-start gap-2.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
-                <span><strong className="text-white font-semibold">Universal Compatibility:</strong> Works seamlessly across major vehicle models and setups.</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-orange-500 mt-1.5 shrink-0" />
+                <span><strong className="text-zinc-900 dark:text-white font-semibold">Universal Compatibility:</strong> Works seamlessly across major vehicle models and setups.</span>
               </li>
               <li className="flex items-start gap-2.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
-                <span><strong className="text-white font-semibold">Plug & Play Installation:</strong> Quick, hassle-free installation without modifications.</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-orange-500 mt-1.5 shrink-0" />
+                <span><strong className="text-zinc-900 dark:text-white font-semibold">Plug & Play Installation:</strong> Quick, hassle-free installation without modifications.</span>
               </li>
               <li className="flex items-start gap-2.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
-                <span><strong className="text-white font-semibold">Quality Verified:</strong> 100% factory tested and quality assured.</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-orange-500 mt-1.5 shrink-0" />
+                <span><strong className="text-zinc-900 dark:text-white font-semibold">Quality Verified:</strong> 100% factory tested and quality assured.</span>
               </li>
             </ul>
           </div>
 
           {/* 3. Detailed Specifications Table */}
-          <div className="space-y-3 pt-2 border-t border-zinc-800/60">
-            <h3 className="text-sm sm:text-base font-bold text-amber-500 tracking-wider uppercase flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+          <div className="space-y-3 pt-2 border-t border-zinc-200 dark:border-zinc-800/60">
+            <h3 className="text-sm sm:text-base font-bold text-orange-500 tracking-wider uppercase flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
               Specifications
             </h3>
-            <div className="overflow-hidden rounded-xl border border-zinc-800/80 bg-transparent">
-              <table className="w-full text-left text-xs text-zinc-300 font-normal">
-                <thead className="bg-zinc-900/60 text-amber-500 font-bold uppercase tracking-wider text-[11px] border-b border-zinc-800">
+            <div className="overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800/80 bg-transparent">
+              <table className="w-full text-left text-xs text-zinc-600 dark:text-zinc-300 font-normal">
+                <thead className="bg-zinc-100 dark:bg-zinc-900/60 text-orange-500 font-bold uppercase tracking-wider text-[11px] border-b border-zinc-200 dark:border-zinc-800">
                   <tr>
                     <th className="py-2.5 px-3.5 w-1/3">Property</th>
                     <th className="py-2.5 px-3.5 w-2/3">Specification</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-800/60 bg-transparent">
+                <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800/60 bg-transparent">
                   <tr>
-                    <td className="py-2.5 px-3.5 font-semibold text-white">Brand / Line</td>
+                    <td className="py-2.5 px-3.5 font-semibold text-zinc-900 dark:text-white">Brand / Line</td>
                     <td className="py-2.5 px-3.5">{brandName}</td>
                   </tr>
                   <tr>
-                    <td className="py-2.5 px-3.5 font-semibold text-white">Condition</td>
-                    <td className="py-2.5 px-3.5 text-amber-400 font-medium">100% Brand New Original</td>
+                    <td className="py-2.5 px-3.5 font-semibold text-zinc-900 dark:text-white">Condition</td>
+                    <td className="py-2.5 px-3.5 text-orange-500 font-medium">100% Brand New Original</td>
                   </tr>
                   <tr>
-                    <td className="py-2.5 px-3.5 font-semibold text-white">Warranty</td>
+                    <td className="py-2.5 px-3.5 font-semibold text-zinc-900 dark:text-white">Warranty</td>
                     <td className="py-2.5 px-3.5">1-Year Standard AutoTrade Guarantee</td>
                   </tr>
                   <tr>
-                    <td className="py-2.5 px-3.5 font-semibold text-white">Quality Inspection</td>
+                    <td className="py-2.5 px-3.5 font-semibold text-zinc-900 dark:text-white">Quality Inspection</td>
                     <td className="py-2.5 px-3.5">Passed ISO9001 standard inspection</td>
                   </tr>
                 </tbody>
@@ -135,12 +135,12 @@ const ProductFeaturesAndSpecs = ({ product }: { product: any }) => {
           </div>
 
           {/* 4. Package Contents */}
-          <div className="space-y-2 pt-2 border-t border-zinc-800/60">
-            <h3 className="text-sm sm:text-base font-bold text-amber-500 tracking-wider uppercase flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+          <div className="space-y-2 pt-2 border-t border-zinc-200 dark:border-zinc-800/60">
+            <h3 className="text-sm sm:text-base font-bold text-orange-500 tracking-wider uppercase flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
               Package Contents
             </h3>
-            <ul className="list-disc pl-5 space-y-1 text-xs text-zinc-300 font-normal normal-case">
+            <ul className="list-disc pl-5 space-y-1 text-xs text-zinc-600 dark:text-zinc-300 font-normal normal-case">
               <li>1x {productName}</li>
               <li>1x Setup Guide & User Manual</li>
             </ul>
@@ -402,18 +402,18 @@ const ProductDetailsPage = () => {
       {/* Breadcrumbs */}
       <div className="border-b border-zinc-200 dark:border-zinc-800">
         <div className="max-w-[1400px] mx-auto px-8 lg:px-12 py-4">
-          <div className="flex gap-2 items-center text-xs font-medium text-zinc-400">
-            <Link to="/" className="hover:text-black dark:hover:text-white transition-colors">HOME</Link>
-            <ChevronRight size={10} strokeWidth={2} />
+          <div className="flex gap-2 items-center text-sm font-semibold text-zinc-500 dark:text-zinc-400">
+            <Link to="/" className="hover:text-orange-500 dark:hover:text-orange-400 transition-colors">HOME</Link>
+            <ChevronRight size={14} strokeWidth={2.5} className="text-zinc-400 dark:text-zinc-600" />
             {product.subcategoryName && (
               <>
-                <Link to={`/collections/${normalizeSlug(String(product.subcategoryName))}`} className="hover:text-black dark:hover:text-white transition-colors">
+                <Link to={`/collections/${normalizeSlug(String(product.subcategoryName))}`} className="hover:text-orange-500 dark:hover:text-orange-400 transition-colors capitalize">
                   {product.subcategoryName}
                 </Link>
-                <ChevronRight size={10} strokeWidth={2} />
+                <ChevronRight size={14} strokeWidth={2.5} className="text-zinc-400 dark:text-zinc-600" />
               </>
             )}
-            <span className="text-black dark:text-white line-clamp-1">{product.title || product.name}</span>
+            <span className="text-zinc-900 dark:text-white font-extrabold line-clamp-1">{product.title || product.name}</span>
           </div>
         </div>
       </div>
@@ -432,7 +432,7 @@ const ProductDetailsPage = () => {
                   onMouseMove={handleImageZoom}
                   onMouseLeave={() => setZoomLens((p) => ({ ...p, active: false }))}
                   onClick={() => openLightbox(selectedImage)}
-                  className="relative w-full aspect-square max-h-[460px] sm:max-h-[500px] bg-[#0c1017] border border-zinc-800/80 rounded-2xl overflow-hidden flex items-center justify-center cursor-crosshair shadow-2xl p-4"
+                  className="relative w-full aspect-square max-h-[460px] sm:max-h-[500px] bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden flex items-center justify-center cursor-crosshair shadow-lg p-4 transition-colors duration-200"
                 >
                   <img
                     key={selectedImage}
@@ -445,7 +445,7 @@ const ProductDetailsPage = () => {
                   {/* Zoom lens */}
                   {zoomLens.active && (
                     <div
-                      className="absolute border-2 border-amber-500 bg-amber-500/10 pointer-events-none z-30 rounded-sm"
+                      className="absolute border-2 border-orange-500 bg-orange-500/10 pointer-events-none z-30 rounded-sm"
                       style={{
                         width: `${LENS_SIZE}px`,
                         height: `${LENS_SIZE}px`,
@@ -473,7 +473,7 @@ const ProductDetailsPage = () => {
                       }}
                       className={`w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-md transition-all duration-200 cursor-pointer active:scale-90 shadow-md ${isWishlisted
                         ? 'bg-red-600 text-white'
-                        : 'bg-black/60 text-zinc-300 hover:bg-black/80 hover:text-white'
+                        : 'bg-white/80 dark:bg-black/60 text-zinc-700 dark:text-zinc-300 hover:bg-black hover:text-white'
                         }`}
                       aria-label="Wishlist"
                     >
@@ -488,7 +488,7 @@ const ProductDetailsPage = () => {
                           navigator.clipboard?.writeText(window.location.href);
                         }
                       }}
-                      className="w-9 h-9 rounded-full bg-black/60 text-zinc-300 hover:bg-black/80 hover:text-white flex items-center justify-center backdrop-blur-md transition-all duration-200 cursor-pointer active:scale-90 shadow-md"
+                      className="w-9 h-9 rounded-full bg-white/80 dark:bg-black/60 text-zinc-700 dark:text-zinc-300 hover:bg-black hover:text-white flex items-center justify-center backdrop-blur-md transition-all duration-200 cursor-pointer active:scale-90 shadow-md"
                       aria-label="Share"
                     >
                       <Share2 className="w-[16px] h-[16px]" strokeWidth={1.5} />
@@ -504,7 +504,7 @@ const ProductDetailsPage = () => {
                 {/* Zoom preview — lg screens */}
                 {zoomLens.active && (
                   <div className="hidden lg:block absolute top-0 left-full ml-6 z-[100] pointer-events-none">
-                    <div className="w-[450px] h-[480px] overflow-hidden rounded-2xl border border-zinc-800 shadow-2xl bg-[#0c1017]">
+                    <div className="w-[450px] h-[480px] overflow-hidden rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl bg-white dark:bg-zinc-950">
                       <img
                         src={displayImages[selectedImage] || displayImages[0]}
                         alt=""
@@ -526,7 +526,7 @@ const ProductDetailsPage = () => {
                   {displayImages.length > 1 && (
                     <button
                       onClick={() => setSelectedImage((prev) => (prev - 1 + displayImages.length) % displayImages.length)}
-                      className="w-7 h-7 rounded-full bg-[#14203e] text-zinc-400 hover:text-white border border-zinc-700 flex items-center justify-center transition-colors shrink-0 cursor-pointer"
+                      className="w-7 h-7 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white border border-zinc-200 dark:border-zinc-700 flex items-center justify-center transition-colors shrink-0 cursor-pointer"
                       aria-label="Previous thumbnail"
                     >
                       <ChevronLeft size={16} />
@@ -539,8 +539,8 @@ const ProductDetailsPage = () => {
                         onClick={() => setSelectedImage(idx)}
                         className={`w-14 h-14 sm:w-16 sm:h-16 rounded-xl overflow-hidden border-2 transition-all duration-200 shrink-0 cursor-pointer ${
                           selectedImage === idx
-                            ? 'border-amber-500 ring-2 ring-amber-500/40 opacity-100'
-                            : 'border-zinc-800 hover:border-zinc-600 opacity-60 hover:opacity-100'
+                            ? 'border-orange-500 ring-2 ring-orange-500/40 opacity-100'
+                            : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 opacity-60 hover:opacity-100'
                         }`}
                       >
                         <img src={img} alt="" className="w-full h-full object-contain p-1 bg-white" />
@@ -550,7 +550,7 @@ const ProductDetailsPage = () => {
                   {displayImages.length > 1 && (
                     <button
                       onClick={() => setSelectedImage((prev) => (prev + 1) % displayImages.length)}
-                      className="w-7 h-7 rounded-full bg-[#14203e] text-zinc-400 hover:text-white border border-zinc-700 flex items-center justify-center transition-colors shrink-0 cursor-pointer"
+                      className="w-7 h-7 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white border border-zinc-200 dark:border-zinc-700 flex items-center justify-center transition-colors shrink-0 cursor-pointer"
                       aria-label="Next thumbnail"
                     >
                       <ChevronRight size={16} />
@@ -567,21 +567,23 @@ const ProductDetailsPage = () => {
             
             {/* Tag, Title & Price */}
             <div>
-              <span className="text-xs font-bold text-amber-500 uppercase tracking-widest block mb-1.5">
-                {product.subcategoryName || 'AUTOTRADE PRO'}
-              </span>
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold leading-snug text-white tracking-tight">
+              {(product.subcategoryName || product.categoryName || product.category?.name) && (
+                <span className="text-xs font-bold text-orange-500 uppercase tracking-widest block mb-1.5">
+                  {product.subcategoryName || product.categoryName || product.category?.name}
+                </span>
+              )}
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold leading-snug text-zinc-900 dark:text-white tracking-tight">
                 {productName}
               </h1>
 
               {/* Price */}
               <div className="flex items-center gap-3 mt-3">
-                <span className="text-2xl sm:text-3xl font-black text-white">
+                <span className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-white">
                   {formatINR(product.discountPrice || product.price)}
                 </span>
                 {product.discountPrice && (
                   <>
-                    <span className="text-sm text-zinc-500 line-through">{formatINR(product.price)}</span>
+                    <span className="text-sm text-zinc-400 dark:text-zinc-500 line-through">{formatINR(product.price)}</span>
                     <span className="bg-red-600 text-white font-bold text-xs px-2 py-0.5 rounded shadow">
                       {discountPct}% OFF
                     </span>
@@ -591,35 +593,35 @@ const ProductDetailsPage = () => {
             </div>
 
             {/* 4 Trust Badges Box */}
-            <div className="rounded-xl border border-zinc-800/80 bg-[#0e121b] p-3.5 shadow-lg">
+            <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/90 p-3.5 shadow-md transition-colors duration-200">
               <div className="grid grid-cols-4 gap-2 text-center">
                 <div className="flex flex-col items-center">
-                  <div className="w-9 h-9 rounded-lg bg-[#14203e] border border-amber-500/40 flex items-center justify-center text-amber-500 mb-1.5">
+                  <div className="w-9 h-9 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-500 mb-1.5">
                     <Award size={16} />
                   </div>
-                  <span className="text-[10px] font-bold text-amber-500 uppercase">AUTHORISED</span>
-                  <span className="text-[9px] text-zinc-400">Since 2014</span>
+                  <span className="text-[10px] font-bold text-orange-500 uppercase">AUTHORISED</span>
+                  <span className="text-[9px] text-zinc-500 dark:text-zinc-400">Since 2014</span>
                 </div>
                 <div className="flex flex-col items-center">
-                  <div className="w-9 h-9 rounded-lg bg-[#14203e] border border-amber-500/40 flex items-center justify-center text-amber-500 mb-1.5">
+                  <div className="w-9 h-9 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-500 mb-1.5">
                     <Truck size={16} />
                   </div>
-                  <span className="text-[10px] font-bold text-amber-500 uppercase">FREE SHIPPING</span>
-                  <span className="text-[9px] text-zinc-400">Pan-India</span>
+                  <span className="text-[10px] font-bold text-orange-500 uppercase">FREE SHIPPING</span>
+                  <span className="text-[9px] text-zinc-500 dark:text-zinc-400">Pan-India</span>
                 </div>
                 <div className="flex flex-col items-center">
-                  <div className="w-9 h-9 rounded-lg bg-[#14203e] border border-amber-500/40 flex items-center justify-center text-amber-500 mb-1.5">
+                  <div className="w-9 h-9 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-500 mb-1.5">
                     <RotateCcw size={16} />
                   </div>
-                  <span className="text-[10px] font-bold text-amber-500 uppercase">14-DAY RETURNS</span>
-                  <span className="text-[9px] text-zinc-400">No questions</span>
+                  <span className="text-[10px] font-bold text-orange-500 uppercase">14-DAY RETURNS</span>
+                  <span className="text-[9px] text-zinc-500 dark:text-zinc-400">No questions</span>
                 </div>
                 <div className="flex flex-col items-center">
-                  <div className="w-9 h-9 rounded-lg bg-[#14203e] border border-amber-500/40 flex items-center justify-center text-amber-500 mb-1.5">
+                  <div className="w-9 h-9 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-500 mb-1.5">
                     <ShieldCheck size={16} />
                   </div>
-                  <span className="text-[10px] font-bold text-amber-500 uppercase">GENUINE PRODUCT</span>
-                  <span className="text-[9px] text-zinc-400">100% authorised</span>
+                  <span className="text-[10px] font-bold text-orange-500 uppercase">GENUINE PRODUCT</span>
+                  <span className="text-[9px] text-zinc-500 dark:text-zinc-400">100% authorised</span>
                 </div>
               </div>
             </div>
@@ -628,13 +630,13 @@ const ProductDetailsPage = () => {
             <div className="space-y-3 pt-1">
               <button
                 onClick={handleAddToCart}
-                className="w-full py-4 rounded-full bg-[#f5a623] hover:bg-[#e0951a] text-black font-bold text-sm uppercase tracking-wider shadow-lg transition-all active:scale-[0.99] cursor-pointer flex items-center justify-center gap-2"
+                className="w-full py-4 rounded-full bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm uppercase tracking-wider shadow-lg transition-all active:scale-[0.99] cursor-pointer flex items-center justify-center gap-2"
               >
                 <span>{isAdded ? 'Added to cart' : 'Add to cart'}</span>
               </button>
               <button
                 onClick={handleBuyNow}
-                className="w-full py-4 rounded-full bg-[#f3af38] hover:bg-[#e09f29] text-black font-bold text-sm uppercase tracking-wider shadow-lg transition-all active:scale-[0.99] cursor-pointer flex items-center justify-center gap-2"
+                className="w-full py-4 rounded-full bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm uppercase tracking-wider shadow-lg transition-all active:scale-[0.99] cursor-pointer flex items-center justify-center gap-2"
               >
                 <span>Buy it now</span>
               </button>

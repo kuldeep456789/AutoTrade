@@ -224,59 +224,76 @@ const AccountPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-[#0F0F10]">
+    <div className="min-h-screen bg-zinc-50 dark:bg-black text-zinc-900 dark:text-zinc-100 transition-colors duration-200">
       {/* ── Profile Header ── */}
-      <div className="bg-white dark:bg-gradient-to-r dark:from-[#18181B] dark:via-[#1f1f23] dark:to-[#18181B] border-b border-zinc-200 dark:border-[#2A2A2A] transition-colors duration-200">
+      <div className="bg-white dark:bg-zinc-900/90 border-b border-zinc-200 dark:border-zinc-800/80 transition-colors duration-200 backdrop-blur-md">
         <div className="mx-auto max-w-[1500px] px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 sm:gap-6">
-            {/* Avatar */}
-            <div className="relative shrink-0 group cursor-pointer" onClick={() => setShowEditModal(true)} title="Click to upload profile photo">
-              <div className="w-16 h-16 sm:w-[72px] sm:h-[72px] rounded-full bg-zinc-100 dark:bg-white/15 flex items-center justify-center text-zinc-900 dark:text-white text-2xl sm:text-3xl font-bold border-2 border-zinc-200 dark:border-white/20 shadow-md backdrop-blur-sm overflow-hidden relative transition-colors duration-200">
-                {(userInfo.avatar || (userInfo as any).image || userInfo.profileImage) ? (
-                  <img
-                    src={userInfo.avatar || (userInfo as any).image || userInfo.profileImage}
-                    alt={userInfo.name || 'User Avatar'}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  (userInfo.name?.[0] || userInfo.firstName?.[0] || userInfo.email?.[0] || 'U').toUpperCase()
-                )}
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
-                  <Camera size={20} />
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 sm:gap-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 sm:gap-6">
+              {/* Avatar */}
+              <div className="relative shrink-0 group cursor-pointer" onClick={() => setShowEditModal(true)} title="Click to upload profile photo">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-900 dark:text-white text-2xl sm:text-3xl font-bold border-2 border-zinc-200 dark:border-zinc-700 shadow-lg overflow-hidden relative transition-colors duration-200">
+                  {(userInfo.avatar || (userInfo as any).image || userInfo.profileImage) ? (
+                    <img
+                      src={userInfo.avatar || (userInfo as any).image || userInfo.profileImage}
+                      alt={userInfo.name || 'User Avatar'}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    (userInfo.name?.[0] || userInfo.firstName?.[0] || userInfo.email?.[0] || 'U').toUpperCase()
+                  )}
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                    <Camera size={22} />
+                  </div>
+                </div>
+                <div className="absolute -bottom-0.5 -right-0.5 w-5.5 h-5.5 rounded-full bg-emerald-500 border-2 border-white dark:border-zinc-900 flex items-center justify-center shadow-sm">
+                  <CheckCircle size={12} className="text-white" strokeWidth={3} />
                 </div>
               </div>
-              <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-emerald-500 border-2 border-white dark:border-[#18181B] flex items-center justify-center">
-                <CheckCircle size={10} className="text-white" strokeWidth={3} />
+              {/* Info */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-zinc-900 dark:text-white tracking-tight">
+                    {userInfo.name || `${userInfo.firstName || ''} ${userInfo.lastName || ''}`.trim()}
+                  </h1>
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-orange-500/10 text-orange-500 border border-orange-500/20 uppercase tracking-wider">
+                    {userInfo.role === 'admin' ? 'Admin' : 'Verified Member'}
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+                  <span className="flex items-center gap-1.5">
+                    <Mail size={15} strokeWidth={1.75} className="text-orange-500" />
+                    {userInfo.email}
+                  </span>
+                  {userInfo.phone && (
+                    <span className="flex items-center gap-1.5">
+                      <Phone size={15} strokeWidth={1.75} className="text-orange-500" />
+                      {userInfo.phone}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
-            {/* Info */}
-            <div className="flex-1 min-w-0">
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-zinc-900 dark:text-white tracking-tight">
-                {userInfo.name || `${userInfo.firstName || ''} ${userInfo.lastName || ''}`.trim()}
-              </h1>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-sm text-zinc-600 dark:text-white/70">
-                <span className="flex items-center gap-1.5">
-                  <Mail size={14} strokeWidth={1.5} />
-                  {userInfo.email}
-                </span>
-                {userInfo.phone && (
-                  <span className="flex items-center gap-1.5">
-                    <Phone size={14} strokeWidth={1.5} />
-                    {userInfo.phone}
-                  </span>
-                )}
-              </div>
+
+            {/* Quick Actions */}
+            <div className="flex items-center gap-3 self-stretch sm:self-auto">
+              <button
+                onClick={() => setShowEditModal(true)}
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 text-xs sm:text-sm font-semibold hover:bg-zinc-50 dark:hover:bg-zinc-700/80 transition-all shadow-sm cursor-pointer"
+              >
+                <Pencil size={15} /> Edit Profile
+              </button>
             </div>
           </div>
         </div>
       </div>
 
       {/* ── Dashboard Body ── */}
-      <div className="mx-auto max-w-[1500px] px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+      <div className="mx-auto max-w-[1500px] px-4 sm:px-6 lg:px-8 py-6 lg:py-10">
         <div className="grid gap-6 lg:gap-8 lg:grid-cols-[240px_1fr]">
 
           {/* ── Sidebar ── */}
-          <aside className="flex overflow-x-auto lg:flex-col lg:space-y-1 gap-2 lg:gap-0 scrollbar-hide pb-2 lg:pb-0 lg:sticky lg:top-[130px] lg:self-start -mx-4 px-4 sm:mx-0 sm:px-0">
+          <aside className="flex overflow-x-auto lg:flex-col lg:space-y-1.5 gap-2 lg:gap-0 scrollbar-hide pb-2 lg:pb-0 lg:sticky lg:top-[110px] lg:self-start -mx-4 px-4 sm:mx-0 sm:px-0">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -284,38 +301,39 @@ const AccountPage = () => {
                 <button
                   key={tab.id}
                   onClick={() => setTab(tab.id)}
-                  className={`relative shrink-0 flex items-center gap-2 sm:gap-3.5 rounded-xl px-4 py-3 sm:py-3.5 text-[14px] sm:text-[15px] font-medium transition-all duration-200 group ${isActive
-                    ? 'bg-white dark:bg-[#18181B] text-zinc-900 dark:text-white shadow-sm border border-zinc-200 dark:border-[#2A2A2A]'
-                    : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-[#18181B]/60 border border-transparent'
+                  className={`relative shrink-0 flex items-center gap-2.5 sm:gap-3.5 rounded-xl px-4 py-3 sm:py-3.5 text-xs sm:text-sm font-semibold transition-all duration-200 cursor-pointer group ${isActive
+                    ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20'
+                    : 'bg-white dark:bg-zinc-900/80 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200/80 dark:border-zinc-800'
                     }`}
                 >
-                  {/* Left accent bar (Desktop) / Bottom accent (Mobile) */}
-                  {isActive && (
-                    <>
-                      <span className="hidden lg:block absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-6 rounded-r-full bg-zinc-900 dark:bg-white" />
-                      <span className="lg:hidden absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-[3px] rounded-t-full bg-zinc-900 dark:bg-white" />
-                    </>
-                  )}
-                  <Icon size={18} className="lg:w-[22px] lg:h-[22px]" strokeWidth={isActive ? 2 : 1.5} />
+                  <Icon size={18} className="shrink-0" strokeWidth={isActive ? 2 : 1.75} />
                   <span className="whitespace-nowrap">{tab.label}</span>
                   {tab.id === 'wishlist' && wishlistItems.length > 0 && (
-                    <span className={`ml-1 lg:ml-auto rounded-full px-2 py-0.5 text-[10px] sm:text-[11px] font-bold transition-all ${isActive
-                      ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900'
-                      : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300'
+                    <span className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold ${isActive
+                      ? 'bg-white/20 text-white'
+                      : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400'
                       }`}>
                       {wishlistItems.length}
+                    </span>
+                  )}
+                  {tab.id === 'notifications' && userMessages.length > 0 && (
+                    <span className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold ${isActive
+                      ? 'bg-white/20 text-white'
+                      : 'bg-orange-500/10 text-orange-500'
+                      }`}>
+                      {userMessages.length}
                     </span>
                   )}
                 </button>
               );
             })}
-            <div className="shrink-0 lg:pt-4 lg:mt-3 lg:border-t border-zinc-200 dark:border-[#2A2A2A] flex items-center">
+            <div className="shrink-0 lg:pt-4 lg:mt-3 lg:border-t border-zinc-200 dark:border-zinc-800 flex items-center">
               <button
                 onClick={() => dispatch(logout())}
-                className="flex items-center gap-2 sm:gap-3.5 rounded-xl px-4 py-3 sm:py-3.5 text-[14px] sm:text-[15px] font-medium text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all duration-200 border border-transparent hover:border-red-100 dark:hover:border-red-900/30 whitespace-nowrap"
+                className="flex items-center gap-2.5 sm:gap-3.5 rounded-xl px-4 py-3 sm:py-3.5 text-xs sm:text-sm font-semibold text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-500/10 transition-all duration-200 border border-transparent hover:border-red-500/20 whitespace-nowrap cursor-pointer"
               >
-                <LogOut size={18} className="lg:w-[22px] lg:h-[22px]" strokeWidth={1.5} />
-                <span>Sign out</span>
+                <LogOut size={18} strokeWidth={1.75} />
+                <span>Sign Out</span>
               </button>
             </div>
           </aside>

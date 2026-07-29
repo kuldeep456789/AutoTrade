@@ -1,49 +1,28 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Heart, Star, ShoppingBag, Check } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
-import { toggleWishlist } from '../../store/slices/wishlistSlice';
+import { Heart, ShoppingBag, Check } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { addToCart } from '../../store/slices/cartSlice';
+import { toggleWishlist } from '../../store/slices/wishlistSlice';
 import type { RootState } from '../../store/store';
+import WishlistLoginPopup from '../WishlistLoginPopup';
 import { getProductId } from '../../lib/product';
 import { formatINR } from '../../lib/currency';
-import toast from 'react-hot-toast';
-import WishlistLoginPopup from '../WishlistLoginPopup';
-
-const PLACEHOLDER_IMAGE = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="500" viewBox="0 0 400 500"><rect width="100%" height="100%" fill="%2318181b"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="24" font-weight="900" fill="%23ef4444" letter-spacing="4">AUTOTRADE</text></svg>';
 
 interface ProductCardProps {
-  product: {
-    _id: string;
-    name: string;
-    price: number;
-    discountPrice?: number;
-    images: string[];
-    variants?: { color: string; size: string; stock: number }[];
-    colors?: string[];
-    sizes?: string[];
-    tags?: string[];
-    title?: string;
-    description?: string;
-    numReviews?: number;
-    averageRating?: number;
-    subcategoryName?: string;
-    collectionType?: string;
-  };
-  keyword?: string;
+  product: any;
 }
 
+const PLACEHOLDER_IMAGE = 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=600&auto=format&fit=crop&q=80';
+
 export const ProductCardSkeleton = () => (
-  <div className="w-full bg-[#0e121b] border border-zinc-800 rounded-2xl overflow-hidden animate-pulse">
-    <div className="aspect-[4/5] bg-zinc-800/60" />
+  <div className="flex flex-col w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden shadow-sm animate-pulse">
+    <div className="aspect-square w-full bg-zinc-200 dark:bg-zinc-800" />
     <div className="p-4 space-y-3">
-      <div className="h-3 w-1/3 bg-zinc-800 rounded" />
-      <div className="h-5 w-full bg-zinc-800 rounded" />
-      <div className="h-4 w-2/3 bg-zinc-800 rounded" />
-      <div className="flex items-center justify-between pt-2">
-        <div className="h-6 w-20 bg-zinc-800 rounded" />
-        <div className="h-8 w-24 bg-zinc-800 rounded-lg" />
-      </div>
+      <div className="h-3 w-1/3 bg-zinc-200 dark:bg-zinc-800 rounded" />
+      <div className="h-4 w-3/4 bg-zinc-200 dark:bg-zinc-800 rounded" />
+      <div className="h-5 w-1/2 bg-zinc-200 dark:bg-zinc-800 rounded pt-2" />
     </div>
   </div>
 );
@@ -133,16 +112,15 @@ const ProductCard = ({ product }: ProductCardProps) => {
 
   return (
     <div
-      className="group relative flex flex-col w-full bg-[#0e121b] border border-zinc-800/80 hover:border-zinc-700 rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer"
+      className="group relative flex flex-col w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden shadow-sm transition-all duration-200 cursor-pointer"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
       {/* Product Image Box */}
-      <Link to={`/product/${productId}`} className="relative block aspect-square w-full bg-white overflow-hidden p-2.5 sm:p-3">
+      <Link to={`/product/${productId}`} className="relative block aspect-square w-full bg-zinc-50 dark:bg-zinc-950 overflow-hidden p-2.5 sm:p-3 transition-colors duration-200">
         {imageFailed ? (
-          <div className="flex h-full w-full flex-col items-center justify-center bg-zinc-900 px-6 text-center">
-            <span className="text-xs font-bold uppercase tracking-[0.2em] text-red-500">AUTOTRADE</span>
-            <span className="mt-2 line-clamp-2 text-sm font-bold text-white">
+          <div className="flex h-full w-full flex-col items-center justify-center bg-zinc-100 dark:bg-zinc-900 px-6 text-center">
+            <span className="mt-2 line-clamp-2 text-sm font-bold text-zinc-900 dark:text-white">
               {productName}
             </span>
           </div>
@@ -154,7 +132,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
               alt={productName}
               loading="lazy"
               onError={() => { if (primaryImage !== PLACEHOLDER_IMAGE) setImageFailed(true); }}
-              className={`h-full w-full object-contain object-center transform group-hover:scale-108 transition-all duration-500 ${
+              className={`h-full w-full object-contain object-center transform group-hover:scale-105 transition-all duration-500 ${
                 hovered && hoverImage ? 'opacity-0' : 'opacity-100'
               }`}
             />
@@ -164,7 +142,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
                 src={hoverImage}
                 alt={`${productName} hover view`}
                 loading="lazy"
-                className={`absolute inset-0 h-full w-full object-contain object-center p-2.5 sm:p-3 transform group-hover:scale-108 transition-all duration-500 ${
+                className={`absolute inset-0 h-full w-full object-contain object-center p-2.5 sm:p-3 transform group-hover:scale-105 transition-all duration-500 ${
                   hovered ? 'opacity-100' : 'opacity-0'
                 }`}
               />
@@ -187,7 +165,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
           className={`absolute top-2.5 right-2.5 z-20 flex h-8 w-8 items-center justify-center rounded-full backdrop-blur-md transition-all duration-300 shadow-md hover:scale-110 active:scale-95 ${
             isWishlisted
               ? 'bg-red-600 text-white'
-              : 'bg-black/60 text-zinc-300 hover:bg-red-600 hover:text-white'
+              : 'bg-white/80 dark:bg-black/60 text-zinc-700 dark:text-zinc-300 hover:bg-red-600 hover:text-white'
           }`}
           aria-label="Wishlist"
         >
@@ -196,28 +174,30 @@ const ProductCard = ({ product }: ProductCardProps) => {
       </Link>
 
       {/* Product Content Details */}
-      <div className="flex flex-col flex-1 p-3 sm:p-4 justify-between">
+      <div className="flex flex-col flex-1 p-3 sm:p-4 justify-between bg-white dark:bg-zinc-900 transition-colors duration-200">
         <Link to={`/product/${productId}`} className="space-y-1.5">
           {/* Subcategory / Brand Tag */}
-          <span className="text-[11px] font-bold text-amber-500 uppercase tracking-widest block">
-            {product.subcategoryName || product.collectionType || 'AUTOTRADE PRO'}
-          </span>
+          {(product.subcategoryName || product.collectionType || product.categoryName || product.category?.name) && (
+            <span className="text-[11px] font-bold text-orange-500 uppercase tracking-widest block">
+              {product.subcategoryName || product.collectionType || product.categoryName || product.category?.name}
+            </span>
+          )}
 
           {/* Product Title */}
-          <h3 className="text-sm sm:text-[15px] font-bold text-white group-hover:text-red-400 transition-colors line-clamp-2 leading-snug tracking-tight">
+          <h3 className="text-sm sm:text-[15px] font-bold text-zinc-900 dark:text-white group-hover:text-orange-500 transition-colors line-clamp-2 leading-snug tracking-tight">
             {productName}
           </h3>
         </Link>
 
         {/* Price & Quick Add Button */}
-        <div className="pt-3 border-t border-zinc-800/80 mt-3 flex items-center justify-between gap-2">
+        <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800/80 mt-3 flex items-center justify-between gap-2">
           <div>
             <div className="flex items-baseline gap-2">
-              <span className="text-base sm:text-lg font-black text-white">
+              <span className="text-base sm:text-lg font-black text-zinc-900 dark:text-white">
                 {formatINR(currentPrice)}
               </span>
               {originalPrice && (
-                <span className="text-xs text-zinc-500 line-through">
+                <span className="text-xs text-zinc-400 dark:text-zinc-500 line-through">
                   {formatINR(originalPrice)}
                 </span>
               )}
@@ -226,10 +206,10 @@ const ProductCard = ({ product }: ProductCardProps) => {
 
           <button
             onClick={handleQuickAdd}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all duration-300 shadow-md active:scale-95 cursor-pointer ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all duration-300 shadow-sm active:scale-95 cursor-pointer ${
               isAdded
-                ? 'bg-green-600 text-white'
-                : 'bg-[#18233c] text-amber-400 hover:bg-amber-500 hover:text-black border border-amber-500/40'
+                ? 'bg-emerald-600 text-white'
+                : 'bg-orange-500/10 text-orange-600 dark:text-orange-400 hover:bg-orange-500 hover:text-white border border-orange-500/30'
             }`}
           >
             {isAdded ? (

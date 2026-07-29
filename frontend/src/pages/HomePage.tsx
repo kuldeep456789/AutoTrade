@@ -222,54 +222,56 @@ const HomePage = () => {
       </section>
 
       {/* ───────── CATEGORY SHOWCASE (1 SINGLE ROW OF ALL 8 CATEGORIES) ───────── */}
-      <section className="bg-[#0b0e14] dark:bg-[#07090d] py-12 sm:py-16 border-b-2 border-black dark:border-zinc-800">
+      <section className="bg-zinc-50 dark:bg-zinc-950 py-12 sm:py-16 border-b border-zinc-200 dark:border-zinc-800 transition-colors duration-200">
         <div className="max-w-[1920px] mx-auto px-6 sm:px-10 lg:px-16">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 sm:mb-10 gap-4">
             <div>
-              {/* <p className="text-red-500 font-bold tracking-[0.2em] text-xs sm:text-sm uppercase mb-2">Shop By Category</p> */}
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white uppercase">
-                Explore Catogries
+              <span className="text-orange-500 font-bold tracking-[0.2em] text-xs uppercase mb-1.5 block">
+                Catalog Showcase
+              </span>
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-zinc-900 dark:text-white uppercase">
+                Explore Categories
               </h2>
             </div>
             <Link
               to="/collections/all"
-              className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold tracking-widest text-zinc-400 hover:text-red-500 transition-colors uppercase group"
+              className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold tracking-widest text-zinc-600 dark:text-zinc-400 hover:text-orange-500 transition-colors uppercase group"
             >
               <span>VIEW ALL CATEGORIES</span>
-              <ArrowRight className="w-4 h-4 text-red-500 transform group-hover:translate-x-1 transition-transform" />
+              <ArrowRight className="w-4 h-4 text-orange-500 transform group-hover:translate-x-1 transition-transform" />
             </Link>
           </div>
 
-          {/* 1 Single Horizontal Row Container (8 Columns on XL screens, horizontal scroll on mobile) */}
+          {/* 1 Single Horizontal Row Container (8 Columns on XL screens) */}
           <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3 sm:gap-4">
             {heroCategories.map((cat, idx) => (
               <Link
                 key={idx}
                 to={cat.to}
-                className="group relative rounded-2xl bg-[#0a0d14] border border-zinc-800/80 hover:border-zinc-700 shadow-md hover:shadow-xl transition-all duration-300 flex flex-col items-center justify-between text-center p-4 sm:p-5"
+                className="group relative rounded-2xl bg-white dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 hover:border-orange-500/50 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col items-center justify-between text-center p-4 sm:p-5"
               >
                 {/* Top: Icon Badge */}
                 <div className="relative z-10 my-1">
-                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-2 border-zinc-700 flex items-center justify-center text-white bg-black/40 group-hover:scale-105 group-hover:border-red-500 transition-all duration-300">
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border border-zinc-200 dark:border-zinc-700 flex items-center justify-center text-orange-500 bg-orange-500/10 group-hover:scale-110 group-hover:border-orange-500 transition-all duration-300">
                     <cat.icon className="w-7 h-7 stroke-[2]" />
                   </div>
                 </div>
 
                 {/* Center: Title & Description */}
                 <div className="relative z-10 flex-1 flex flex-col items-center justify-center my-3">
-                  <h3 className="text-xs sm:text-sm font-black tracking-tight text-white uppercase group-hover:text-red-500 transition-colors leading-snug mb-1">
+                  <h3 className="text-xs sm:text-sm font-extrabold tracking-tight text-zinc-900 dark:text-white uppercase group-hover:text-orange-500 transition-colors leading-snug mb-1">
                     {cat.title}
                   </h3>
-                  <p className="text-[11px] text-zinc-400 font-normal normal-case leading-tight line-clamp-2">
+                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400 font-normal normal-case leading-tight line-clamp-2">
                     {cat.description}
                   </p>
                 </div>
 
                 {/* Bottom: Pill Button */}
                 <div className="relative z-10 mt-1">
-                  <div className="px-3 py-1.5 rounded-full border border-zinc-700/80 bg-black/60 text-[10px] font-bold text-white group-hover:border-red-500 group-hover:text-red-500 transition-all inline-flex items-center gap-1 uppercase tracking-wider shadow-sm">
+                  <div className="px-3 py-1.5 rounded-full border border-orange-500/30 bg-orange-500/10 text-[10px] font-bold text-orange-600 dark:text-orange-400 group-hover:bg-orange-500 group-hover:text-white transition-all inline-flex items-center gap-1 uppercase tracking-wider shadow-sm">
                     <span>Explore</span>
-                    <ArrowRight className="w-3 h-3 text-red-500 transform group-hover:translate-x-0.5 transition-transform" />
+                    <ArrowRight className="w-3 h-3 text-orange-500 group-hover:text-white transform group-hover:translate-x-0.5 transition-transform" />
                   </div>
                 </div>
               </Link>
@@ -278,13 +280,18 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* ───────── FEATURED COLLECTION carousel ───────── */}
+      {/* ───────── FEATURED COLLECTION CAROUSEL ───────── */}
       {carouselProducts.length > 0 && (
-        <section className="border-b-2 border-black dark:border-zinc-800 bg-[#07090d]">
+        <section className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-100/50 dark:bg-zinc-950/80 transition-colors duration-200">
           <div className="max-w-[1920px] mx-auto px-6 sm:px-10 lg:px-16 py-8 sm:py-10 lg:py-12">
             <div className="flex items-end justify-between mb-6 sm:mb-8">
               <div>
-                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight leading-none text-white">COLLECTION</h2>
+                <span className="text-orange-500 font-bold tracking-[0.2em] text-xs uppercase mb-1.5 block">
+                  Featured Lineup
+                </span>
+                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight leading-none text-zinc-900 dark:text-white">
+                  Collection
+                </h2>
               </div>
             </div>
             <div className="relative group">
@@ -308,7 +315,7 @@ const HomePage = () => {
                         carouselRef.current.scrollBy({ left: -280, behavior: 'smooth' });
                       }
                     }}
-                    className="w-10 h-10 rounded-full bg-zinc-900 text-white shadow-md hover:bg-red-600 transition-all flex items-center justify-center cursor-pointer border border-zinc-800"
+                    className="w-10 h-10 rounded-full bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 shadow-md hover:bg-orange-500 hover:text-white transition-all flex items-center justify-center cursor-pointer border border-zinc-200 dark:border-zinc-800"
                     aria-label="Previous products"
                   >
                     <ChevronLeft size={18} strokeWidth={2} />
@@ -319,7 +326,7 @@ const HomePage = () => {
                         carouselRef.current.scrollBy({ left: 280, behavior: 'smooth' });
                       }
                     }}
-                    className="w-10 h-10 rounded-full bg-zinc-900 text-white shadow-md hover:bg-red-600 transition-all flex items-center justify-center cursor-pointer border border-zinc-800"
+                    className="w-10 h-10 rounded-full bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 shadow-md hover:bg-orange-500 hover:text-white transition-all flex items-center justify-center cursor-pointer border border-zinc-200 dark:border-zinc-800"
                     aria-label="Next products"
                   >
                     <ChevronRight size={18} strokeWidth={2} />

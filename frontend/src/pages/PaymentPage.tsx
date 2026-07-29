@@ -5,19 +5,20 @@ import type { RootState } from '../store/store';
 import { savePaymentMethod } from '../store/slices/cartSlice';
 import CheckoutSteps from '../components/checkout/CheckoutSteps';
 import OrderSummarySidebar from '../components/checkout/OrderSummarySidebar';
-import { CreditCard, ShieldCheck, Smartphone, Landmark } from 'lucide-react';
+import { CreditCard, ShieldCheck, Smartphone, Landmark, Check, Lock, Sparkles, Truck } from 'lucide-react';
 
 const paymentOptions = [
   {
     value: 'Razorpay',
-    label: 'Razorpay Secure',
-    sub: 'Pay via Credit Card, UPI, Net Banking & more',
+    label: 'Razorpay Secure Payment',
+    sub: 'Pay via Credit/Debit Cards, UPI (GPay/PhonePe/Paytm), NetBanking & Wallets',
     icon: CreditCard,
+    badge: 'Popular & Instant',
     icons: (
-      <div className="flex gap-2">
-        <CreditCard size={20} strokeWidth={1.5} />
-        <Smartphone size={20} strokeWidth={1.5} />
-        <Landmark size={20} strokeWidth={1.5} />
+      <div className="flex items-center gap-2">
+        <CreditCard size={18} strokeWidth={1.5} className="text-zinc-400 dark:text-zinc-300" />
+        <Smartphone size={18} strokeWidth={1.5} className="text-zinc-400 dark:text-zinc-300" />
+        <Landmark size={18} strokeWidth={1.5} className="text-zinc-400 dark:text-zinc-300" />
       </div>
     ),
   },
@@ -44,24 +45,30 @@ const PaymentPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-[#0F0F10]">
-      <div className="mx-auto max-w-[1500px] px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+    <div className="min-h-screen bg-zinc-50 dark:bg-black text-zinc-900 dark:text-zinc-100 transition-colors duration-200">
+      <div className="mx-auto max-w-[1500px] px-4 sm:px-6 lg:px-8 py-6 lg:py-10">
         <CheckoutSteps step1 step2 />
 
-        <div className="flex flex-col lg:flex-row gap-6 lg:gap-10 xl:gap-12 mt-2">
+        <div className="flex flex-col lg:flex-row gap-6 lg:gap-10 xl:gap-12 mt-6">
 
           {/* ── Left: Payment options ── */}
           <div className="w-full lg:w-[65%]">
-            <div className="rounded-2xl border border-zinc-200 dark:border-[#2A2A2A] bg-white dark:bg-[#18181B] overflow-hidden">
-              <div className="px-6 sm:px-8 pt-6 sm:pt-8 pb-4 border-b border-zinc-100 dark:border-zinc-800">
-                <span className="text-[12px] font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
-                  Step 02 / 03
-                </span>
-                <h1 className="mt-2 text-[28px] sm:text-[32px] font-bold text-zinc-900 dark:text-white tracking-tight">
-                  Payment Method
+            <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/90 shadow-xl overflow-hidden backdrop-blur-md">
+              <div className="px-6 sm:px-8 pt-6 sm:pt-8 pb-5 border-b border-zinc-100 dark:border-zinc-800/80">
+                <div className="flex items-center justify-between">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-orange-500/10 text-orange-500 border border-orange-500/20">
+                    <Sparkles size={13} /> Step 02 of 03
+                  </span>
+                  <div className="flex items-center gap-1.5 text-xs text-emerald-500 font-medium bg-emerald-500/10 dark:bg-emerald-500/20 px-2.5 py-1 rounded-full border border-emerald-500/20">
+                    <Lock size={12} strokeWidth={2} />
+                    <span>256-Bit SSL Encrypted</span>
+                  </div>
+                </div>
+                <h1 className="mt-3 text-2xl sm:text-3xl font-extrabold text-zinc-900 dark:text-white tracking-tight">
+                  Select Payment Method
                 </h1>
-                <p className="mt-1 text-[15px] text-zinc-500 dark:text-zinc-400">
-                  Choose how you'd like to pay
+                <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+                  All transactions are safe, encrypted, and backed by AutoTrade Buyer Guarantee.
                 </p>
               </div>
 
@@ -73,56 +80,67 @@ const PaymentPage = () => {
                     <button
                       key={option.value}
                       onClick={() => setPaymentMethod(option.value)}
-                      className={`relative w-full flex items-center gap-5 px-5 sm:px-6 py-5 rounded-xl border-2 transition-all duration-200 text-left cursor-pointer group ${
+                      className={`relative w-full flex items-start sm:items-center gap-4 sm:gap-5 px-5 sm:px-6 py-5 rounded-2xl border-2 transition-all duration-200 text-left cursor-pointer group ${
                         isSelected
-                          ? 'border-zinc-900 dark:border-white bg-zinc-50 dark:bg-zinc-900/50 shadow-sm'
-                          : 'border-zinc-200 dark:border-zinc-700 bg-white dark:bg-[#18181B] hover:border-zinc-300 dark:hover:border-zinc-600 hover:shadow-sm'
+                          ? 'border-orange-500 bg-orange-500/5 dark:bg-orange-500/10 shadow-md shadow-orange-500/10'
+                          : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-zinc-300 dark:hover:border-zinc-700 hover:shadow-sm'
                       }`}
                     >
-                      {/* Radio indicator */}
-                      <span className={`shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
-                        isSelected ? 'border-zinc-900 dark:border-white' : 'border-zinc-300 dark:border-zinc-600'
-                      }`}>
-                        {isSelected && (
-                          <span className="w-2.5 h-2.5 rounded-full bg-zinc-900 dark:bg-white animate-fadeIn" />
-                        )}
+                      {/* Custom Radio Indicator */}
+                      <span
+                        className={`shrink-0 mt-0.5 sm:mt-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
+                          isSelected
+                            ? 'border-orange-500 bg-orange-500 text-white'
+                            : 'border-zinc-300 dark:border-zinc-600 bg-transparent'
+                        }`}
+                      >
+                        {isSelected && <Check size={12} strokeWidth={3} />}
                       </span>
 
                       {/* Icon */}
-                      <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-all duration-200 ${
-                        isSelected
-                          ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900'
-                          : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 group-hover:bg-zinc-200 dark:group-hover:bg-zinc-700'
-                      }`}>
-                        <Icon size={20} strokeWidth={1.5} />
+                      <div
+                        className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-all duration-200 ${
+                          isSelected
+                            ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30'
+                            : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 group-hover:bg-zinc-200 dark:group-hover:bg-zinc-700'
+                        }`}
+                      >
+                        <Icon size={20} strokeWidth={1.75} />
                       </div>
 
-                      {/* Label + Sub */}
+                      {/* Content */}
                       <div className="flex-1 min-w-0">
-                        <p className={`text-[15px] font-bold tracking-tight transition-colors ${
-                          isSelected ? 'text-zinc-900 dark:text-white' : 'text-zinc-700 dark:text-zinc-300'
-                        }`}>
-                          {option.label}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p
+                            className={`text-base font-bold tracking-tight transition-colors ${
+                              isSelected ? 'text-zinc-900 dark:text-white' : 'text-zinc-800 dark:text-zinc-200'
+                            }`}
+                          >
+                            {option.label}
+                          </p>
+                          {option.badge && (
+                            <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700 uppercase tracking-wider">
+                              {option.badge}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-1 leading-snug">
+                          {option.sub}
                         </p>
-                        <p className="text-[13px] text-zinc-500 dark:text-zinc-400 mt-0.5">{option.sub}</p>
                       </div>
 
-                      {/* Icons */}
-                      <div className={`shrink-0 transition-colors ${
-                        isSelected ? 'text-zinc-600 dark:text-zinc-300' : 'text-zinc-300 dark:text-zinc-600'
-                      }`}>
-                        {option.icons}
-                      </div>
+                      {/* Payment Icons */}
+                      <div className="hidden sm:block shrink-0">{option.icons}</div>
                     </button>
                   );
                 })}
               </div>
 
-              {/* Reassurance */}
-              <div className="flex items-center gap-2.5 px-6 sm:px-8 py-4 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/30">
-                <ShieldCheck size={16} className="text-emerald-500 shrink-0" strokeWidth={2} />
-                <p className="text-[12px] font-medium text-zinc-500 dark:text-zinc-400">
-                  Every transaction is encrypted end-to-end with 256-bit SSL security
+              {/* Security Banner */}
+              <div className="flex items-center gap-3 px-6 sm:px-8 py-4 border-t border-zinc-100 dark:border-zinc-800/80 bg-zinc-50/80 dark:bg-zinc-900/40">
+                <ShieldCheck size={18} className="text-emerald-500 shrink-0" strokeWidth={2} />
+                <p className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                  Your payment credentials are secure. AutoTrade never stores complete card data or banking PINs.
                 </p>
               </div>
             </div>

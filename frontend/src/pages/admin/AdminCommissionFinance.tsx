@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { adminApi, type AnalyticsData, type StoreSettings } from '../../services/adminApi';
+import toast from 'react-hot-toast';
 
 export default function AdminCommissionFinance() {
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
@@ -52,10 +53,10 @@ export default function AdminCommissionFinance() {
         ...settings,
         ...rates
       });
-      // Refresh to confirm
+      toast.success('Finance rates saved successfully');
       await fetchData();
     } catch (err: any) {
-      alert(err?.message ?? 'Failed to save rates');
+      toast.error(err?.message ?? 'Failed to save rates');
     } finally {
       setSaving(false);
     }
@@ -97,7 +98,7 @@ export default function AdminCommissionFinance() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-2 border-[#382620] border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -105,27 +106,31 @@ export default function AdminCommissionFinance() {
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center h-64 text-center">
-        <p className="text-red-600 mb-2">{error}</p>
-        <button onClick={fetchData} className="text-[#382620] underline font-medium">Retry</button>
+        <p className="text-red-500 mb-2 font-semibold">{error}</p>
+        <button onClick={fetchData} className="text-orange-500 underline font-bold">Retry</button>
       </div>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 pb-12 font-sans text-[#382620]">
+    <div className="max-w-6xl mx-auto space-y-6 pb-12 font-sans">
       
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-[#382620]">Commission & Finance</h1>
-          <p className="text-sm text-gray-500 mt-1">Computed from paid orders over the last {days} days</p>
+          <h1 className="text-2xl font-extrabold tracking-tight text-zinc-900 dark:text-white">Commission & Finance</h1>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Computed from paid orders over the last {days} days</p>
         </div>
-        <div className="flex border border-gray-200 rounded-md overflow-hidden bg-white shadow-sm">
+        <div className="flex border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden bg-white dark:bg-zinc-900 shadow-sm p-1 gap-1">
           {[7, 30, 90].map(d => (
             <button 
               key={d}
               onClick={() => setDays(d)}
-              className={`px-4 py-1.5 text-sm font-medium cursor-pointer transition-colors ${days === d ? 'bg-[#382620] text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+              className={`px-4 py-1.5 text-xs font-semibold rounded-lg cursor-pointer transition-all ${
+                days === d 
+                  ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20' 
+                  : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+              }`}
             >
               {d}d
             </button>
@@ -136,31 +141,31 @@ export default function AdminCommissionFinance() {
       {/* KPI Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Gross Revenue */}
-        <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]">
-          <p className="text-[11px] font-bold text-gray-400 tracking-widest uppercase mb-2">Gross Revenue</p>
-          <h3 className="text-2xl font-bold text-[#b5853b]">{formatCurrency(grossRevenue)}</h3>
-          <p className="text-xs text-gray-500 mt-2">{totalPaidOrders} paid orders</p>
+        <div className="bg-white dark:bg-zinc-900/90 p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xl backdrop-blur-md">
+          <p className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 tracking-widest uppercase mb-2">Gross Revenue</p>
+          <h3 className="text-2xl font-extrabold text-orange-500">{formatCurrency(grossRevenue)}</h3>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2 font-medium">{totalPaidOrders} paid orders</p>
         </div>
 
         {/* GST */}
-        <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]">
-          <p className="text-[11px] font-bold text-gray-400 tracking-widest uppercase mb-2">GST</p>
-          <h3 className="text-2xl font-bold text-[#382620]">{formatCurrency(gst)}</h3>
-          <p className="text-xs text-gray-500 mt-2">{rates.gstRate}% (inclusive)</p>
+        <div className="bg-white dark:bg-zinc-900/90 p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xl backdrop-blur-md">
+          <p className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 tracking-widest uppercase mb-2">GST</p>
+          <h3 className="text-2xl font-extrabold text-zinc-900 dark:text-white">{formatCurrency(gst)}</h3>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2 font-medium">{rates.gstRate}% (inclusive)</p>
         </div>
 
         {/* Gateway Fees */}
-        <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]">
-          <p className="text-[11px] font-bold text-gray-400 tracking-widest uppercase mb-2">Gateway Fees</p>
-          <h3 className="text-2xl font-bold text-[#382620]">{formatCurrency(gatewayFees)}</h3>
-          <p className="text-xs text-gray-500 mt-2">{rates.gatewayFeePercent}% + {formatCurrency(rates.gatewayFixedFee)}</p>
+        <div className="bg-white dark:bg-zinc-900/90 p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xl backdrop-blur-md">
+          <p className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 tracking-widest uppercase mb-2">Gateway Fees</p>
+          <h3 className="text-2xl font-extrabold text-zinc-900 dark:text-white">{formatCurrency(gatewayFees)}</h3>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2 font-medium">{rates.gatewayFeePercent}% + {formatCurrency(rates.gatewayFixedFee)}</p>
         </div>
 
         {/* Commission */}
-        <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]">
-          <p className="text-[11px] font-bold text-gray-400 tracking-widest uppercase mb-2">Commission</p>
-          <h3 className="text-2xl font-bold text-[#382620]">{formatCurrency(commission)}</h3>
-          <p className="text-xs text-gray-500 mt-2">{rates.commissionRate}% of net</p>
+        <div className="bg-white dark:bg-zinc-900/90 p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xl backdrop-blur-md">
+          <p className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 tracking-widest uppercase mb-2">Commission</p>
+          <h3 className="text-2xl font-extrabold text-zinc-900 dark:text-white">{formatCurrency(commission)}</h3>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2 font-medium">{rates.commissionRate}% of net</p>
         </div>
       </div>
 
@@ -168,113 +173,113 @@ export default function AdminCommissionFinance() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
         
         {/* Settlement Breakdown */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] p-8">
-          <p className="text-[11px] font-bold text-gray-400 tracking-widest uppercase mb-6">Settlement Breakdown</p>
+        <div className="bg-white dark:bg-zinc-900/90 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xl p-6 sm:p-8 backdrop-blur-md">
+          <p className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 tracking-widest uppercase mb-6">Settlement Breakdown</p>
           
           <div className="space-y-4">
-            <div className="flex justify-between items-center text-[15px]">
-              <span className="text-gray-500">Gross revenue</span>
-              <span className="font-semibold text-gray-900">{formatCurrency(grossRevenue)}</span>
+            <div className="flex justify-between items-center text-sm font-medium">
+              <span className="text-zinc-500 dark:text-zinc-400">Gross revenue</span>
+              <span className="font-bold text-zinc-900 dark:text-white">{formatCurrency(grossRevenue)}</span>
             </div>
             
-            <div className="flex justify-between items-center text-[15px]">
-              <span className="text-gray-500">GST ({rates.gstRate}%)</span>
-              <span className="font-semibold text-[#e56d6d]">- {formatCurrency(gst)}</span>
+            <div className="flex justify-between items-center text-sm font-medium">
+              <span className="text-zinc-500 dark:text-zinc-400">GST ({rates.gstRate}%)</span>
+              <span className="font-bold text-red-500">- {formatCurrency(gst)}</span>
             </div>
             
-            <div className="flex justify-between items-center text-[15px]">
-              <span className="text-gray-500">Payment gateway fees</span>
-              <span className="font-semibold text-[#e56d6d]">- {formatCurrency(gatewayFees)}</span>
+            <div className="flex justify-between items-center text-sm font-medium">
+              <span className="text-zinc-500 dark:text-zinc-400">Payment gateway fees</span>
+              <span className="font-bold text-red-500">- {formatCurrency(gatewayFees)}</span>
             </div>
 
-            <div className="flex justify-between items-center text-[15px]">
-              <span className="text-gray-500">Commission ({rates.commissionRate}%)</span>
-              <span className="font-semibold text-[#e56d6d]">- {formatCurrency(commission)}</span>
+            <div className="flex justify-between items-center text-sm font-medium">
+              <span className="text-zinc-500 dark:text-zinc-400">Commission ({rates.commissionRate}%)</span>
+              <span className="font-bold text-red-500">- {formatCurrency(commission)}</span>
             </div>
 
-            <div className="flex justify-between items-center text-[15px]">
-              <span className="text-gray-500">Coupon cost</span>
-              <span className="font-semibold text-[#e56d6d]">- {formatCurrency(couponCost)}</span>
+            <div className="flex justify-between items-center text-sm font-medium">
+              <span className="text-zinc-500 dark:text-zinc-400">Coupon cost</span>
+              <span className="font-bold text-red-500">- {formatCurrency(couponCost)}</span>
             </div>
 
-            <div className="flex justify-between items-center text-[15px]">
-              <span className="text-gray-500">Refunds issued</span>
-              <span className="font-semibold text-[#e56d6d]">- {formatCurrency(refundsIssued)}</span>
+            <div className="flex justify-between items-center text-sm font-medium">
+              <span className="text-zinc-500 dark:text-zinc-400">Refunds issued</span>
+              <span className="font-bold text-red-500">- {formatCurrency(refundsIssued)}</span>
             </div>
 
-            <div className="pt-6 mt-4 border-t border-gray-100">
+            <div className="pt-6 mt-4 border-t border-zinc-200 dark:border-zinc-800">
               <div className="flex justify-between items-center">
-                <span className="font-bold text-[#382620] text-base">Net settlement</span>
-                <span className="font-bold text-[#382620] text-2xl">{formatCurrency(netSettlement)}</span>
+                <span className="font-bold text-zinc-900 dark:text-white text-base">Net settlement</span>
+                <span className="font-extrabold text-orange-500 text-2xl sm:text-3xl">{formatCurrency(netSettlement)}</span>
               </div>
-              <p className="text-[13px] text-gray-400 mt-3">Settled every {rates.settlementCycleDays} days.</p>
+              <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-3 font-medium">Settled every {rates.settlementCycleDays} days.</p>
             </div>
           </div>
         </div>
 
         {/* Rates Form */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] p-8">
-          <p className="text-[11px] font-bold text-gray-400 tracking-widest uppercase mb-6">Rates</p>
+        <div className="bg-white dark:bg-zinc-900/90 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xl p-6 sm:p-8 backdrop-blur-md">
+          <p className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 tracking-widest uppercase mb-6">Rates</p>
           
-          <div className="space-y-5">
+          <div className="space-y-4">
             <div>
-              <label className="block text-[13px] font-medium text-gray-600 mb-2">GST rate (%)</label>
+              <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1.5">GST rate (%)</label>
               <input 
                 type="number"
                 value={rates.gstRate}
                 onChange={(e) => setRates(r => ({ ...r, gstRate: Number(e.target.value) }))}
-                className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#382620] focus:border-[#382620] transition-colors" 
+                className="w-full px-4 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm font-medium text-zinc-900 dark:text-white focus:outline-none focus:border-orange-500 transition-colors" 
               />
             </div>
             
             <div>
-              <label className="block text-[13px] font-medium text-gray-600 mb-2">Commission rate (%)</label>
+              <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1.5">Commission rate (%)</label>
               <input 
                 type="number"
                 value={rates.commissionRate}
                 onChange={(e) => setRates(r => ({ ...r, commissionRate: Number(e.target.value) }))}
-                className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#382620] focus:border-[#382620] transition-colors" 
+                className="w-full px-4 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm font-medium text-zinc-900 dark:text-white focus:outline-none focus:border-orange-500 transition-colors" 
               />
             </div>
 
             <div>
-              <label className="block text-[13px] font-medium text-gray-600 mb-2">Gateway fee (%)</label>
+              <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1.5">Gateway fee (%)</label>
               <input 
                 type="number"
                 step="0.1"
                 value={rates.gatewayFeePercent}
                 onChange={(e) => setRates(r => ({ ...r, gatewayFeePercent: Number(e.target.value) }))}
-                className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#382620] focus:border-[#382620] transition-colors" 
+                className="w-full px-4 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm font-medium text-zinc-900 dark:text-white focus:outline-none focus:border-orange-500 transition-colors" 
               />
             </div>
 
             <div>
-              <label className="block text-[13px] font-medium text-gray-600 mb-2">Gateway fixed fee ({settings?.currency || 'INR'})</label>
+              <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1.5">Gateway fixed fee ({settings?.currency || 'INR'})</label>
               <input 
                 type="number"
                 step="0.1"
                 value={rates.gatewayFixedFee}
                 onChange={(e) => setRates(r => ({ ...r, gatewayFixedFee: Number(e.target.value) }))}
-                className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#382620] focus:border-[#382620] transition-colors" 
+                className="w-full px-4 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm font-medium text-zinc-900 dark:text-white focus:outline-none focus:border-orange-500 transition-colors" 
               />
             </div>
 
             <div>
-              <label className="block text-[13px] font-medium text-gray-600 mb-2">Settlement cycle (days)</label>
+              <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1.5">Settlement cycle (days)</label>
               <input 
                 type="number"
                 value={rates.settlementCycleDays}
                 onChange={(e) => setRates(r => ({ ...r, settlementCycleDays: Number(e.target.value) }))}
-                className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#382620] focus:border-[#382620] transition-colors" 
+                className="w-full px-4 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm font-medium text-zinc-900 dark:text-white focus:outline-none focus:border-orange-500 transition-colors" 
               />
             </div>
 
             <div>
-              <label className="block text-[13px] font-medium text-gray-600 mb-2">Currency</label>
+              <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1.5">Currency</label>
               <select 
                 value={settings?.currency || 'INR'}
                 onChange={(e) => setSettings(s => s ? { ...s, currency: e.target.value } : s)}
-                className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-[#382620] focus:border-[#382620] transition-colors cursor-pointer" 
+                className="w-full px-4 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm font-medium text-zinc-900 dark:text-white focus:outline-none focus:border-orange-500 transition-colors cursor-pointer" 
               >
                 <option value="INR">INR (₹)</option>
                 <option value="USD">USD ($)</option>
@@ -287,9 +292,9 @@ export default function AdminCommissionFinance() {
               <button 
                 onClick={handleSaveRates}
                 disabled={saving}
-                className="cursor-pointer w-full py-3 bg-[#382620] text-white rounded-lg text-[13px] font-bold tracking-widest uppercase hover:bg-[#281b16] transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#382620] disabled:opacity-70"
+                className="cursor-pointer w-full py-3.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-bold tracking-wider uppercase transition-all shadow-md shadow-orange-500/20 disabled:opacity-70"
               >
-                {saving ? 'Saving...' : 'Save Rates'}
+                {saving ? 'Saving Rates...' : 'Save Rates'}
               </button>
             </div>
           </div>

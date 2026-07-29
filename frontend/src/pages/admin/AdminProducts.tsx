@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Plus, Download, Edit, Trash, Package, RefreshCw } from 'lucide-react';
+import { Search, Download, Edit, Trash, Package, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { adminApi, type AdminProduct } from '../../services/adminApi';
 import Pagination from '../../components/Pagination';
@@ -42,8 +42,9 @@ export default function AdminProducts() {
       setDeletingId(id);
       await adminApi.products.delete(id);
       setProducts(prev => prev.filter(p => p._id !== id));
+      toast.success('Product deleted');
     } catch (err: any) {
-      alert(err?.message ?? 'Failed to delete product');
+      toast.error(err?.message ?? 'Failed to delete product');
     } finally {
       setDeletingId(null);
     }
@@ -94,109 +95,105 @@ export default function AdminProducts() {
     <div className="space-y-6 pb-10">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Products</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage your store's inventory and categories.</p>
+          <h1 className="text-2xl font-extrabold text-zinc-900 dark:text-white tracking-tight">Products</h1>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Manage your store's inventory and catalog.</p>
         </div>
         <div className="flex flex-wrap gap-2 sm:gap-3">
-          <button onClick={fetchProducts} className="flex-1 sm:flex-none justify-center items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm flex cursor-pointer">
-            <RefreshCw className="h-4 w-4" />
+          <button onClick={fetchProducts} className="flex-1 sm:flex-none justify-center items-center gap-2 px-4 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 shadow-sm flex cursor-pointer transition-colors">
+            <RefreshCw className="h-4 w-4 text-orange-500" />
             Refresh
           </button>
-          <button onClick={handleExportProducts} className="flex-1 sm:flex-none justify-center items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm flex cursor-pointer">
-            <Download className="h-4 w-4" />
+          <button onClick={handleExportProducts} className="flex-1 sm:flex-none justify-center items-center gap-2 px-4 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 shadow-sm flex cursor-pointer transition-colors">
+            <Download className="h-4 w-4 text-orange-500" />
             Export
-          </button>
-          <button className="w-full sm:w-auto justify-center items-center gap-2 px-4 py-2 bg-[#0050cb] text-white rounded text-sm font-medium hover:opacity-90 transition-opacity shadow-sm flex cursor-pointer">
-            <Plus className="h-4 w-4" />
-            Add Product
           </button>
         </div>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-gray-200 flex flex-col sm:flex-row gap-4 items-center justify-between bg-gray-50/50">
+      <div className="bg-white dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xl overflow-hidden backdrop-blur-md transition-colors duration-200">
+        <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex flex-col sm:flex-row gap-4 items-center justify-between bg-zinc-50 dark:bg-zinc-950">
           <div className="relative w-full sm:w-72">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
             <input 
               type="text"
               placeholder="Search products..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0066ff]/20 focus:border-[#0066ff]"
+              className="w-full pl-10 pr-4 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-full text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:border-orange-500 transition-colors"
             />
           </div>
         </div>
 
         {loading ? (
           <div className="flex items-center justify-center h-48">
-            <div className="w-8 h-8 border-2 border-[#0050cb] border-t-transparent rounded-full animate-spin" />
+            <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
           </div>
         ) : error ? (
-          <div className="flex flex-col items-center justify-center h-48">
-            <p className="text-red-600 text-sm">{error}</p>
-            <button onClick={fetchProducts} className="mt-3 text-[#0050cb] text-sm underline">Retry</button>
+          <div className="flex flex-col items-center justify-center h-48 text-center">
+            <p className="text-red-500 text-sm font-semibold">{error}</p>
+            <button onClick={fetchProducts} className="mt-3 text-orange-500 text-sm font-bold underline">Retry</button>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
-              <thead className="bg-gray-50 border-b border-gray-200 text-xs font-mono text-gray-500 uppercase tracking-wider">
+              <thead className="bg-zinc-100 dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 text-xs font-mono text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                 <tr>
-                  <th className="px-6 py-4 font-medium">Product Name</th>
-                  <th className="px-6 py-4 font-medium">Category</th>
-                  <th className="px-6 py-4 font-medium">Price</th>
-                  <th className="px-6 py-4 font-medium">Stock</th>
-                  <th className="px-6 py-4 font-medium text-right">Actions</th>
+                  <th className="px-6 py-4 font-semibold">Product Name</th>
+                  <th className="px-6 py-4 font-semibold">Category</th>
+                  <th className="px-6 py-4 font-semibold">Price</th>
+                  <th className="px-6 py-4 font-semibold">Stock</th>
+                  <th className="px-6 py-4 font-semibold text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="text-sm divide-y divide-gray-100">
+              <tbody className="text-sm divide-y divide-zinc-100 dark:divide-zinc-800/60">
                 {paginatedProducts.map((p) => {
                   const isDeleting = deletingId === p._id;
                   const image = p.images && p.images.length > 0 ? p.images[0] : '';
                   
                   return (
-                    <tr key={p._id} className="hover:bg-gray-50/50 transition-colors">
+                    <tr key={p._id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-gray-100 border border-gray-200 overflow-hidden flex-shrink-0">
+                          <div className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 overflow-hidden flex-shrink-0">
                             {image ? (
                               <img src={image} alt={p.name} className="w-full h-full object-cover" />
                             ) : (
-                              <div className="w-full h-full flex items-center justify-center text-gray-400">
+                              <div className="w-full h-full flex items-center justify-center text-zinc-400">
                                 <Package className="h-5 w-5" />
                               </div>
                             )}
                           </div>
                           <div>
-                            <p className="font-medium text-gray-900 line-clamp-1">{p.name}</p>
-                            <p className="text-xs text-gray-400 font-mono">#{p._id.slice(-6).toUpperCase()}</p>
+                            <p className="font-semibold text-zinc-900 dark:text-white line-clamp-1">{p.name}</p>
+                            <p className="text-xs text-orange-500 font-mono">#{p._id.slice(-6).toUpperCase()}</p>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
                           {p.category?.name || 'Uncategorized'}
                         </span>
                       </td>
-                      <td className="px-6 py-4 font-medium text-gray-900">
+                      <td className="px-6 py-4 font-extrabold text-zinc-900 dark:text-white">
                         ₹{(p.discountPrice || p.price || 0).toLocaleString()}
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${(p.stock ?? 0) > 10 ? 'bg-green-100 text-green-800' : (p.stock ?? 0) > 0 ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800'}`}>
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold border ${(p.stock ?? 0) > 10 ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : (p.stock ?? 0) > 0 ? 'bg-orange-500/10 text-orange-500 border-orange-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'}`}>
                           {(p.stock ?? 0) > 0 ? `${p.stock} in stock` : 'Out of stock'}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <button className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors cursor-pointer">
+                          <button className="p-2 text-zinc-400 hover:text-orange-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-colors cursor-pointer">
                             <Edit className="h-4 w-4" />
                           </button>
                           <button 
                             onClick={() => handleDelete(p._id, p.name)}
                             disabled={isDeleting}
-                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50 cursor-pointer"
+                            className="p-2 text-zinc-400 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-colors disabled:opacity-50 cursor-pointer"
                           >
                             {isDeleting ? (
-                              <div className="w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
+                              <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
                             ) : (
                               <Trash className="h-4 w-4" />
                             )}
@@ -210,15 +207,15 @@ export default function AdminProducts() {
             </table>
             {filtered.length === 0 && (
               <div className="flex flex-col items-center justify-center py-12 text-center">
-                <Package className="h-8 w-8 text-gray-300 mb-3" />
-                <p className="text-sm text-gray-500">No products found</p>
+                <Package className="h-8 w-8 text-zinc-400 mb-3" />
+                <p className="text-sm text-zinc-500 dark:text-zinc-400">No products found</p>
               </div>
             )}
           </div>
         )}
         
         {!loading && !error && filtered.length > 0 && (
-          <div className="px-6 py-4 border-t border-gray-200 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-gray-500">
+          <div className="px-6 py-4 border-t border-zinc-200 dark:border-zinc-800 flex flex-col md:flex-row items-center justify-between gap-4 text-xs font-medium text-zinc-500 dark:text-zinc-400">
             <span>Showing {Math.min((currentPage - 1) * ITEMS_PER_PAGE + 1, filtered.length)} to {Math.min(currentPage * ITEMS_PER_PAGE, filtered.length)} of {filtered.length} products</span>
             <Pagination
               currentPage={currentPage}

@@ -105,10 +105,8 @@ const CollectionPage = () => {
   }, [collectionPoolData, rawProducts]);
 
   // Page title
-  const pageTitle = (
-    categoryInfo?.title ||
-    (normalizedSubcategory ? fromSlug(normalizedSubcategory) : 'ALL COLLECTIONS')
-  ).toUpperCase();
+  const rawTitle = categoryInfo?.title || (normalizedSubcategory ? fromSlug(normalizedSubcategory) : 'All Collections');
+  const pageTitle = rawTitle.charAt(0).toUpperCase() + rawTitle.slice(1);
 
   // Products to render: use exact API returned products for targeted subcategories
   const filteredProducts = rawProducts;
@@ -122,86 +120,98 @@ const CollectionPage = () => {
   const headerCount = filteredProducts.length;
 
   return (
-    <div className="bg-[hsl(var(--background))] min-h-screen text-[hsl(var(--foreground))] uppercase">
-      {/* Compact Header */}
-      <div className="border-b border-zinc-200 dark:border-zinc-800">
-        <div className="max-w-[1920px] mx-auto px-6 sm:px-10">
-          <div className="flex items-center gap-2 pt-5 pb-2 text-[11px] font-semibold text-zinc-400 dark:text-zinc-500">
-            <Link to="/" className="hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors">HOME</Link>
-            <ChevronRight size={10} strokeWidth={2.5} />
+    <div className="bg-[hsl(var(--background))] min-h-screen text-[hsl(var(--foreground))]">
+      {/* Compact Senior Developer Header */}
+      <div className="border-b border-zinc-200 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-zinc-900/40 backdrop-blur-sm">
+        <div className="max-w-[1920px] mx-auto px-6 sm:px-10 py-6 sm:py-8">
+          <div className="flex items-center gap-2 mb-3.5 text-sm font-semibold text-zinc-500 dark:text-zinc-400">
+            <Link to="/" className="hover:text-orange-500 dark:hover:text-orange-400 transition-colors">Home</Link>
+            <ChevronRight size={14} strokeWidth={2.5} className="text-zinc-400 dark:text-zinc-600" />
+            <Link to="/collections/exterior-accessories" className="hover:text-orange-500 dark:hover:text-orange-400 transition-colors">Collections</Link>
             {subcategory && (
-              <span className="text-zinc-700 dark:text-zinc-300">{pageTitle}</span>
+              <>
+                <ChevronRight size={14} strokeWidth={2.5} className="text-zinc-400 dark:text-zinc-600" />
+                <span className="text-zinc-900 dark:text-white font-extrabold">{pageTitle}</span>
+              </>
             )}
           </div>
-          <div className="flex items-center justify-between pb-5">
-            <h1 className="text-[22px] sm:text-[28px] lg:text-[32px] font-bold tracking-tight text-[hsl(var(--foreground))] leading-none">
-              {pageTitle}
-            </h1>
-            <div className="flex items-center gap-4">
-              <span className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-500 tracking-wider">
-                {isLoading ? '...' : headerCount} ITEMS
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-[hsl(var(--foreground))]">
+                {pageTitle}
+              </h1>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="inline-flex items-center px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-bold bg-orange-500/10 text-orange-500 border border-orange-500/20">
+                {isLoading ? 'Loading...' : `${headerCount} Products Available`}
               </span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Premium Category Navigation */}
+      {/* Senior Developer Subcategory Pill Navigation */}
       {derivedTabs.length > 0 && (
-        <div className="sticky top-[88px] bg-[hsl(var(--background))] z-20 border-b border-zinc-200 dark:border-zinc-800 shadow-sm">
+        <div className="sticky top-[72px] bg-[hsl(var(--background))]/95 backdrop-blur-md z-20 border-b border-zinc-200 dark:border-zinc-800 shadow-sm py-3.5">
           <div className="max-w-[1920px] mx-auto px-6 sm:px-10 relative">
             {canScrollLeft && (
               <button
                 onClick={() => scrollCategories('left')}
-                className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-9 h-9 flex items-center justify-center rounded-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 shadow-md hover:shadow-lg transition-all duration-200 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white cursor-pointer hidden lg:flex"
+                className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-9 h-9 flex items-center justify-center rounded-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shadow-md hover:shadow-lg transition-all duration-200 text-zinc-600 dark:text-zinc-300 hover:text-black dark:hover:text-white cursor-pointer hidden lg:flex"
                 aria-label="Scroll left"
               >
-                <ChevronLeft size={16} strokeWidth={2.5} />
+                <ChevronLeft size={18} strokeWidth={2.5} />
               </button>
             )}
             {canScrollRight && (
               <button
                 onClick={() => scrollCategories('right')}
-                className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-9 h-9 flex items-center justify-center rounded-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 shadow-md hover:shadow-lg transition-all duration-200 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white cursor-pointer hidden lg:flex"
+                className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-9 h-9 flex items-center justify-center rounded-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shadow-md hover:shadow-lg transition-all duration-200 text-zinc-600 dark:text-zinc-300 hover:text-black dark:hover:text-white cursor-pointer hidden lg:flex"
                 aria-label="Scroll right"
               >
-                <ChevronRight size={16} strokeWidth={2.5} />
+                <ChevronRight size={18} strokeWidth={2.5} />
               </button>
             )}
 
             <div
               ref={scrollRef}
               onScroll={checkScroll}
-              className="flex items-center gap-2 sm:gap-3 overflow-x-auto hide-scrollbar scrollbar-hide [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden touch-pan-x py-3 px-8 lg:px-0"
+              className="flex items-center gap-5 overflow-x-auto hide-scrollbar scrollbar-hide [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden touch-pan-x px-2 lg:px-0"
             >
               {derivedTabs.map((tab) => {
-                let tabSlug = toSlug(tab.name);
+                const tabSlug = toSlug(tab.name);
                 const isActive = targetSubcategoryName
                   ? targetSubcategoryName.toLowerCase() === tab.name.toLowerCase()
                   : toSlug(tab.name) === normalizedSubcategory;
                 const linkTo = `/collections/${tabSlug}`;
+                const rawName = fromSlug(tabSlug);
+                const formattedName = rawName
+                  .split(' ')
+                  .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+                  .join(' ');
 
                 return (
                   <Link
                     key={tab.name}
                     to={linkTo}
-                    className={`group relative shrink-0 py-2 px-2 text-[13px] sm:text-[15px] font-bold tracking-wider transition-all duration-200 cursor-pointer ${isActive
-                      ? 'text-[hsl(var(--foreground))]'
-                      : 'text-zinc-400 dark:text-zinc-500 hover:text-[hsl(var(--foreground))]'
+                    className={`group relative shrink-0 flex items-center gap-2 py-3 px-3.5 text-sm sm:text-base font-bold transition-colors duration-200 cursor-pointer ${isActive
+                      ? 'text-zinc-900 dark:text-white font-extrabold'
+                      : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
                       }`}
                   >
-                    {tab.name.toUpperCase()}
-                    <span className={`ml-1 text-[10px] font-semibold ${isActive ? 'text-zinc-500 dark:text-zinc-400' : 'text-zinc-400 dark:text-zinc-600'}`}>
+                    <span className="capitalize">{formattedName}</span>
+                    <span className={`text-xs sm:text-sm font-semibold ${isActive ? 'text-orange-500 font-extrabold' : 'text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-700 dark:group-hover:text-zinc-300'}`}>
                       ({tab.count})
                     </span>
-                    {isActive && (
+                    {isActive ? (
                       <motion.span
-                        layoutId="activeTab"
-                        className="absolute -bottom-[2px] left-1/2 -translate-x-1/2 w-[calc(100%-16px)] h-[3px] rounded-full bg-[hsl(var(--foreground))]"
-                        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                        layoutId="activeSubTab"
+                        className="absolute bottom-0 left-0 right-0 h-[3px] bg-orange-500 rounded-full"
+                        transition={{ type: 'spring', stiffness: 500, damping: 35 }}
                       />
+                    ) : (
+                      <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 group-hover:w-full h-[2.5px] bg-zinc-400 dark:bg-zinc-600 rounded-full transition-all duration-200" />
                     )}
-                    <span className="absolute -bottom-[2px] left-1/2 -translate-x-1/2 w-0 group-hover:w-[calc(100%-16px)] h-[3px] rounded-full bg-zinc-300 dark:bg-zinc-600 transition-all duration-300" />
                   </Link>
                 );
               })}

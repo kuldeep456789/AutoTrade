@@ -318,7 +318,7 @@ export class CjService {
       let pageNum = 1;
       while (true) {
         try {
-          const pageSize = 50;
+          const pageSize = 40;
           const url = `/v1/product/list${this.buildSearch({ categoryId: catId, pageNum: String(pageNum), pageSize: String(pageSize) })}`;
           this.logger.log(`[CJ] GET ${url}`);
           const response = await this.scheduleRequest(url, {
@@ -329,7 +329,7 @@ export class CjService {
           const normalized = this.normalizeProductResponse(response);
           allProducts.push(...(normalized.products || []));
           if (products.length < pageSize) break;
-          if (pageNum * pageSize >= 3000) break;
+          if (pageNum >= 800) break;
           pageNum++;
         } catch (e: any) {
           this.logger.warn(
@@ -338,7 +338,7 @@ export class CjService {
           break;
         }
       }
-      if (allProducts.length >= 12000) break;
+      if (allProducts.length >= 20000) break;
     }
 
     await this.saveProductCount(allProducts.length);
@@ -713,8 +713,8 @@ export class CjService {
       }
 
       let pageNum = 1;
-      const pageSize = 50; // Match CJ API max page size limit (50)
-      const maxPagesPerCategory = 60; // Max 3000 items per category to prevent CJ rate-limit bans
+      const pageSize = 40; // 40 products per request
+      const maxPagesPerCategory = 800; // Increased limit to 800 pages per category
       let pagesSynced = 0;
       let newProductsCount = 0;
       let updatedProductsCount = 0;

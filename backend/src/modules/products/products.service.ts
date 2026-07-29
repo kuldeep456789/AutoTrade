@@ -73,15 +73,20 @@ export class ProductsService implements OnModuleInit {
       this.fetchFromWarehouse(query),
     );
 
-    // Cache the result ONLY if we actually got products (never cache empty warehouse responses)
+    // Cache search queries for 300s (5 min TTL), listings for 6 hours
+    const isSearchQuery = Boolean(
+      (query.q || query.keyword || query.search || '').trim(),
+    );
+    const ttlSeconds = isSearchQuery ? 300 : this.productTtlSeconds;
+
     if (
       result &&
       Array.isArray(result.products) &&
       result.products.length > 0
     ) {
-      await this.redisService.setJson(cacheKey, result, this.productTtlSeconds);
+      await this.redisService.setJson(cacheKey, result, ttlSeconds);
       this.logger.log(
-        `[Products] Cache WRITE ${cacheKey} → ${result.products.length} products`,
+        `[Products] Cache WRITE ${cacheKey} (TTL ${ttlSeconds}s) → ${result.products.length} products`,
       );
     } else {
       this.logger.warn(
@@ -209,54 +214,91 @@ export class ProductsService implements OnModuleInit {
       250,
     );
 
-    // ── Search query: filter warehouse in-memory ───────────────────────────
-    const searchQueryStr = (
+    // ── Search query: filter & score warehouse products with relevance engine ──
+    const rawSearchQuery = (
       query.q ||
       query.keyword ||
       query.search ||
       ''
     ).trim();
-    if (searchQueryStr) {
-      const searchTerm = searchQueryStr.toLowerCase();
-      const searchTerms = searchTerm.split(/\s+/).filter(Boolean);
+
+    // Sanitize input: cap length at 100, remove dangerous injection symbols
+    const cleanQuery = rawSearchQuery.slice(0, 100).replace(/[<>{}$]/g, '').trim();
+
+    if (cleanQuery) {
+      const queryKeywords = cleanQuery
+        .toLowerCase()
+        .split(/\s+/)
+        .filter(Boolean);
+
+      // Scoped Candidate Pool: Fetch candidate products from requested category/subcategory pool
       const warehouseResult = await this.cjService.getWarehouseProducts(
-        pageNum,
-        pageSize,
+        1,
+        2500,
+        query.categoryId,
+        query.subcategoryName,
+        query.collectionType,
       );
 
-      if (warehouseResult && warehouseResult.products.length > 0) {
-        const matched = warehouseResult.products.filter((p: any) => {
-          const text = [
-            p.name,
-            p.title,
-            p.productName,
-            p.productNameEn,
-            p._category,
-            p.subcategoryName,
-            p.categoryName,
-            p.collectionType,
-            ...(p.tags ?? []),
-          ]
-            .filter(Boolean)
-            .join(' ')
-            .toLowerCase();
+      const candidateProducts = warehouseResult?.products ?? [];
 
-          return (
-            text.includes(searchTerm) ||
-            searchTerms.every((term) => text.includes(term))
-          );
+      if (candidateProducts.length > 0) {
+        const scoredProducts: { product: any; score: number }[] = [];
+
+        for (const p of candidateProducts) {
+          const score = this.computeRelevanceScore(p, cleanQuery, queryKeywords);
+          if (score > 0) {
+            // Price range filtering
+            const price = Number(p.discountPrice || p.price || 0);
+            if (query.minPrice && price < Number(query.minPrice)) continue;
+            if (query.maxPrice && price > Number(query.maxPrice)) continue;
+
+            scoredProducts.push({ product: p, score });
+          }
+        }
+
+        // Sorting
+        const sortMode = (query.sort || 'relevance').toLowerCase();
+        scoredProducts.sort((a, b) => {
+          if (sortMode === 'price-asc' || sortMode === 'price-low-to-high') {
+            return (a.product.price || 0) - (b.product.price || 0);
+          }
+          if (sortMode === 'price-desc' || sortMode === 'price-high-to-low') {
+            return (b.product.price || 0) - (a.product.price || 0);
+          }
+          if (sortMode === 'rating') {
+            return (b.product.averageRating || 0) - (a.product.averageRating || 0);
+          }
+          // Default: relevance score descending
+          return b.score - a.score;
         });
 
-        if (matched.length > 0) {
-          const total = matched.length;
-          const start = (pageNum - 1) * pageSize;
-          return {
-            products: matched.slice(start, start + pageSize),
-            total,
-            source: 'warehouse:search',
-          };
-        }
+        const total = scoredProducts.length;
+        const start = (pageNum - 1) * pageSize;
+        const paginatedProducts = scoredProducts
+          .slice(start, start + pageSize)
+          .map((item) => item.product);
+
+        return {
+          success: true,
+          query: cleanQuery,
+          total,
+          page: pageNum,
+          limit: pageSize,
+          source: 'warehouse:search',
+          products: paginatedProducts,
+        };
       }
+
+      return {
+        success: true,
+        query: cleanQuery,
+        total: 0,
+        page: pageNum,
+        limit: pageSize,
+        source: 'warehouse:search_empty',
+        products: [],
+      };
     }
 
     // ── Category / collection listing: read from warehouse ─────────────────────
@@ -273,8 +315,11 @@ export class ProductsService implements OnModuleInit {
         `[Products] Warehouse HIT sub=${query.subcategoryName ?? '-'} page=${pageNum} → ${warehouseResult.products.length}/${warehouseResult.total}`,
       );
       return {
+        success: true,
         products: warehouseResult.products,
         total: warehouseResult.total,
+        page: pageNum,
+        limit: pageSize,
         source: 'warehouse',
       };
     }
@@ -287,8 +332,11 @@ export class ProductsService implements OnModuleInit {
       const liveData = await this.cjService.getProducts(query);
       if (liveData && Array.isArray(liveData.products) && liveData.products.length > 0) {
         return {
+          success: true,
           products: liveData.products,
           total: liveData.total || liveData.products.length,
+          page: pageNum,
+          limit: pageSize,
           source: 'cj_live_fallback',
         };
       }
@@ -299,11 +347,77 @@ export class ProductsService implements OnModuleInit {
     }
 
     return {
+      success: true,
       products: [],
       total: 0,
+      page: pageNum,
+      limit: pageSize,
       source: 'warehouse_empty',
       message: 'Products are syncing — please try again in a few minutes',
     };
+  }
+
+  // ─── Private: Relevance Scoring Engine ─────────────────────────────────────
+
+  private computeRelevanceScore(
+    product: any,
+    queryStr: string,
+    queryKeywords: string[],
+  ): number {
+    const title = String(product.name || product.title || product.productName || '').trim();
+    const brand = String(product.brand || product.productBrand || '').trim();
+    const sku = String(product.sku || product.variantSku || '').trim();
+    const category = String(
+      product.collectionType || product.categoryName || product._category || product.subcategoryName || '',
+    ).trim();
+    const tags = Array.isArray(product.tags) ? product.tags.join(' ') : String(product.tags || '');
+    const desc = String(product.description || '').trim();
+
+    const titleLower = title.toLowerCase();
+    const brandLower = brand.toLowerCase();
+    const skuLower = sku.toLowerCase();
+    const categoryLower = category.toLowerCase();
+    const tagsLower = tags.toLowerCase();
+    const descLower = desc.toLowerCase();
+    const qLower = queryStr.toLowerCase();
+
+    let score = 0;
+
+    // 1. Exact Title Match
+    if (titleLower === qLower) {
+      score += 100;
+    }
+    // 2. Starts With Title Match
+    else if (titleLower.startsWith(qLower)) {
+      score += 50;
+    }
+    // 3. Contains Full Search Phrase in Title
+    else if (titleLower.includes(qLower)) {
+      score += 30;
+    }
+
+    const mainText = `${titleLower} ${brandLower} ${skuLower}`;
+
+    // 4. All keywords present in Title/Brand/SKU
+    if (queryKeywords.length > 0 && queryKeywords.every((kw) => mainText.includes(kw))) {
+      score += 25;
+    }
+    // 5. Any keyword present in Title/Brand/SKU
+    else if (queryKeywords.some((kw) => mainText.includes(kw))) {
+      score += 15;
+    }
+
+    // 6. Category / Subcategory Match
+    if (queryKeywords.some((kw) => categoryLower.includes(kw))) {
+      score += 10;
+    }
+
+    // 7. Tags / Description Match
+    if (queryKeywords.some((kw) => tagsLower.includes(kw) || descLower.includes(kw))) {
+      score += 5;
+    }
+
+    return score;
   }
 
   // ─── Private: helpers ─────────────────────────────────────────────────────

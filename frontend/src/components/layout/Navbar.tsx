@@ -15,9 +15,11 @@ import { formatINR } from '../../lib/currency';
 import MiniCart from './MiniCart';
 
 import ThemeToggle from '../theme/ThemeToggle';
+import { useTheme } from '../../context/ThemeContext';
 import { NAV_CATEGORIES as navCategories } from '../../config/categories';
 
 const Navbar = () => {
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useDispatch();
@@ -370,7 +372,7 @@ const Navbar = () => {
                 animate={searchFocused ? { scaleX: 1.05 } : { scaleX: 1 }}
                 transition={{ duration: 0.2 }}
               >
-                <div className={`flex items-center rounded-[25px] border transition-all duration-200 h-[44px] ${searchFocused ? 'border-blue-400 bg-[#16223D] shadow-lg shadow-black/30' : 'border-[#1E2C4F] bg-[#101B36] hover:border-[#2C3E6B]'}`}>
+                <div className={`flex items-center rounded-[25px] border transition-all duration-200 h-[44px] ${searchFocused ? 'border-orange-500 bg-black shadow-lg shadow-black/50' : 'border-zinc-800 bg-zinc-900/90 hover:border-zinc-700'}`}>
                   <Search className="ml-4 mr-2.5 h-4.5 w-4.5 text-zinc-400 shrink-0" strokeWidth={1.5} />
                   <input
                     ref={searchInputRef}
@@ -385,7 +387,7 @@ const Navbar = () => {
                     <button
                       type="button"
                       onClick={() => setSearchQuery('')}
-                      className="mr-2 p-1 hover:bg-[#1E2C4F] rounded-full transition-colors cursor-pointer"
+                      className="mr-2 p-1 hover:bg-zinc-800 rounded-full transition-colors cursor-pointer"
                     >
                       <X className="h-4 w-4 text-zinc-400" strokeWidth={2} />
                     </button>
@@ -401,7 +403,7 @@ const Navbar = () => {
                     animate={{ opacity: 1, y: 0, scaleY: 1 }}
                     exit={{ opacity: 0, y: -8, scaleY: 0.95 }}
                     transition={{ duration: 0.15 }}
-                    className="absolute top-full mt-2 left-0 right-0 bg-[#0F182E] rounded-xl shadow-2xl border border-[#1E2C4F] overflow-hidden z-50"
+                    className="absolute top-full mt-2 left-0 right-0 bg-zinc-950 rounded-xl shadow-2xl border border-zinc-800 overflow-hidden z-50"
                     style={{ transformOrigin: 'top center' }}
                   >
                     <div className="py-2">
@@ -422,7 +424,7 @@ const Navbar = () => {
                                   to={item.to}
                                   onClick={() => { setSearchFocused(false); setSearchQuery(''); }}
                                   onMouseEnter={() => setSelectedSuggestionIdx(i)}
-                                  className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${selectedSuggestionIdx === i ? 'bg-[#1E2C4F]' : 'hover:bg-[#16223D]'}`}
+                                  className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${selectedSuggestionIdx === i ? 'bg-zinc-800' : 'hover:bg-zinc-900'}`}
                                 >
                                   <Search className="h-3.5 w-3.5 text-zinc-400 shrink-0" strokeWidth={1.5} />
                                   <span className="text-zinc-200">{highlightMatch(item.label)}</span>
@@ -436,9 +438,9 @@ const Navbar = () => {
                                   to={item.to}
                                   onClick={() => { setSearchFocused(false); setSearchQuery(''); }}
                                   onMouseEnter={() => setSelectedSuggestionIdx(i)}
-                                  className={`flex items-center gap-3 px-4 py-2.5 transition-colors ${selectedSuggestionIdx === i ? 'bg-[#1E2C4F]' : 'hover:bg-[#16223D]'}`}
+                                  className={`flex items-center gap-3 px-4 py-2.5 transition-colors ${selectedSuggestionIdx === i ? 'bg-zinc-800' : 'hover:bg-zinc-900'}`}
                                 >
-                                  <div className="w-10 h-12 shrink-0 bg-[#16223D] border border-[#25365E] overflow-hidden rounded">
+                                  <div className="w-10 h-12 shrink-0 bg-zinc-900 border border-zinc-800 overflow-hidden rounded">
                                     {item.image && (
                                       <img src={item.image} alt="" className="w-full h-full object-cover" />
                                     )}
@@ -449,7 +451,7 @@ const Navbar = () => {
                                     </p>
                                     <p className="text-xs text-zinc-400 mt-0.5 truncate">{item.category}</p>
                                   </div>
-                                  <span className="text-sm font-semibold text-blue-300 shrink-0">{item.price}</span>
+                                  <span className="text-sm font-semibold text-orange-400 shrink-0">{item.price}</span>
                                 </Link>
                               );
                             }
@@ -473,20 +475,15 @@ const Navbar = () => {
 
             {/* Mobile Search Trigger */}
             <button
-              className="md:hidden flex items-center justify-center w-10 h-10 hover:bg-[#1E2C4F] rounded-full transition-colors cursor-pointer text-zinc-300 hover:text-white"
+              className="md:hidden flex items-center justify-center w-10 h-10 hover:bg-zinc-800 rounded-full transition-colors cursor-pointer text-zinc-300 hover:text-white"
               onClick={() => setMobileSearchOpen(true)}
               aria-label="Search"
             >
               <Search className="h-5.5 w-5.5" strokeWidth={1.5} />
             </button>
 
-            {/* Theme Toggle */}
-            <div className="hidden md:flex items-center justify-center w-10 h-10 hover:bg-[#1E2C4F] rounded-full transition-colors cursor-pointer text-zinc-300 hover:text-white">
-              <ThemeToggle />
-            </div>
-
-            {/* Wishlist */}
-            <Link to="/wishlist" className="hidden md:flex relative items-center justify-center w-10 h-10 hover:bg-[#1E2C4F] rounded-full transition-colors group text-zinc-300 hover:text-white">
+            {/* 1. Wishlist */}
+            <Link to="/wishlist" className="hidden md:flex relative items-center justify-center w-10 h-10 hover:bg-zinc-800 rounded-full transition-colors group text-zinc-300 hover:text-white">
               <Heart className="h-5.5 w-5.5 group-hover:scale-105 transition-transform duration-200" strokeWidth={1.5} />
               {wishlistCount > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 h-[18px] w-[18px] bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full shadow-sm">
@@ -495,129 +492,10 @@ const Navbar = () => {
               )}
             </Link>
 
-            {/* Profile */}
-            <div className="relative" ref={profileRef}>
-              <button
-                onClick={() => setProfileOpen(!profileOpen)}
-                className="relative flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200 cursor-pointer hover:bg-[#1E2C4F] text-zinc-300 hover:text-white group"
-                style={{ backgroundColor: userInfo ? '#16223D' : 'transparent' }}
-                aria-label="Profile"
-              >
-                {userInfo ? (
-                  <span className="text-xs font-bold text-white uppercase tracking-wide select-none">
-                    {(userInfo.firstName?.[0] || userInfo.email?.[0] || 'U').toUpperCase()}
-                    {(userInfo.lastName?.[0] || '')}
-                  </span>
-                ) : (
-                  <UserRound className="h-5.5 w-5.5 group-hover:scale-105 transition-all duration-200" strokeWidth={1.5} />
-                )}
-              </button>
-
-              <AnimatePresence>
-                {profileOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -12, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -12, scale: 0.95 }}
-                    transition={{ duration: 0.25, ease: 'easeOut' }}
-                    className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-zinc-900 rounded-2xl shadow-xl border border-zinc-200 dark:border-zinc-700 overflow-hidden z-50"
-                    style={{ transformOrigin: 'top right' }}
-                  >
-                    {userInfo ? (
-                      <>
-                        <div className="px-5 py-4 bg-gradient-to-br from-zinc-50 to-white dark:from-zinc-800 dark:to-zinc-900 border-b border-zinc-100 dark:border-zinc-800">
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-100 truncate">
-                              Hello, {userInfo.firstName || userDisplayName}
-                            </p>
-                            <span className={`shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${userInfo.role === 'admin' ? 'bg-[#0050cb] text-white' : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300'}`}>
-                              {userInfo.role === 'admin' ? 'Admin' : 'User'}
-                            </span>
-                          </div>
-                          <p className="text-xs text-zinc-500 mt-0.5 truncate">{userInfo.email}</p>
-                        </div>
-                        <div className="py-1">
-                          {[
-                            { to: '/account?tab=profile', label: 'My Profile', icon: UserRound },
-                            { to: '/account', label: 'My Orders', icon: Package },
-                            { to: '/account?tab=notifications', label: 'Notifications', icon: Bell },
-                            { to: '/account?tab=wishlist', label: 'Wishlist', icon: Heart },
-                            { to: '/account?tab=addresses', label: 'Saved Addresses', icon: MapPin },
-                            { to: '/account?tab=settings', label: 'Settings', icon: Settings },
-                          ].map(({ to, label, icon: Icon }) => (
-                            <Link
-                              key={to}
-                              to={to}
-                              onClick={() => setProfileOpen(false)}
-                              className="flex items-center gap-3 mx-2 my-0.5 px-3 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-black dark:hover:text-white rounded-xl transition-all duration-200 group/item"
-                            >
-                              <Icon className="h-4 w-4 text-zinc-400 group-hover/item:text-zinc-600 transition-colors duration-200" strokeWidth={1.5} />
-                              {label}
-                            </Link>
-                          ))}
-                        </div>
-                        <div className="border-t border-zinc-100 py-1">
-                          {userInfo?.role === 'admin' && (
-                            <Link
-                              to="/admin"
-                              onClick={() => setProfileOpen(false)}
-                              className="flex items-center gap-3 mx-2 my-0.5 px-3 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-black dark:hover:text-white rounded-xl transition-all duration-200 group/item"
-                            >
-                              <Shield className="h-4 w-4 text-zinc-400 group-hover/item:text-zinc-600 transition-colors duration-200" strokeWidth={1.5} />
-                              Admin Panel
-                            </Link>
-                          )}
-                          <button
-                            onClick={() => {
-                              dispatch(logout());
-                              dispatch(apiSlice.util.resetApiState());
-                              dispatch(clearCartItems());
-                              dispatch(clearWishlist());
-                              setProfileOpen(false);
-                            }}
-                            className="w-full flex items-center gap-3 mx-2 my-0.5 px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition-all duration-200 cursor-pointer"
-                          >
-                            <LogOut className="h-4 w-4" strokeWidth={1.5} />
-                            Logout
-                          </button>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="px-5 py-5 text-center border-b border-zinc-100 dark:border-zinc-800">
-                          <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
-                            <UserRound className="h-6 w-6 text-zinc-500" strokeWidth={1.5} />
-                          </div>
-                          <h3 className="text-base font-semibold text-zinc-800 dark:text-zinc-100">Welcome to AutoTrade</h3>
-                          <p className="text-xs text-zinc-500 mt-1">Discover premium automotive parts & accessories.</p>
-                        </div>
-                        <div className="px-4 py-4 space-y-2">
-                          <Link
-                            to="/login"
-                            onClick={() => setProfileOpen(false)}
-                            className="block w-full text-center bg-[#111111] dark:bg-white text-white dark:text-zinc-900 rounded-xl py-3 text-sm font-semibold tracking-wide hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
-                          >
-                            Login
-                          </Link>
-                          <Link
-                            to="/register"
-                            onClick={() => setProfileOpen(false)}
-                            className="block w-full text-center bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 border-2 border-zinc-200 dark:border-zinc-700 rounded-xl py-3 text-sm font-semibold tracking-wide hover:border-zinc-400 dark:hover:border-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-all duration-200"
-                          >
-                            Sign Up
-                          </Link>
-                        </div>
-                      </>
-                    )}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* Cart */}
+            {/* 2. Cart */}
             <button
               onClick={() => setMiniCartOpen(true)}
-              className="relative flex items-center justify-center w-10 h-10 hover:bg-[#1E2C4F] rounded-full transition-colors group cursor-pointer text-zinc-300 hover:text-white"
+              className="relative flex items-center justify-center w-10 h-10 hover:bg-zinc-800 rounded-full transition-colors group cursor-pointer text-zinc-300 hover:text-white"
               aria-label="Open cart"
             >
               <ShoppingBag className="h-5.5 w-5.5 group-hover:scale-105 transition-transform duration-200" strokeWidth={1.5} />
@@ -628,9 +506,141 @@ const Navbar = () => {
               )}
             </button>
 
+            {/* 3. Settings & Account Section */}
+            <div className="relative" ref={profileRef}>
+              <button
+                onClick={() => setProfileOpen(!profileOpen)}
+                className="flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200 cursor-pointer hover:bg-zinc-800 text-zinc-300 hover:text-white group"
+                aria-label="Settings & Account"
+              >
+                <Settings className="h-5.5 w-5.5 group-hover:rotate-45 transition-transform duration-300" strokeWidth={1.5} />
+              </button>
+
+              <AnimatePresence>
+                {profileOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -12, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -12, scale: 0.95 }}
+                    transition={{ duration: 0.2, ease: 'easeOut' }}
+                    className="absolute right-0 top-full mt-2 w-72 bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-700 overflow-hidden z-50 text-left"
+                    style={{ transformOrigin: 'top right' }}
+                  >
+                    {/* Account Info Header */}
+                    {userInfo ? (
+                      <div className="px-5 py-4 bg-gradient-to-br from-zinc-50 to-white dark:from-zinc-800 dark:to-zinc-900 border-b border-zinc-100 dark:border-zinc-800">
+                        <div className="flex items-center gap-2">
+                          <UserRound className="h-4 w-4 text-orange-500" strokeWidth={2} />
+                          <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-100 truncate">
+                            {userInfo.firstName || userDisplayName}
+                          </p>
+                          <span className={`shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${userInfo.role === 'admin' ? 'bg-[#0050cb] text-white' : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300'}`}>
+                            {userInfo.role === 'admin' ? 'Admin' : 'User'}
+                          </span>
+                        </div>
+                        <p className="text-xs text-zinc-500 mt-1 truncate">{userInfo.email}</p>
+                      </div>
+                    ) : (
+                      <div className="px-5 py-4 bg-gradient-to-br from-zinc-50 to-white dark:from-zinc-800 dark:to-zinc-900 border-b border-zinc-100 dark:border-zinc-800">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <UserRound className="h-4 w-4 text-orange-500" strokeWidth={2} />
+                          <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">Settings & Account</p>
+                        </div>
+                        <p className="text-xs text-zinc-500">Manage preferences and profile access.</p>
+                      </div>
+                    )}
+
+                    {/* Appearance / Dark Mode Section */}
+                    <div className="p-3 border-b border-zinc-100 dark:border-zinc-800">
+                      <p className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider px-3 mb-2">Appearance</p>
+                      <div 
+                        onClick={toggleTheme}
+                        className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800/80 hover:bg-zinc-200 dark:hover:bg-zinc-700/80 transition-colors cursor-pointer"
+                      >
+                        <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-100">
+                          {theme === 'dark' ? 'Dark Mode' : 'Light Mode'}
+                        </span>
+                        <ThemeToggle />
+                      </div>
+                    </div>
+
+                    {/* User Account Actions */}
+                    {userInfo ? (
+                      <div className="py-2">
+                        <p className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider px-4 mb-1">Account Options</p>
+                        {[
+                          { to: '/account?tab=profile', label: 'My Profile', icon: UserRound },
+                          { to: '/account', label: 'My Orders', icon: Package },
+                          { to: '/account?tab=notifications', label: 'Notifications', icon: Bell },
+                          { to: '/account?tab=wishlist', label: 'Wishlist', icon: Heart },
+                          { to: '/account?tab=addresses', label: 'Saved Addresses', icon: MapPin },
+                          { to: '/account?tab=settings', label: 'Account Settings', icon: Settings },
+                        ].map(({ to, label, icon: Icon }) => (
+                          <Link
+                            key={to}
+                            to={to}
+                            onClick={() => setProfileOpen(false)}
+                            className="flex items-center gap-3 px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-black dark:hover:text-white rounded-xl mx-1 transition-colors"
+                          >
+                            <Icon className="h-4 w-4 text-zinc-400" strokeWidth={1.5} />
+                            {label}
+                          </Link>
+                        ))}
+
+                        {userInfo?.role === 'admin' && (
+                          <Link
+                            to="/admin"
+                            onClick={() => setProfileOpen(false)}
+                            className="flex items-center gap-3 px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-black dark:hover:text-white rounded-xl mx-1 transition-colors"
+                          >
+                            <Shield className="h-4 w-4 text-zinc-400" strokeWidth={1.5} />
+                            Admin Panel
+                          </Link>
+                        )}
+
+                        <div className="border-t border-zinc-100 dark:border-zinc-800 mt-2 pt-2">
+                          <button
+                            onClick={() => {
+                              dispatch(logout());
+                              dispatch(apiSlice.util.resetApiState());
+                              dispatch(clearCartItems());
+                              dispatch(clearWishlist());
+                              setProfileOpen(false);
+                            }}
+                            className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl cursor-pointer transition-colors"
+                          >
+                            <LogOut className="h-4 w-4" strokeWidth={1.5} />
+                            Logout
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-4 space-y-2">
+                        <p className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider mb-2">Account Access</p>
+                        <Link
+                          to="/login"
+                          onClick={() => setProfileOpen(false)}
+                          className="block w-full text-center bg-[#111111] dark:bg-white text-white dark:text-zinc-900 rounded-xl py-2.5 text-xs font-semibold tracking-wide hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-all"
+                        >
+                          Login
+                        </Link>
+                        <Link
+                          to="/register"
+                          onClick={() => setProfileOpen(false)}
+                          className="block w-full text-center bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700 rounded-xl py-2 text-xs font-semibold tracking-wide hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-all"
+                        >
+                          Sign Up
+                        </Link>
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
             {/* Mobile menu toggle (Right side) */}
             <button
-              className="lg:hidden flex items-center justify-center w-10 h-10 hover:bg-[#1E2C4F] rounded-full transition-colors cursor-pointer ml-1 text-zinc-300 hover:text-white"
+              className="lg:hidden flex items-center justify-center w-10 h-10 hover:bg-zinc-800 rounded-full transition-colors cursor-pointer ml-1 text-zinc-300 hover:text-white"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label="Toggle menu"
             >
