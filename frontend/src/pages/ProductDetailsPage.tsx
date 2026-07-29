@@ -54,7 +54,7 @@ const ProductFeaturesAndSpecs = ({ product }: { product: any }) => {
 
       {descOpen && (
         <div className="space-y-6 bg-transparent py-1 max-h-[500px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700/60 scrollbar-track-transparent">
-          
+
           {/* 1. Overview */}
           <div className="space-y-3">
             <h3 className="text-sm sm:text-base font-bold text-orange-500 tracking-wider uppercase flex items-center gap-2">
@@ -233,10 +233,23 @@ const ProductDetailsPage = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[hsl(var(--background))] text-[hsl(var(--foreground))]">
         <div className="text-center border-2 border-black dark:border-white p-12">
-          <span className="text-4xl mb-4 block">✕</span>
-          <h2 className="text-2xl font-black uppercase tracking-widest mb-2">PRODUCT NOT FOUND</h2>
           <Link to="/" className="text-sm font-bold underline underline-offset-4 uppercase tracking-wider hover:text-red-600 transition-colors">
             BACK TO SHOP
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Block direct access to products with no meaningful price (₹0 – ₹1) ──────
+  const productDisplayPrice = Number(product.price ?? product.discountPrice ?? 0);
+  if (productDisplayPrice <= 1) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[hsl(var(--background))] text-[hsl(var(--foreground))]">
+        <div className="text-center p-12">
+          <p className="text-zinc-500 mb-4 font-medium">This product is currently unavailable.</p>
+          <Link to="/" className="text-sm font-bold underline underline-offset-4 uppercase tracking-wider hover:text-orange-500 transition-colors">
+            Back to Shop
           </Link>
         </div>
       </div>
@@ -537,11 +550,10 @@ const ProductDetailsPage = () => {
                       <button
                         key={idx}
                         onClick={() => setSelectedImage(idx)}
-                        className={`w-14 h-14 sm:w-16 sm:h-16 rounded-xl overflow-hidden border-2 transition-all duration-200 shrink-0 cursor-pointer ${
-                          selectedImage === idx
-                            ? 'border-orange-500 ring-2 ring-orange-500/40 opacity-100'
-                            : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 opacity-60 hover:opacity-100'
-                        }`}
+                        className={`w-14 h-14 sm:w-16 sm:h-16 rounded-xl overflow-hidden border-2 transition-all duration-200 shrink-0 cursor-pointer ${selectedImage === idx
+                          ? 'border-orange-500 ring-2 ring-orange-500/40 opacity-100'
+                          : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 opacity-60 hover:opacity-100'
+                          }`}
                       >
                         <img src={img} alt="" className="w-full h-full object-contain p-1 bg-white" />
                       </button>
@@ -564,7 +576,7 @@ const ProductDetailsPage = () => {
 
           {/* ─── Right — Product Buy Box Details & Embedded Description ─── */}
           <div className="lg:col-span-6 space-y-5">
-            
+
             {/* Tag, Title & Price */}
             <div>
               {(product.subcategoryName || product.categoryName || product.category?.name) && (

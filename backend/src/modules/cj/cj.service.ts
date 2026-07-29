@@ -565,6 +565,12 @@ export class CjService {
       }
     }
 
+    // ── Strip zero / sub-1-rupee priced products from the final pool ─────────
+    pool = pool.filter((p) => {
+      const inrPrice = Number(p.price ?? 0);
+      return inrPrice > 1;
+    });
+
     const total = pool.length;
     const effectivePageSize = Math.min(pageSize, 250);
     const start = (pageNum - 1) * effectivePageSize;
@@ -799,6 +805,11 @@ export class CjService {
         for (const product of products) {
           const pid = String(product?.pid || product?.id || '');
           if (!pid) continue;
+
+          // ── Skip zero / sub-1-rupee priced products ─────────────────────
+          const productPrice = Number(product?.price ?? product?.sellPrice ?? 0) || 0;
+          const inrPrice = productPrice > 1 ? productPrice : Number((productPrice * 93.45).toFixed(2));
+          if (inrPrice <= 1) continue;
 
           if (productMap.has(pid)) {
             // Update changed fields (price, stock, images, variants, title, etc.)

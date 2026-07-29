@@ -54,6 +54,9 @@ const ProductCard = ({ product }: ProductCardProps) => {
     ? Math.round(((originalPrice - currentPrice) / originalPrice) * 100)
     : 0;
 
+  // ── Hide products with no meaningful price (₹0 – ₹1) ───────────────────────
+  if (!currentPrice || Number(currentPrice) <= 1) return null;
+
   const handleWishlistClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();

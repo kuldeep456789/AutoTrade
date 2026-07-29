@@ -12,8 +12,6 @@ import {
   Bike,
   Cpu,
   Cog,
-  Droplets,
-  Warehouse,
 } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../store/store';
@@ -63,20 +61,6 @@ const heroCategories = [
     to: '/collections/auto-replacement-parts',
     bgImage: 'https://images.unsplash.com/photo-1486006920555-c77dce18193b?auto=format&fit=crop&w=800&q=80',
     icon: Cog,
-  },
-  {
-    title: 'Car Care & Detailing',
-    description: 'Keep your vehicle looking new with premium care & detailing products.',
-    to: '/collections/paint-care',
-    bgImage: 'https://images.unsplash.com/photo-1607860108855-64acf2078ed9?auto=format&fit=crop&w=800&q=80',
-    icon: Droplets,
-  },
-  {
-    title: 'Garage Equipment',
-    description: 'Advanced garage equipment for workshops and professionals.',
-    to: '/collections/diagnostic-tools',
-    bgImage: 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=800&q=80',
-    icon: Warehouse,
   },
 ];
 
@@ -226,29 +210,20 @@ const HomePage = () => {
         <div className="max-w-[1920px] mx-auto px-6 sm:px-10 lg:px-16">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 sm:mb-10 gap-4">
             <div>
-              <span className="text-orange-500 font-bold tracking-[0.2em] text-xs uppercase mb-1.5 block">
-                Catalog Showcase
-              </span>
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-zinc-900 dark:text-white uppercase">
-                Explore Categories
-              </h2>
+              <h3 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-zinc-800 dark:text-white uppercase">
+                Categories
+              </h3>
             </div>
-            <Link
-              to="/collections/all"
-              className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold tracking-widest text-zinc-600 dark:text-zinc-400 hover:text-orange-500 transition-colors uppercase group"
-            >
-              <span>VIEW ALL CATEGORIES</span>
-              <ArrowRight className="w-4 h-4 text-orange-500 transform group-hover:translate-x-1 transition-transform" />
-            </Link>
+
           </div>
 
-          {/* 1 Single Horizontal Row Container (8 Columns on XL screens) */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3 sm:gap-4">
+          {/* Centered flex-wrap — cards stay centered regardless of count */}
+          <div className="flex flex-wrap justify-center gap-4 sm:gap-5">
             {heroCategories.map((cat, idx) => (
               <Link
                 key={idx}
                 to={cat.to}
-                className="group relative rounded-2xl bg-white dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 hover:border-orange-500/50 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col items-center justify-between text-center p-4 sm:p-5"
+                className="group relative rounded-2xl bg-white dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 hover:border-orange-500/50 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col items-center justify-between text-center p-4 sm:p-5 w-[calc(50%-8px)] sm:w-[180px] lg:w-[200px]"
               >
                 {/* Top: Icon Badge */}
                 <div className="relative z-10 my-1">
@@ -286,9 +261,7 @@ const HomePage = () => {
           <div className="max-w-[1920px] mx-auto px-6 sm:px-10 lg:px-16 py-8 sm:py-10 lg:py-12">
             <div className="flex items-end justify-between mb-6 sm:mb-8">
               <div>
-                <span className="text-orange-500 font-bold tracking-[0.2em] text-xs uppercase mb-1.5 block">
-                  Featured Lineup
-                </span>
+
                 <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight leading-none text-zinc-900 dark:text-white">
                   Collection
                 </h2>
@@ -342,7 +315,6 @@ const HomePage = () => {
       {autoProducts.length === 0 && (
         <section className="py-24 text-center border-b-2 border-black dark:border-white">
           <p className="text-2xl font-black tracking-widest text-zinc-400">SYNCING PRODUCTS...</p>
-          <p className="mt-3 text-sm text-zinc-500 font-normal normal-case">Products will appear once the hourly sync completes.</p>
         </section>
       )}
     </div>
