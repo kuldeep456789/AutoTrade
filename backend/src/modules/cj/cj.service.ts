@@ -338,18 +338,42 @@ export class CjService {
       }
     }
 
-    // 2. Cache query fallback
-    const cacheKey = `cj:products:list:${JSON.stringify(query)}`;
-    const cached = await this.redisService.getJson<any>(cacheKey);
-    if (cached) return cached;
-
+    // 2. Clamp pageSize and resolve category fallback
     const cjQuery = { ...query };
+    if (cjQuery.pageSize) {
+      const ps = Number(cjQuery.pageSize);
+      if (!isNaN(ps)) {
+        cjQuery.pageSize = String(Math.min(ps, 200));
+      }
+    } else {
+      cjQuery.pageSize = String(CJ_CONFIG.PAGE_SIZE);
+    }
+
     if (!cjQuery.categoryId && cjQuery.subcategoryName) {
       const info = getCategoryInfoBySubname(cjQuery.subcategoryName);
       if (info?.categoryId) {
         cjQuery.categoryId = info.categoryId;
       }
     }
+
+    if (!cjQuery.categoryId && cjQuery.collectionType) {
+      const normColl = cjQuery.collectionType.trim().toLowerCase();
+      for (const [parent, items] of Object.entries(Automobiles)) {
+        if (parent.toLowerCase() === normColl && items.length > 0) {
+          cjQuery.categoryId = items[0].categoryId;
+          break;
+        }
+      }
+    }
+
+    // Always enforce automotive niche filter by defaulting to an automotive category
+    if (!cjQuery.categoryId) {
+      cjQuery.categoryId = '255A489E-8518-4E31-AC84-A2E8EB645C78'; // Default to Car Stickers (Exterior Accessories)
+    }
+
+    const cacheKey = `cj:products:list:${JSON.stringify(cjQuery)}`;
+    const cached = await this.redisService.getJson<any>(cacheKey);
+    if (cached) return cached;
 
     const url = `/v1/product/list${this.buildSearch(cjQuery)}`;
     this.logger.log(`[CJ] GET ${url}`);
@@ -358,7 +382,7 @@ export class CjService {
       headers: await this.cjClient.authHeaders(),
     });
 
-    const normalized = this.normalizeProductResponse(response, query);
+    const normalized = this.normalizeProductResponse(response, cjQuery);
     await this.redisService.setJson(cacheKey, normalized, CJ_CONFIG.CACHE_TTL.PRODUCT_LIST);
     return normalized;
   }
@@ -1224,7 +1248,14 @@ export class CjService {
   ): Record<string, string> {
     const result: Record<string, string> = {};
     for (const [key, value] of Object.entries(query)) {
-      if (value && !this.CJ_IGNORE_PARAMS.has(key)) result[key] = value;
+      if (value && !this.CJ_IGNORE_PARAMS.has(key)) {
+        if (key === 'pageSize') {
+          const num = Number(value);
+          result[key] = !isNaN(num) && num > 0 ? String(Math.min(num, 200)) : value;
+        } else {
+          result[key] = value;
+        }
+      }
     }
     return result;
   }
