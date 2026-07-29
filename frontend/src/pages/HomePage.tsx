@@ -90,9 +90,13 @@ const HomePage = () => {
 
   const autoProducts = Array.isArray(autoData?.products) ? autoData.products : [];
 
-  // Featured carousel — first 10 products
+  // Featured carousel — first 12 valid products
   const carouselProducts = useMemo(() => {
-    return autoProducts.slice(0, 10);
+    const valid = autoProducts.filter((p: any) => {
+      const currentPrice = p.discountPrice && p.discountPrice < p.price ? p.discountPrice : p.price;
+      return currentPrice && Number(currentPrice) > 1;
+    });
+    return valid.slice(0, 12);
   }, [autoProducts]);
 
   const carouselRef = useRef<HTMLDivElement>(null);

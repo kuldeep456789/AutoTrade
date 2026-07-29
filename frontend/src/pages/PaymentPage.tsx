@@ -55,14 +55,10 @@ const PaymentPage = () => {
           <div className="w-full lg:w-[65%]">
             <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/90 shadow-xl overflow-hidden backdrop-blur-md">
               <div className="px-6 sm:px-8 pt-6 sm:pt-8 pb-5 border-b border-zinc-100 dark:border-zinc-800/80">
-                <div className="flex items-center justify-between">
+                <div>
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-orange-500/10 text-orange-500 border border-orange-500/20">
                     <Sparkles size={13} /> Step 02 of 03
                   </span>
-                  <div className="flex items-center gap-1.5 text-xs text-emerald-500 font-medium bg-emerald-500/10 dark:bg-emerald-500/20 px-2.5 py-1 rounded-full border border-emerald-500/20">
-                    <Lock size={12} strokeWidth={2} />
-                    <span>256-Bit SSL Encrypted</span>
-                  </div>
                 </div>
                 <h1 className="mt-3 text-2xl sm:text-3xl font-extrabold text-zinc-900 dark:text-white tracking-tight">
                   Select Payment Method
@@ -136,13 +132,7 @@ const PaymentPage = () => {
                 })}
               </div>
 
-              {/* Security Banner */}
-              <div className="flex items-center gap-3 px-6 sm:px-8 py-4 border-t border-zinc-100 dark:border-zinc-800/80 bg-zinc-50/80 dark:bg-zinc-900/40">
-                <ShieldCheck size={18} className="text-emerald-500 shrink-0" strokeWidth={2} />
-                <p className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
-                  Your payment credentials are secure. AutoTrade never stores complete card data or banking PINs.
-                </p>
-              </div>
+
             </div>
           </div>
 

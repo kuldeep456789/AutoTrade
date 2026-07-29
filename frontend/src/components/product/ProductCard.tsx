@@ -29,6 +29,7 @@ export const ProductCardSkeleton = () => (
 
 const ProductCard = ({ product }: ProductCardProps) => {
   const [imageFailed, setImageFailed] = useState(false);
+  const [usePlaceholder, setUsePlaceholder] = useState(false);
   const [hovered, setHovered] = useState(false);
   const [isAdded, setIsAdded] = useState(false);
   const [showWishlistPopup, setShowWishlistPopup] = useState(false);
@@ -131,11 +132,17 @@ const ProductCard = ({ product }: ProductCardProps) => {
           <>
             {/* Primary image */}
             <img
-              src={primaryImage}
+              src={usePlaceholder ? PLACEHOLDER_IMAGE : primaryImage}
               alt={productName}
               loading="lazy"
-              onError={() => { if (primaryImage !== PLACEHOLDER_IMAGE) setImageFailed(true); }}
-              className={`h-full w-full object-contain object-center transform group-hover:scale-105 transition-all duration-500 ${
+              onError={() => {
+                if (!usePlaceholder) {
+                  setUsePlaceholder(true);
+                } else {
+                  setImageFailed(true);
+                }
+              }}
+              className={`h-full w-full object-cover object-center transform group-hover:scale-105 transition-all duration-500 ${
                 hovered && hoverImage ? 'opacity-0' : 'opacity-100'
               }`}
             />
@@ -145,7 +152,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
                 src={hoverImage}
                 alt={`${productName} hover view`}
                 loading="lazy"
-                className={`absolute inset-0 h-full w-full object-contain object-center p-2.5 sm:p-3 transform group-hover:scale-105 transition-all duration-500 ${
+                className={`absolute inset-0 h-full w-full object-cover object-center p-2.5 sm:p-3 transform group-hover:scale-105 transition-all duration-500 ${
                   hovered ? 'opacity-100' : 'opacity-0'
                 }`}
               />
@@ -180,7 +187,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
       <div className="flex flex-col flex-1 p-3 sm:p-4 justify-between bg-white dark:bg-zinc-900 transition-colors duration-200">
         <Link to={`/product/${productId}`} className="space-y-1.5">
           {/* Product Title */}
-          <h3 className="text-sm sm:text-[15px] font-bold text-zinc-900 dark:text-white group-hover:text-orange-500 transition-colors line-clamp-2 leading-snug tracking-tight">
+          <h3 className="text-sm sm:text-[15px] font-medium text-zinc-900 dark:text-white group-hover:text-orange-500 transition-colors line-clamp-2 leading-snug tracking-tight">
             {productName}
           </h3>
         </Link>
@@ -189,7 +196,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
         <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800/80 mt-3 flex items-center justify-between gap-2">
           <div>
             <div className="flex items-baseline gap-2">
-              <span className="text-base sm:text-lg font-black text-zinc-900 dark:text-white">
+              <span className="text-base sm:text-lg font-semibold text-zinc-900 dark:text-white">
                 {formatINR(currentPrice)}
               </span>
               {originalPrice && (

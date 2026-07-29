@@ -554,7 +554,7 @@ const ProductDetailsPage = () => {
                   {product.subcategoryName || product.categoryName || product.category?.name}
                 </span>
               )}
-              <h1 className="text-lg sm:text-xl lg:text-2xl font-bold leading-snug text-zinc-900 dark:text-white tracking-tight">
+              <h1 className="text-lg sm:text-xl lg:text-2xl font-semibold leading-snug text-zinc-900 dark:text-white tracking-tight">
                 {productName}
               </h1>
 
@@ -564,7 +564,7 @@ const ProductDetailsPage = () => {
                   Price
                 </span>
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-white">
+                  <span className="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-white">
                     {formatINR(product.discountPrice || product.price)}
                   </span>
                   {product.discountPrice && (
@@ -581,24 +581,28 @@ const ProductDetailsPage = () => {
 
             {/* Quantity Selector */}
             <div className="flex flex-col gap-2 pt-1.5">
-              <span className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white">Order Quantity (Units)</span>
+              <span className="text-[10px] sm:text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest block mb-0.5">Order Quantity (Units)</span>
               <div className="flex items-center justify-between border border-zinc-200 dark:border-zinc-800 rounded-2xl w-[120px] bg-zinc-50 dark:bg-zinc-900/60 h-10 px-1 shadow-sm transition-all duration-200 focus-within:ring-2 focus-within:ring-amber-500/30 focus-within:border-amber-500">
                 <button
                   onClick={() => setQty((q) => Math.max(1, q - 1))}
-                  className="text-zinc-500 hover:text-zinc-900 dark:hover:text-white font-bold text-base w-8 h-8 flex items-center justify-center cursor-pointer transition-colors active:scale-90"
+                  className="text-zinc-500 hover:text-zinc-900 dark:hover:text-white font-bold text-lg w-8 h-8 flex items-center justify-center cursor-pointer transition-colors active:scale-90 select-none"
                 >
-                  —
+                  -
                 </button>
                 <input
-                  type="number"
-                  min="1"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   value={qty === 0 ? '' : qty}
                   onChange={(e) => {
-                    const val = parseInt(e.target.value, 10);
-                    if (!isNaN(val) && val >= 1) {
-                      setQty(val);
-                    } else if (e.target.value === '') {
+                    const cleanVal = e.target.value.replace(/[^0-9]/g, '');
+                    if (cleanVal === '') {
                       setQty(0);
+                    } else {
+                      const val = parseInt(cleanVal, 10);
+                      if (!isNaN(val) && val >= 1) {
+                        setQty(val);
+                      }
                     }
                   }}
                   onBlur={() => {
@@ -606,11 +610,11 @@ const ProductDetailsPage = () => {
                       setQty(1);
                     }
                   }}
-                  className="font-bold text-zinc-900 dark:text-white w-10 text-center select-all bg-transparent focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-sm flex-1"
+                  className="font-bold text-zinc-900 dark:text-white w-10 text-center select-all bg-transparent focus:outline-none text-sm p-0 m-0 border-none flex-1"
                 />
                 <button
                   onClick={() => setQty((q) => (q === 0 ? 1 : q + 1))}
-                  className="text-zinc-500 hover:text-zinc-900 dark:hover:text-white font-bold text-base w-8 h-8 flex items-center justify-center cursor-pointer transition-colors active:scale-90"
+                  className="text-zinc-500 hover:text-zinc-900 dark:hover:text-white font-bold text-lg w-8 h-8 flex items-center justify-center cursor-pointer transition-colors active:scale-90 select-none"
                 >
                   +
                 </button>
