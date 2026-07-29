@@ -10,7 +10,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { RedisService } from '../redis/redis.service';
 import { Order } from '../orders/schemas/order.schema';
-import { Automobiles, getAllSyncTargets } from './collections';
+import { Automobiles, getAllSyncTargets, getCategoryInfoById, getCategoryInfoBySubname } from './collections';
 import { CjCreateOrderDto, CjOrderProductItem } from './dto/cj-order.dto';
 
 const WAREHOUSE_KEY_ALL = 'products:all';
@@ -267,7 +267,15 @@ export class CjService {
     const cached = await this.redisService.getJson<any>(cacheKey);
     if (cached) return cached;
 
-    const url = `/v1/product/list${this.buildSearch(query)}`;
+    const cjQuery = { ...query };
+    if (!cjQuery.categoryId && cjQuery.subcategoryName) {
+      const info = getCategoryInfoBySubname(cjQuery.subcategoryName);
+      if (info?.categoryId) {
+        cjQuery.categoryId = info.categoryId;
+      }
+    }
+
+    const url = `/v1/product/list${this.buildSearch(cjQuery)}`;
     this.logger.log(`[CJ] GET ${url}`);
     const response = await this.scheduleRequest(url, {
       method: 'GET',
@@ -428,7 +436,7 @@ export class CjService {
           const normSub = subcategoryName.trim().toLowerCase();
           const subFiltered = pool.filter((p) => {
             const val = String(
-              p.subcategoryName ?? p._category ?? p.category ?? '',
+              p.subcategoryName ?? p._category ?? p.category ?? p.categoryName ?? '',
             )
               .trim()
               .toLowerCase();
@@ -436,7 +444,11 @@ export class CjService {
               val === normSub || val.includes(normSub) || normSub.includes(val)
             );
           });
-          if (subFiltered.length > 0) pool = subFiltered;
+          if (subFiltered.length > 0) {
+            pool = subFiltered;
+          } else {
+            return { products: [], total: 0, warehouseHit: true };
+          }
         }
 
         const total = pool.length;
@@ -515,12 +527,16 @@ export class CjService {
     if (subcategoryName) {
       const norm = subcategoryName.trim().toLowerCase();
       const filtered = pool.filter((p) => {
-        const val = String(p.subcategoryName ?? p._category ?? p.category ?? '')
+        const val = String(p.subcategoryName ?? p._category ?? p.category ?? p.categoryName ?? '')
           .trim()
           .toLowerCase();
         return val === norm || val.includes(norm) || norm.includes(val);
       });
-      if (filtered.length > 0) pool = filtered;
+      if (filtered.length > 0) {
+        pool = filtered;
+      } else {
+        return { products: [], total: 0, warehouseHit: true };
+      }
     }
 
     if (collectionType) {

@@ -109,6 +109,24 @@ export function getCategoryInfoById(
   };
 }
 
+export function getCategoryInfoBySubname(
+  subcategoryName: string,
+): { categoryId: string; subcategoryName: string; collectionType: string } | null {
+  if (!subcategoryName) return null;
+  const target = subcategoryName.trim().toLowerCase();
+  for (const [parent, items] of Object.entries(Automobiles)) {
+    const found = items.find((i) => i.name.toLowerCase() === target);
+    if (found) {
+      return {
+        categoryId: found.categoryId,
+        subcategoryName: found.name,
+        collectionType: parent,
+      };
+    }
+  }
+  return null;
+}
+
 /** Return all non-empty CJ categoryIds as a flat array */
 export function getAllCategoryIds(): string[] {
   return Object.values(Automobiles)
