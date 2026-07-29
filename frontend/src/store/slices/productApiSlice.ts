@@ -78,20 +78,6 @@ export const productApiSlice = apiSlice.injectEndpoints({
     }),
 
     /**
-     * @deprecated — prefer useGetProductsQuery with { subcategoryName }.
-     * Kept for any legacy usage.
-     */
-    getProductsByCategory: builder.query({
-      query: ({ categoryId, pageNum, pageSize }: { categoryId: string; pageNum?: number; pageSize?: number }) => ({
-        url: `${PRODUCTS_URL}/category/${categoryId}`,
-        params: { pageNum, pageSize },
-      }),
-      transformResponse: transformListResponse,
-      providesTags: ['Product'],
-      keepUnusedDataFor: 600,
-    }),
-
-    /**
      * Fetch total product count (shown in Navbar banner).
      */
     getProductCount: builder.query({
@@ -117,7 +103,6 @@ export const {
   useGetProductsQuery,
   useGetProductDetailsQuery,
   useGetRelatedProductsQuery,
-  useGetProductsByCategoryQuery,
   useCreateReviewMutation,
   useGetProductCountQuery,
   useGetSyncStatusQuery,

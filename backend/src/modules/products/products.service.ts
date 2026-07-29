@@ -206,7 +206,7 @@ export class ProductsService implements OnModuleInit {
     const pageNum = Math.max(1, Number(query.pageNum || query.page || 1));
     const pageSize = Math.min(
       Math.max(1, Number(query.pageSize || query.limit || 20)),
-      50000,
+      250,
     );
 
     // ── Search query: filter warehouse in-memory ───────────────────────────
@@ -224,42 +224,39 @@ export class ProductsService implements OnModuleInit {
         pageSize,
       );
 
-      if (!warehouseResult || warehouseResult.products.length === 0) {
-        this.logger.warn(
-          `[Products] Warehouse empty — cannot serve search "${searchQueryStr}"`,
-        );
-        return { products: [], total: 0, source: 'warehouse_empty' };
+      if (warehouseResult && warehouseResult.products.length > 0) {
+        const matched = warehouseResult.products.filter((p: any) => {
+          const text = [
+            p.name,
+            p.title,
+            p.productName,
+            p.productNameEn,
+            p._category,
+            p.subcategoryName,
+            p.categoryName,
+            p.collectionType,
+            ...(p.tags ?? []),
+          ]
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase();
+
+          return (
+            text.includes(searchTerm) ||
+            searchTerms.every((term) => text.includes(term))
+          );
+        });
+
+        if (matched.length > 0) {
+          const total = matched.length;
+          const start = (pageNum - 1) * pageSize;
+          return {
+            products: matched.slice(start, start + pageSize),
+            total,
+            source: 'warehouse:search',
+          };
+        }
       }
-
-      const matched = warehouseResult.products.filter((p: any) => {
-        const text = [
-          p.name,
-          p.title,
-          p.productName,
-          p.productNameEn,
-          p._category,
-          p.subcategoryName,
-          p.categoryName,
-          p.collectionType,
-          ...(p.tags ?? []),
-        ]
-          .filter(Boolean)
-          .join(' ')
-          .toLowerCase();
-
-        return (
-          text.includes(searchTerm) ||
-          searchTerms.every((term) => text.includes(term))
-        );
-      });
-
-      const total = matched.length;
-      const start = (pageNum - 1) * pageSize;
-      return {
-        products: matched.slice(start, start + pageSize),
-        total,
-        source: 'warehouse:search',
-      };
     }
 
     // ── Category / collection listing: read from warehouse ─────────────────────
@@ -282,10 +279,25 @@ export class ProductsService implements OnModuleInit {
       };
     }
 
-    // ── Warehouse empty — do NOT fall back to CJ ───────────────────────────
-    this.logger.warn(
-      `[Products] Warehouse MISS sub=${query.subcategoryName ?? '-'} — returning empty (no CJ fallback)`,
-    );
+    // ── Fallback: Live CJ API fetch if warehouse returns 0 items ──────────────
+    try {
+      this.logger.log(
+        `[Products] Warehouse MISS sub=${query.subcategoryName ?? '-'} — falling back to live CJ API`,
+      );
+      const liveData = await this.cjService.getProducts(query);
+      if (liveData && Array.isArray(liveData.products) && liveData.products.length > 0) {
+        return {
+          products: liveData.products,
+          total: liveData.total || liveData.products.length,
+          source: 'cj_live_fallback',
+        };
+      }
+    } catch (err: any) {
+      this.logger.warn(
+        `[Products] Live CJ API fallback attempt failed: ${err?.message ?? err}`,
+      );
+    }
+
     return {
       products: [],
       total: 0,

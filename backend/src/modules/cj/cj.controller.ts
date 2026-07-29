@@ -46,19 +46,6 @@ export class CjController {
     };
   }
 
-  /**
-   * Backwards-compatible crawl endpoint.
-   * @deprecated Use POST /cj/sync-now instead.
-   */
-  @Post('crawl-keywords')
-  crawlKeywords() {
-    this.cjService.runCatalogSync().catch((err) => {
-      console.error('[CJ] Background crawl failed:', err);
-    });
-    return {
-      message: 'Catalog sync started. Check /cj/sync-status for live progress.',
-    };
-  }
   @Get('products')
   getProducts() {
     return this.cjService.getProducts();

@@ -130,26 +130,30 @@ const CollectionPage = () => {
 
   const rawProducts = Array.isArray(apiResponse?.products) ? apiResponse.products : [];
 
-  // Query general pool to derive category navigation tabs when on main collection pages
-  const { data: generalPoolData } = useGetProductsQuery(
-    { pageNum: 1, pageSize: 1500 },
-    { skip: Boolean(normalizedSubcategory && normalizedSubcategory !== 'all') }
-  );
-
-  const allProductsPool = useMemo(() => {
-    if (!normalizedSubcategory || normalizedSubcategory === 'all') {
-      return rawProducts;
+  // Query full collection pool to derive category navigation tabs for the current section
+  const collectionPoolQuery = useMemo(() => {
+    if (targetCollectionType) {
+      return { collectionType: targetCollectionType, pageNum: 1, pageSize: 500 };
     }
-    return Array.isArray(generalPoolData?.products) ? generalPoolData.products : [];
-  }, [normalizedSubcategory, rawProducts, generalPoolData]);
+    return { pageNum: 1, pageSize: 500 };
+  }, [targetCollectionType]);
+
+  const { data: collectionPoolData } = useGetProductsQuery(
+    collectionPoolQuery,
+    { skip: !targetCollectionType }
+  );
 
   // Derive unique subcategory tabs
   const derivedTabs = useMemo(() => {
-    const pool = allProductsPool.length > 0 ? allProductsPool : rawProducts;
+    const pool =
+      Array.isArray(collectionPoolData?.products) && collectionPoolData.products.length > 0
+        ? collectionPoolData.products
+        : rawProducts;
+
     const catMap = new Map<string, number>();
 
     for (const p of pool) {
-      const cat = String(p._category ?? p.subcategoryName ?? '').trim();
+      const cat = String(p.subcategoryName ?? p._category ?? '').trim();
       if (!cat) continue;
       catMap.set(cat, (catMap.get(cat) || 0) + 1);
     }
@@ -157,7 +161,7 @@ const CollectionPage = () => {
     return Array.from(catMap.entries())
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count);
-  }, [allProductsPool, rawProducts]);
+  }, [collectionPoolData, rawProducts]);
 
   // Page title
   const pageTitle = (

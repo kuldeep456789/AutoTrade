@@ -368,12 +368,13 @@ export class CjService {
     subcategoryName?: string,
     collectionType?: string,
   ): Promise<{ products: any[]; total: number; warehouseHit: true } | null> {
-    // Try fine-grained sub-category key first
+    // 1. Direct Subcategory Key Lookup
     if (subcategoryName) {
-      // Find parent category for this sub
       let parentCat = 'auto';
       for (const [parent, items] of Object.entries(Automobiles)) {
-        if (items.some(i => i.name.toLowerCase() === subcategoryName.toLowerCase())) {
+        if (
+          items.some((i) => i.name.toLowerCase() === subcategoryName.toLowerCase())
+        ) {
           parentCat = parent;
           break;
         }
@@ -383,8 +384,9 @@ export class CjService {
 
       if (catData && Array.isArray(catData) && catData.length > 0) {
         const total = catData.length;
-        const start = (pageNum - 1) * pageSize;
-        const products = catData.slice(start, start + pageSize);
+        const effectivePageSize = Math.min(pageSize, 250);
+        const start = (pageNum - 1) * effectivePageSize;
+        const products = catData.slice(start, start + effectivePageSize);
         this.logger.log(
           `[CJ] Warehouse cat-key HIT ${catKey} → ${products.length}/${total}`,
         );
@@ -392,18 +394,77 @@ export class CjService {
       }
     }
 
+    // 2. Direct Collection Type Keys Lookup
+    if (collectionType) {
+      const collSlug = collectionType.toLowerCase().replace(/[\s_'&-]+/g, '');
+      const catKeys = await this.redisService.keys('products:*');
+      const collProducts: any[] = [];
+
+      if (catKeys && catKeys.length > 0) {
+        for (const key of catKeys) {
+          const parts = key.split(':');
+          if (
+            parts.length === 3 &&
+            !key.includes('related') &&
+            !key.includes('next')
+          ) {
+            const keyParentSlug = parts[1];
+            if (
+              keyParentSlug.includes(collSlug) ||
+              collSlug.includes(keyParentSlug)
+            ) {
+              const items = await this.redisService.getJson<any[]>(key);
+              if (Array.isArray(items)) {
+                collProducts.push(...items);
+              }
+            }
+          }
+        }
+      }
+
+      if (collProducts.length > 0) {
+        let pool = this.interleaveByCategory(collProducts);
+        if (subcategoryName) {
+          const normSub = subcategoryName.trim().toLowerCase();
+          const subFiltered = pool.filter((p) => {
+            const val = String(
+              p.subcategoryName ?? p._category ?? p.category ?? '',
+            )
+              .trim()
+              .toLowerCase();
+            return (
+              val === normSub || val.includes(normSub) || normSub.includes(val)
+            );
+          });
+          if (subFiltered.length > 0) pool = subFiltered;
+        }
+
+        const total = pool.length;
+        const effectivePageSize = Math.min(pageSize, 250);
+        const start = (pageNum - 1) * effectivePageSize;
+        const products = pool.slice(start, start + effectivePageSize);
+
+        this.logger.log(
+          `[CJ] Warehouse collection-keys HIT "${collectionType}" → ${products.length}/${total}`,
+        );
+        return { products, total, warehouseHit: true };
+      }
+    }
+
+    // 3. Main Global Warehouse Key or Fallback Pool
     let warehouse = await this.redisService.getJson<any[]>(WAREHOUSE_KEY_ALL);
 
-    // Fallback: If global warehouse key is empty (e.g. sync still in progress),
-    // dynamically assemble products from available category or individual product keys
     if (!warehouse || !Array.isArray(warehouse) || warehouse.length === 0) {
-      // 1) Try category keys: products:parent:sub (3 colon-separated parts, no 'related')
       const catKeys = await this.redisService.keys('products:*');
       const allFromCats: any[] = [];
       if (catKeys && catKeys.length > 0) {
         for (const key of catKeys) {
           const parts = key.split(':');
-          if (parts.length === 3 && !key.includes('related') && !key.includes('next')) {
+          if (
+            parts.length === 3 &&
+            !key.includes('related') &&
+            !key.includes('next')
+          ) {
             const catProducts = await this.redisService.getJson<any[]>(key);
             if (Array.isArray(catProducts)) {
               allFromCats.push(...catProducts);
@@ -413,16 +474,15 @@ export class CjService {
       }
 
       if (allFromCats.length > 0) {
-        // Category keys exist — use them
         warehouse = this.interleaveByCategory(allFromCats);
-        this.logger.log(`[Warehouse] Assembled ${warehouse.length} products from category sub-keys`);
+        this.logger.log(
+          `[Warehouse] Assembled ${warehouse.length} products from category sub-keys`,
+        );
       } else {
-        // 2) Last-resort: use individual product:* detail cache entries
         const productDetailKeys = await this.redisService.keys('product:*');
         const allFromDetails: any[] = [];
         if (productDetailKeys && productDetailKeys.length > 0) {
           for (const key of productDetailKeys) {
-            // Skip compound keys like product:related:* (they won't exist but be safe)
             if (key.split(':').length === 2) {
               const p = await this.redisService.getJson<any>(key);
               if (p && typeof p === 'object' && (p.pid || p._id || p.id)) {
@@ -434,7 +494,9 @@ export class CjService {
 
         if (allFromDetails.length > 0) {
           warehouse = allFromDetails;
-          this.logger.warn(`[Warehouse] products:all empty — serving ${warehouse.length} products from individual detail cache (sync pending)`);
+          this.logger.warn(
+            `[Warehouse] products:all empty — serving ${warehouse.length} products from individual detail cache (sync pending)`,
+          );
         } else {
           return null;
         }
@@ -444,38 +506,56 @@ export class CjService {
     let pool = warehouse;
 
     if (categoryId) {
-      pool = pool.filter(
+      const filtered = pool.filter(
         (p) => String(p.categoryId ?? p.category ?? '') === categoryId,
       );
+      if (filtered.length > 0) pool = filtered;
     }
 
     if (subcategoryName) {
       const norm = subcategoryName.trim().toLowerCase();
-      pool = pool.filter(
-        (p) =>
-          String(p.subcategoryName ?? p._category ?? p.category ?? '')
-            .trim()
-            .toLowerCase() === norm,
-      );
+      const filtered = pool.filter((p) => {
+        const val = String(p.subcategoryName ?? p._category ?? p.category ?? '')
+          .trim()
+          .toLowerCase();
+        return val === norm || val.includes(norm) || norm.includes(val);
+      });
+      if (filtered.length > 0) pool = filtered;
     }
 
     if (collectionType) {
       const normColl = collectionType.trim().toLowerCase();
-      pool = pool.filter(
-        (p) =>
-          String(p._parentCategory ?? p._collectionType ?? p.collectionType ?? p.parentCategory ?? '')
-            .trim()
-            .toLowerCase() === normColl,
-      );
+      const filtered = pool.filter((p) => {
+        const val = String(
+          p._parentCategory ??
+            p._collectionType ??
+            p.collectionType ??
+            p.parentCategory ??
+            p.categoryName ??
+            '',
+        )
+          .trim()
+          .toLowerCase();
+        return (
+          val === normColl || val.includes(normColl) || normColl.includes(val)
+        );
+      });
+
+      if (filtered.length > 0) {
+        pool = filtered;
+      } else {
+        // Return 0 products for this collection so live CJ API fallback handles it
+        return { products: [], total: 0, warehouseHit: true };
+      }
     }
 
-
     const total = pool.length;
-    const start = (pageNum - 1) * pageSize;
-    const products = pool.slice(start, start + pageSize);
+    const effectivePageSize = Math.min(pageSize, 250);
+    const start = (pageNum - 1) * effectivePageSize;
+    const products = pool.slice(start, start + effectivePageSize);
 
     this.logger.log(
-      `[CJ] Warehouse READ page=${pageNum} size=${pageSize} → ${products.length}/${total}`,
+      `[CJ] Warehouse READ page=${pageNum} size=${effectivePageSize} → ${products.length}/${total}`,
     );
     return { products, total, warehouseHit: true };
   }
