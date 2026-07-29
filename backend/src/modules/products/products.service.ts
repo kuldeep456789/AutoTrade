@@ -231,16 +231,17 @@ export class ProductsService implements OnModuleInit {
         .split(/\s+/)
         .filter(Boolean);
 
-      // Scoped Candidate Pool: Fetch candidate products from requested category/subcategory pool
-      const warehouseResult = await this.cjService.getWarehouseProducts(
-        1,
-        2500,
-        query.categoryId,
-        query.subcategoryName,
-        query.collectionType,
-      );
+      // Scoped Candidate Pool: Fetch candidate products matching the keyword from the Redis index
+      const searchResult = await this.cjService.getProducts({
+        keyword: cleanQuery,
+        pageNum: '1',
+        pageSize: '2500',
+        categoryId: query.categoryId,
+        subcategoryName: query.subcategoryName,
+        collectionType: query.collectionType,
+      });
 
-      const candidateProducts = warehouseResult?.products ?? [];
+      const candidateProducts = searchResult?.products ?? searchResult?.data?.list ?? [];
 
       if (candidateProducts.length > 0) {
         const scoredProducts: { product: any; score: number }[] = [];

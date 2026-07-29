@@ -1,0 +1,16 @@
+export const CJ_CONFIG = {
+  PAGE_SIZE: 200,
+  REQUEST_DELAY_MS: 1500,
+  MAX_RETRIES: 3,
+  MAX_PAGES_PER_CATEGORY: 800,
+  CURRENCY_EXCHANGE_RATE: 93.45,
+  BACKOFF_FACTOR: 2000,
+  ACCESS_TOKEN_TTL_SECONDS: 60 * 60 * 23,
+  CACHE_TTL: {
+    CATEGORIES: 60 * 60 * 24 * 7, // 7 days
+    PRODUCT_DETAIL: 60 * 60 * 24, // 24 hours
+    PRODUCT_LIST: 60 * 60 * 24, // 24 hours
+    PRODUCT_CATEGORY: 60 * 60 * 6, // 6 hours
+    PRODUCT_COUNT: 60 * 60 * 24, // 24 hours
+  },
+};

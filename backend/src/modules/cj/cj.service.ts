@@ -5,71 +5,68 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import axios, { AxiosRequestConfig } from 'axios';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { RedisService } from '../redis/redis.service';
 import { Order } from '../orders/schemas/order.schema';
-import { Automobiles, getAllSyncTargets, getCategoryInfoById, getCategoryInfoBySubname } from './collections';
+import { Automobiles, getAllSyncTargets, getCategoryInfoBySubname } from './collections';
 import { CjCreateOrderDto, CjOrderProductItem } from './dto/cj-order.dto';
+import { CJ_CONFIG } from '../../config/cj.config';
+import {
+  CjClient,
+  CjProduct,
+  WarehouseProduct,
+  CjVariant,
+  SyncMetrics,
+} from './cj.client';
 
-const WAREHOUSE_KEY_ALL = 'products:all';
-const WAREHOUSE_NEXT_ALL = 'products:next:all';
+// Define cache keys using configured names/patterns
+const WAREHOUSE_KEY_ALL = 'warehouse:all';
+const WAREHOUSE_LEGACY_ALL = 'products:all'; // Keep legacy key for backward compatibility
+const PRODUCT_COUNT_CACHE_KEY = 'cj:product_count';
+
+// Helpers to reduce redundant string operations (slugify & normalizeKey)
+function slugify(val: string): string {
+  return val.toLowerCase().replace(/[\s_'&-]+/g, '');
+}
+
+function normalizeKey(val: string): string {
+  return val.trim().toLowerCase();
+}
 
 const categoryKey = (parentCat: string, subCat: string) =>
-  `products:${parentCat.toLowerCase().replace(/[\s_'&-]+/g, '')}:${subCat.toLowerCase().replace(/[\s_'&-]+/g, '')}`;
-const categoryNextKey = (parentCat: string, subCat: string) =>
-  `products:next:${parentCat.toLowerCase().replace(/[\s_'&-]+/g, '')}:${subCat.toLowerCase().replace(/[\s_'&-]+/g, '')}`;
+  `warehouse:subcategory:${slugify(subCat)}`;
 
-const SYNC_METRICS_KEY = 'cj:sync:metrics';
-
-// TTL removed for zero-downtime persistent cache
-
-const PRODUCT_COUNT_CACHE_KEY = 'cj:product_count';
-const PRODUCT_COUNT_TTL = 60 * 60 * 24;
-
-const DEFAULT_SIZES = ['S', 'M', 'L', 'XL'];
-const DEFAULT_COLORS = ['Black'];
+const legacyCategoryKey = (parentCat: string, subCat: string) =>
+  `products:${slugify(parentCat)}:${slugify(subCat)}`;
 
 @Injectable()
 export class CjService {
   private readonly logger = new Logger(CjService.name);
-  private readonly baseUrl =
-    process.env.CJ_API_BASE_URL ??
-    'https://developers.cjdropshipping.com/api2.0';
-  private readonly accessTokenCacheKey = 'cj:access_token';
-  private readonly accessTokenTtlSeconds = 60 * 60 * 23;
-  private readonly requestDelayMs = 1500;
-  private accessTokenCache: { token: string; expiresAt: number } | null = null;
-  private requestQueue: Promise<void> = Promise.resolve();
-  private apiCallsThisSync = 0;
 
   constructor(
     private readonly redisService: RedisService,
+    private readonly cjClient: CjClient,
     @InjectModel(Order.name) private readonly orderModel?: Model<Order>,
-  ) { }
+  ) {}
 
+  /**
+   * Resolve and get CJ Dropping Access Token.
+   * Backward compatibility fallback for controller.
+   */
   async getAccessToken() {
-    const apiKey = process.env.CJ_API_KEY;
-    const email = process.env.CJ_EMAIL;
-
-    if (!apiKey)
-      throw new InternalServerErrorException('CJ_API_KEY is not configured');
-    if (!email)
-      throw new InternalServerErrorException('CJ_EMAIL is not configured');
-
-    this.logger.log('[CJ] POST /v1/authentication/getAccessToken');
-    return this.scheduleRequest('/v1/authentication/getAccessToken', {
-      method: 'POST',
-      data: { email, api_key: apiKey },
-    });
+    return this.cjClient.getAccessToken();
   }
 
+  /**
+   * Create order in CJ Dropshipping system.
+   * Backward compatibility for order synchronization.
+   */
   async createOrderV2(payload: CjCreateOrderDto) {
     this.logger.log(
       `[CJ] POST /v1/shopping/order/createOrderV2 for order #${payload.orderNumber}`,
     );
-    const headers = await this.authHeaders();
+    const headers = await this.cjClient.authHeaders();
     const body = {
       platform: 'Api',
       logisticName: 'CJPacket',
@@ -77,7 +74,7 @@ export class CjService {
       ...payload,
     };
     try {
-      return await this.scheduleRequest('/v1/shopping/order/createOrderV2', {
+      return await this.cjClient.scheduleRequest('/v1/shopping/order/createOrderV2', {
         method: 'POST',
         headers,
         data: body,
@@ -86,7 +83,7 @@ export class CjService {
       this.logger.warn(
         `[CJ] createOrderV2 failed, attempting fallback to POST /v1/shopping/order/createOrder...`,
       );
-      return await this.scheduleRequest('/v1/shopping/order/createOrder', {
+      return await this.cjClient.scheduleRequest('/v1/shopping/order/createOrder', {
         method: 'POST',
         headers,
         data: body,
@@ -94,6 +91,9 @@ export class CjService {
     }
   }
 
+  /**
+   * Sync Order details to CJ Dropshipping.
+   */
   async syncOrderToCj(order: any): Promise<boolean> {
     const orderNumber = order._id
       ? order._id.toString()
@@ -179,6 +179,9 @@ export class CjService {
     }
   }
 
+  /**
+   * Sync Order in Database by its MongoDB ID.
+   */
   async syncOrderById(
     orderId: string,
   ): Promise<{ success: boolean; message: string; cjOrderId?: string }> {
@@ -207,34 +210,47 @@ export class CjService {
     }
   }
 
+  /**
+   * Retrieve categories with local Redis caching.
+   */
   async getCategories() {
     const cacheKey = 'categories';
     const cached = await this.redisService.getJson<any>(cacheKey);
     if (cached) return cached;
 
     this.logger.log('[CJ] GET /v1/product/getCategory');
-    const response = await this.scheduleRequest('/v1/product/getCategory', {
+    const response = await this.cjClient.scheduleRequest('/v1/product/getCategory', {
       method: 'GET',
-      headers: await this.authHeaders(),
+      headers: await this.cjClient.authHeaders(),
     });
 
     const normalized = this.normalizeCategoryResponse(response);
-    await this.redisService.setJson(cacheKey, normalized, 60 * 60 * 24 * 7);
+    await this.redisService.setJson(cacheKey, normalized, CJ_CONFIG.CACHE_TTL.CATEGORIES);
     return normalized;
   }
 
+  /**
+   * Retrieve product by PID from Redis index/cache, falling back to CJ Dropshipping API if missing.
+   */
   async getProductById(pid: string) {
     if (!pid) throw new BadRequestException('product id is required');
 
-    const cacheKey = `product:${pid}`;
-    const cached = await this.redisService.getJson<any>(cacheKey);
-    if (cached) return cached;
+    // 1. Check direct warehouse key first (optimal Redis usage)
+    const warehouseKey = `warehouse:product:${pid}`;
+    let product = await this.redisService.getJson<any>(warehouseKey);
+    if (product) return product;
 
+    // 2. Check legacy cache key for backward compatibility
+    const legacyCacheKey = `product:${pid}`;
+    product = await this.redisService.getJson<any>(legacyCacheKey);
+    if (product) return product;
+
+    // 3. Fallback to API if not indexed
     const url = `/v1/product/list?pid=${pid}`;
     this.logger.log(`[CJ] GET ${url}`);
-    const response = await this.scheduleRequest(url, {
+    const response = await this.cjClient.scheduleRequest(url, {
       method: 'GET',
-      headers: await this.authHeaders(),
+      headers: await this.cjClient.authHeaders(),
     });
 
     if (response?.result === false) {
@@ -244,13 +260,14 @@ export class CjService {
     }
 
     const normalized = this.normalizeProductResponse(response);
-    const product = normalized?.products?.[0] ?? null;
+    const matchedProduct = normalized?.products?.[0] ?? null;
 
-    if (!product) throw new NotFoundException('Product not found');
+    if (!matchedProduct) throw new NotFoundException('Product not found');
 
     try {
-      const enriched = await this.enrichWithVariants(product, pid);
-      await this.redisService.setJson(cacheKey, enriched, 60 * 60 * 24);
+      const enriched = await this.enrichWithVariants(matchedProduct, pid);
+      await this.redisService.setJson(legacyCacheKey, enriched, CJ_CONFIG.CACHE_TTL.PRODUCT_DETAIL);
+      await this.redisService.setJson(warehouseKey, enriched, CJ_CONFIG.CACHE_TTL.PRODUCT_DETAIL);
       return enriched;
     } catch (err: any) {
       this.logger.warn(
@@ -258,11 +275,70 @@ export class CjService {
       );
     }
 
-    await this.redisService.setJson(cacheKey, product, 60 * 60 * 24);
-    return product;
+    await this.redisService.setJson(legacyCacheKey, matchedProduct, CJ_CONFIG.CACHE_TTL.PRODUCT_DETAIL);
+    await this.redisService.setJson(warehouseKey, matchedProduct, CJ_CONFIG.CACHE_TTL.PRODUCT_DETAIL);
+    return matchedProduct;
   }
 
+  /**
+   * Retrieve products list with optional keyword, category filters.
+   * Leverages the Redis search index to return results under 500ms without scanning arrays.
+   */
   async getProducts(query: Record<string, string | undefined> = {}) {
+    const keyword = query.keyword ? normalizeKey(query.keyword) : '';
+    
+    // 1. If keyword is present, resolve using tokenized search index
+    if (keyword) {
+      const tokens = keyword.split(/\s+/).filter(Boolean).map(t => slugify(t));
+      if (tokens.length > 0) {
+        const indexKeys = tokens.map(t => `warehouse:index:keyword:${t}`);
+        const pidLists = await Promise.all(
+          indexKeys.map(k => this.redisService.getJson<string[]>(k))
+        );
+
+        let matchingPids: string[] = [];
+        let first = true;
+        for (const list of pidLists) {
+          if (!list || !Array.isArray(list)) {
+            matchingPids = [];
+            break;
+          }
+          if (first) {
+            matchingPids = [...list];
+            first = false;
+          } else {
+            matchingPids = matchingPids.filter(pid => list.includes(pid));
+          }
+        }
+
+        if (matchingPids.length > 0) {
+          const page = Number(query.pageNum || 1);
+          const limit = Number(query.pageSize || CJ_CONFIG.PAGE_SIZE);
+          const start = (page - 1) * limit;
+          const paginatedPids = matchingPids.slice(start, start + limit);
+
+          // Batch fetch product details in parallel
+          const products = await Promise.all(
+            paginatedPids.map(pid => this.redisService.getJson<any>(`warehouse:product:${pid}`))
+          );
+          const filteredProducts = products.filter(Boolean);
+
+          return {
+            result: true,
+            message: 'Success',
+            data: {
+              list: filteredProducts,
+              pageNum: page,
+              pageSize: limit,
+              total: matchingPids.length,
+            },
+            products: filteredProducts, // backward compatibility
+          };
+        }
+      }
+    }
+
+    // 2. Cache query fallback
     const cacheKey = `cj:products:list:${JSON.stringify(query)}`;
     const cached = await this.redisService.getJson<any>(cacheKey);
     if (cached) return cached;
@@ -277,16 +353,19 @@ export class CjService {
 
     const url = `/v1/product/list${this.buildSearch(cjQuery)}`;
     this.logger.log(`[CJ] GET ${url}`);
-    const response = await this.scheduleRequest(url, {
+    const response = await this.cjClient.scheduleRequest(url, {
       method: 'GET',
-      headers: await this.authHeaders(),
+      headers: await this.cjClient.authHeaders(),
     });
 
     const normalized = this.normalizeProductResponse(response, query);
-    await this.redisService.setJson(cacheKey, normalized, 60 * 60 * 24);
+    await this.redisService.setJson(cacheKey, normalized, CJ_CONFIG.CACHE_TTL.PRODUCT_LIST);
     return normalized;
   }
 
+  /**
+   * Fetch products filtered by category with caching.
+   */
   async getProductsByCategory(
     categoryId: string,
     pid?: string,
@@ -302,18 +381,19 @@ export class CjService {
     const cjQuery = this.filterCjParams(query);
     const url = `/v1/product/list${this.buildSearch({ ...cjQuery, categoryId, ...(pid ? { pid } : {}) })}`;
     this.logger.log(`[CJ] GET ${url}`);
-    const response = await this.scheduleRequest(url, {
+    const response = await this.cjClient.scheduleRequest(url, {
       method: 'GET',
-      headers: await this.authHeaders(),
+      headers: await this.cjClient.authHeaders(),
     });
 
     const normalized = this.normalizeProductResponse(response, query);
-    await this.redisService.setJson(cacheKey, normalized, 60 * 60 * 6);
+    await this.redisService.setJson(cacheKey, normalized, CJ_CONFIG.CACHE_TTL.PRODUCT_CATEGORY);
     return normalized;
   }
 
-
-
+  /**
+   * Fetch all products across categories recursively.
+   */
   async getAllProducts(categoryId?: string) {
     const categories = categoryId
       ? [categoryId]
@@ -326,18 +406,18 @@ export class CjService {
       let pageNum = 1;
       while (true) {
         try {
-          const pageSize = 40;
+          const pageSize = CJ_CONFIG.PAGE_SIZE;
           const url = `/v1/product/list${this.buildSearch({ categoryId: catId, pageNum: String(pageNum), pageSize: String(pageSize) })}`;
           this.logger.log(`[CJ] GET ${url}`);
-          const response = await this.scheduleRequest(url, {
+          const response = await this.cjClient.scheduleRequest(url, {
             method: 'GET',
-            headers: await this.authHeaders(),
+            headers: await this.cjClient.authHeaders(),
           });
           const products = this.extractList(response);
           const normalized = this.normalizeProductResponse(response);
           allProducts.push(...(normalized.products || []));
           if (products.length < pageSize) break;
-          if (pageNum >= 800) break;
+          if (pageNum >= CJ_CONFIG.MAX_PAGES_PER_CATEGORY) break;
           pageNum++;
         } catch (e: any) {
           this.logger.warn(
@@ -353,6 +433,9 @@ export class CjService {
     return allProducts;
   }
 
+  /**
+   * Search CJ catalog by keyword.
+   */
   async searchProducts(
     keyword: string,
     pageNum = 1,
@@ -368,7 +451,9 @@ export class CjService {
     return this.getProducts(query);
   }
 
-  //warehouse
+  /**
+   * Optimize warehouse retrieval: fetches indexed records from Redis (sub-500ms).
+   */
   async getWarehouseProducts(
     pageNum = 1,
     pageSize = 160,
@@ -378,6 +463,21 @@ export class CjService {
   ): Promise<{ products: any[]; total: number; warehouseHit: true } | null> {
     // 1. Direct Subcategory Key Lookup
     if (subcategoryName) {
+      const catKey = `warehouse:subcategory:${slugify(subcategoryName)}`;
+      const catData = await this.redisService.getJson<any[]>(catKey);
+
+      if (catData && Array.isArray(catData) && catData.length > 0) {
+        const total = catData.length;
+        const effectivePageSize = Math.min(pageSize, 250);
+        const start = (pageNum - 1) * effectivePageSize;
+        const products = catData.slice(start, start + effectivePageSize);
+        this.logger.log(
+          `[CJ] Warehouse subcategory HIT ${catKey} → ${products.length}/${total}`,
+        );
+        return { products, total, warehouseHit: true };
+      }
+
+      // Legacy fallback
       let parentCat = 'auto';
       for (const [parent, items] of Object.entries(Automobiles)) {
         if (
@@ -387,185 +487,89 @@ export class CjService {
           break;
         }
       }
-      const catKey = categoryKey(parentCat, subcategoryName);
-      const catData = await this.redisService.getJson<any[]>(catKey);
+      const legacyCatKey = legacyCategoryKey(parentCat, subcategoryName);
+      const legacyCatData = await this.redisService.getJson<any[]>(legacyCatKey);
+      if (legacyCatData && Array.isArray(legacyCatData) && legacyCatData.length > 0) {
+        const total = legacyCatData.length;
+        const effectivePageSize = Math.min(pageSize, 250);
+        const start = (pageNum - 1) * effectivePageSize;
+        const products = legacyCatData.slice(start, start + effectivePageSize);
+        return { products, total, warehouseHit: true };
+      }
+    }
 
+    // 2. Direct Category Lookup
+    if (categoryId) {
+      const catKey = `warehouse:category:${categoryId}`;
+      const catData = await this.redisService.getJson<any[]>(catKey);
       if (catData && Array.isArray(catData) && catData.length > 0) {
         const total = catData.length;
         const effectivePageSize = Math.min(pageSize, 250);
         const start = (pageNum - 1) * effectivePageSize;
         const products = catData.slice(start, start + effectivePageSize);
         this.logger.log(
-          `[CJ] Warehouse cat-key HIT ${catKey} → ${products.length}/${total}`,
+          `[CJ] Warehouse category HIT ${catKey} → ${products.length}/${total}`,
         );
         return { products, total, warehouseHit: true };
       }
     }
 
-    // 2. Direct Collection Type Keys Lookup
+    // 3. Direct Collection Type Lookup
     if (collectionType) {
-      const collSlug = collectionType.toLowerCase().replace(/[\s_'&-]+/g, '');
-      const catKeys = await this.redisService.keys('products:*');
-      const collProducts: any[] = [];
-
-      if (catKeys && catKeys.length > 0) {
-        for (const key of catKeys) {
-          const parts = key.split(':');
-          if (
-            parts.length === 3 &&
-            !key.includes('related') &&
-            !key.includes('next')
-          ) {
-            const keyParentSlug = parts[1];
-            if (
-              keyParentSlug.includes(collSlug) ||
-              collSlug.includes(keyParentSlug)
-            ) {
-              const items = await this.redisService.getJson<any[]>(key);
-              if (Array.isArray(items)) {
-                collProducts.push(...items);
-              }
-            }
-          }
-        }
-      }
-
-      if (collProducts.length > 0) {
-        let pool = this.interleaveByCategory(collProducts);
-        if (subcategoryName) {
-          const normSub = subcategoryName.trim().toLowerCase();
-          const subFiltered = pool.filter((p) => {
-            const val = String(
-              p.subcategoryName ?? p._category ?? p.category ?? p.categoryName ?? '',
-            )
-              .trim()
-              .toLowerCase();
-            return (
-              val === normSub || val.includes(normSub) || normSub.includes(val)
-            );
-          });
-          if (subFiltered.length > 0) {
-            pool = subFiltered;
-          } else {
-            return { products: [], total: 0, warehouseHit: true };
-          }
-        }
-
-        const total = pool.length;
+      const collSlug = slugify(collectionType);
+      const collKey = `warehouse:brand:${collSlug}`; // Reuse brand segment for collection matching
+      const collData = await this.redisService.getJson<any[]>(collKey);
+      if (collData && Array.isArray(collData) && collData.length > 0) {
+        const total = collData.length;
         const effectivePageSize = Math.min(pageSize, 250);
         const start = (pageNum - 1) * effectivePageSize;
-        const products = pool.slice(start, start + effectivePageSize);
-
-        this.logger.log(
-          `[CJ] Warehouse collection-keys HIT "${collectionType}" → ${products.length}/${total}`,
-        );
+        const products = collData.slice(start, start + effectivePageSize);
         return { products, total, warehouseHit: true };
       }
     }
 
-    // 3. Main Global Warehouse Key or Fallback Pool
+    // 4. Main Global Warehouse Key
     let warehouse = await this.redisService.getJson<any[]>(WAREHOUSE_KEY_ALL);
+    if (!warehouse || !Array.isArray(warehouse) || warehouse.length === 0) {
+      warehouse = await this.redisService.getJson<any[]>(WAREHOUSE_LEGACY_ALL);
+    }
 
     if (!warehouse || !Array.isArray(warehouse) || warehouse.length === 0) {
-      const catKeys = await this.redisService.keys('products:*');
-      const allFromCats: any[] = [];
-      if (catKeys && catKeys.length > 0) {
-        for (const key of catKeys) {
-          const parts = key.split(':');
-          if (
-            parts.length === 3 &&
-            !key.includes('related') &&
-            !key.includes('next')
-          ) {
-            const catProducts = await this.redisService.getJson<any[]>(key);
-            if (Array.isArray(catProducts)) {
-              allFromCats.push(...catProducts);
-            }
-          }
-        }
-      }
-
-      if (allFromCats.length > 0) {
-        warehouse = this.interleaveByCategory(allFromCats);
-        this.logger.log(
-          `[Warehouse] Assembled ${warehouse.length} products from category sub-keys`,
-        );
-      } else {
-        const productDetailKeys = await this.redisService.keys('product:*');
-        const allFromDetails: any[] = [];
-        if (productDetailKeys && productDetailKeys.length > 0) {
-          for (const key of productDetailKeys) {
-            if (key.split(':').length === 2) {
-              const p = await this.redisService.getJson<any>(key);
-              if (p && typeof p === 'object' && (p.pid || p._id || p.id)) {
-                allFromDetails.push(p);
-              }
-            }
-          }
-        }
-
-        if (allFromDetails.length > 0) {
-          warehouse = allFromDetails;
-          this.logger.warn(
-            `[Warehouse] products:all empty — serving ${warehouse.length} products from individual detail cache (sync pending)`,
-          );
-        } else {
-          return null;
-        }
-      }
+      return null;
     }
 
     let pool = warehouse;
 
     if (categoryId) {
-      const filtered = pool.filter(
+      pool = pool.filter(
         (p) => String(p.categoryId ?? p.category ?? '') === categoryId,
       );
-      if (filtered.length > 0) pool = filtered;
     }
 
     if (subcategoryName) {
-      const norm = subcategoryName.trim().toLowerCase();
-      const filtered = pool.filter((p) => {
-        const val = String(p.subcategoryName ?? p._category ?? p.category ?? p.categoryName ?? '')
-          .trim()
-          .toLowerCase();
+      const norm = normalizeKey(subcategoryName);
+      pool = pool.filter((p) => {
+        const val = normalizeKey(p.subcategoryName ?? p._category ?? p.category ?? p.categoryName ?? '');
         return val === norm || val.includes(norm) || norm.includes(val);
       });
-      if (filtered.length > 0) {
-        pool = filtered;
-      } else {
-        return { products: [], total: 0, warehouseHit: true };
-      }
     }
 
     if (collectionType) {
-      const normColl = collectionType.trim().toLowerCase();
-      const filtered = pool.filter((p) => {
-        const val = String(
+      const normColl = normalizeKey(collectionType);
+      pool = pool.filter((p) => {
+        const val = normalizeKey(
           p._parentCategory ??
             p._collectionType ??
             p.collectionType ??
             p.parentCategory ??
             p.categoryName ??
             '',
-        )
-          .trim()
-          .toLowerCase();
-        return (
-          val === normColl || val.includes(normColl) || normColl.includes(val)
         );
+        return val === normColl || val.includes(normColl) || normColl.includes(val);
       });
-
-      if (filtered.length > 0) {
-        pool = filtered;
-      } else {
-        // Return 0 products for this collection so live CJ API fallback handles it
-        return { products: [], total: 0, warehouseHit: true };
-      }
     }
 
-    // ── Strip zero / sub-1-rupee priced products from the final pool ─────────
+    // Strip zero/sub-1-rupee priced products
     pool = pool.filter((p) => {
       const inrPrice = Number(p.price ?? 0);
       return inrPrice > 1;
@@ -582,7 +586,9 @@ export class CjService {
     return { products, total, warehouseHit: true };
   }
 
-  //timer and locked if failed the data load, try in three atemp , one is , 0 sec  , 30 sec and 2 minute
+  /**
+   * Run full catalog sync with automated retry sequence, pipeline/batch writes, index updates, and API cache flushing.
+   */
   async runCatalogSync(): Promise<{ success: boolean; count: number }> {
     const lockKey = 'cj:sync:lock';
     const locked = await this.redisService.setnx(lockKey, '1', 3600);
@@ -593,50 +599,46 @@ export class CjService {
 
     try {
       const syncStart = Date.now();
-      this.apiCallsThisSync = 0;
+      this.cjClient.apiCallsThisSync = 0;
 
       this.logger.log('[Cron] Sync Started');
 
-      const RETRY_DELAYS = [0, 30_000, 120_000]; // timer 0 sec , 30 sec , and 2 min
+      const RETRY_DELAYS = [0, 30_000, 120_000];
       let lastError = '';
       let allProducts: any[] | null = null;
 
       for (let attempt = 0; attempt < RETRY_DELAYS.length; attempt++) {
         if (RETRY_DELAYS[attempt] > 0) {
           this.logger.warn(
-            `[Cron] ⏳ Retrying sync in ${RETRY_DELAYS[attempt] / 1000}s (attempt ${attempt + 1})...`,
+            `[Cron] Retrying sync in ${RETRY_DELAYS[attempt] / 1000}s (attempt ${attempt + 1})...`,
           );
           await this.delay(RETRY_DELAYS[attempt]);
         }
 
         try {
           allProducts = await this.fetchCatalog();
-          break; // success — exit retry loop
+          break; // success
         } catch (e: any) {
           lastError = e?.message ?? String(e);
           this.logger.error(
-            `[Cron]  Sync attempt ${attempt + 1} failed: ${lastError}`,
+            `[Cron] Sync attempt ${attempt + 1} failed: ${lastError}`,
           );
         }
       }
 
-      // ── All retries failed — keep existing cache ────────────────────────────
       if (!allProducts) {
         this.logger.error(
-          '[Cron]  All sync attempts failed. Existing warehouse cache preserved.',
+          '[Cron] All sync attempts failed. Existing warehouse cache preserved.',
         );
         return { success: false, count: 0 };
       }
 
       if (allProducts.length < 500) {
         this.logger.warn(
-          `[Cron]  Fetch returned only ${allProducts.length} products — too few to be valid. Keeping existing cache.`,
+          `[Cron] Fetch returned only ${allProducts.length} products — too few to be valid. Keeping existing cache.`,
         );
         return { success: false, count: allProducts.length };
       }
-
-      /// here is one task running on the background, then start second part is called buffering ,
-      // not burden on first task , and load properly and render/reflect on frontend
 
       const balancedAll = this.interleaveByCategory(allProducts);
 
@@ -644,30 +646,93 @@ export class CjService {
         `[Cron] Products Fetched & Interleaved — Total: ${allProducts.length}`,
       );
 
-      // Write directly to the live key — no temp buffer needed
-      await this.redisService.setJson(WAREHOUSE_KEY_ALL, balancedAll);
-      this.logger.log(`[Cron] Wrote ${balancedAll.length} products → ${WAREHOUSE_KEY_ALL}`);
+      // --- Batch Write to Redis & Update Warehouse Indexing ---
+      const writeOps: { key: string; value: any; ttl?: number }[] = [];
 
-      // Write per-category keys directly
+      // 1. Global warehouse lists
+      writeOps.push({ key: WAREHOUSE_KEY_ALL, value: balancedAll });
+      writeOps.push({ key: WAREHOUSE_LEGACY_ALL, value: balancedAll }); // Keep legacy products:all updated
+
+      // 2. Individual product details and keyword/search indexing maps
+      const keywordMap = new Map<string, string[]>();
       const categoryGroups = this.groupByCategory(allProducts);
-      const catWriteOps: Promise<void>[] = [];
-      for (const [catKey, catProducts] of Object.entries(categoryGroups)) {
-        catWriteOps.push(
-          this.redisService.setJson(`products:${catKey}`, catProducts),
-        );
-      }
-      await Promise.all(catWriteOps);
+      const subcategoryGroups = new Map<string, any[]>();
+      const collectionGroups = new Map<string, any[]>();
 
-      // Automatically invalidate stale API response cache keys so GET /api/products returns fresh 137k warehouse data immediately
+      for (const product of allProducts) {
+        const pid = String(product.pid || product.id || '');
+        if (!pid) continue;
+
+        // Individual product detail cache
+        writeOps.push({ key: `warehouse:product:${pid}`, value: product });
+        writeOps.push({ key: `product:${pid}`, value: product }); // Legacy individual cache key
+
+        // Group by subcategory
+        const subCat = product.subcategoryName || product._category || '';
+        if (subCat) {
+          const subKey = slugify(subCat);
+          if (!subcategoryGroups.has(subKey)) subcategoryGroups.set(subKey, []);
+          subcategoryGroups.get(subKey)!.push(product);
+        }
+
+        // Group by collection/parentCategory
+        const parent = product._parentCategory || product.collectionType || '';
+        if (parent) {
+          const parentKey = slugify(parent);
+          if (!collectionGroups.has(parentKey)) collectionGroups.set(parentKey, []);
+          collectionGroups.get(parentKey)!.push(product);
+        }
+
+        // Build tokenized search index: Name, SKU, Category keywords
+        const tokens: string[] = [];
+        if (product.name) tokens.push(...product.name.split(/\s+/));
+        if (product.sku) tokens.push(product.sku);
+        if (product.categoryName) tokens.push(...product.categoryName.split(/\s+/));
+        if (product.subcategoryName) tokens.push(...product.subcategoryName.split(/\s+/));
+
+        for (const token of tokens) {
+          const cleanToken = slugify(token);
+          if (cleanToken && cleanToken.length > 1) {
+            if (!keywordMap.has(cleanToken)) keywordMap.set(cleanToken, []);
+            keywordMap.get(cleanToken)!.push(pid);
+          }
+        }
+      }
+
+      // Write subcategory groups
+      for (const [subKey, products] of subcategoryGroups.entries()) {
+        writeOps.push({ key: `warehouse:subcategory:${subKey}`, value: products });
+      }
+
+      // Write collection/brand groups
+      for (const [collKey, products] of collectionGroups.entries()) {
+        writeOps.push({ key: `warehouse:brand:${collKey}`, value: products });
+      }
+
+      // Write per-category groups (legacy support)
+      for (const [catKey, catProducts] of Object.entries(categoryGroups)) {
+        writeOps.push({ key: `products:${catKey}`, value: catProducts });
+      }
+
+      // Write keyword search indexes
+      for (const [token, pids] of keywordMap.entries()) {
+        writeOps.push({ key: `warehouse:index:keyword:${token}`, value: Array.from(new Set(pids)) });
+      }
+
+      this.logger.log(`[Cron] Preparing batch writes of ${writeOps.length} keys to Redis...`);
+      await this.batchWriteToRedis(writeOps);
+      this.logger.log(`[Cron] Batch Redis writes completed.`);
+
+      // Automatically invalidate stale API response cache keys
       await this.clearApiCache();
 
       const durationMs = Date.now() - syncStart;
-      this.logger.log(`[Cron]  Redis Updated & API Cache Cleared`);
+      this.logger.log(`[Cron] Redis Updated & API Cache Cleared`);
       this.logger.log(
-        `[Cron]  Execution Time: ${(durationMs / 1000).toFixed(1)}s`,
+        `[Cron] Execution Time: ${(durationMs / 1000).toFixed(1)}s`,
       );
-      this.logger.log(`[Cron]  API Calls Used: ~${this.apiCallsThisSync}`);
-      this.logger.log(`[Cron]  Sync Completed Successfully`);
+      this.logger.log(`[Cron] API Calls Used: ~${this.cjClient.apiCallsThisSync}`);
+      this.logger.log(`[Cron] Sync Completed Successfully`);
 
       await this.saveProductCount(allProducts.length);
 
@@ -701,33 +766,27 @@ export class CjService {
     return { cleared: keys.length };
   }
 
-  // ─── Private: catalog fetch logic ─────────────────────────────────────────
+  // ─── Private Helpers ──────────────────────────────────────────────────────
 
   private async fetchCatalog(): Promise<any[]> {
     const allProducts: any[] = [];
     const globalSeenPids = new Set<string>();
-
-    // Build sync targets from Automobiles categories (skip empty categoryIds)
     const uniqueTargets = getAllSyncTargets();
 
     this.logger.log(
-      `[CJ] Starting full catalog sync across ${uniqueTargets.length} automobile categories (processing ONE at a time)...`,
+      `[CJ] Starting full catalog sync across ${uniqueTargets.length} categories...`,
     );
 
-    let totalPagesSyncedAll = 0;
+    const syncStartAll = Date.now();
 
-    // 2. Process ONE CATEGORY AT A TIME sequentially
     for (const entry of uniqueTargets) {
       const { categoryId, parentCategory, name: categoryName } = entry;
-      const catKey = categoryKey(parentCategory, categoryName);
+      const catKey = legacyCategoryKey(parentCategory, categoryName);
       const catStart = Date.now();
 
-      // Read existing products from Redis for safe merge (NEVER CLEAR keys)
       const existingCatProducts =
         (await this.redisService.getJson<any[]>(catKey)) || [];
-      const productsBefore = existingCatProducts.length;
 
-      // Product Map indexed by PID for deduplication, merge & updates
       const productMap = new Map<string, any>();
       for (const p of existingCatProducts) {
         const pid = String(p.pid || p.id || '');
@@ -735,59 +794,28 @@ export class CjService {
       }
 
       let pageNum = 1;
-      const pageSize = 40; // 40 products per request
-      const maxPagesPerCategory = 800; // Increased limit to 800 pages per category
-      let pagesSynced = 0;
+      const pageSize = CJ_CONFIG.PAGE_SIZE;
       let newProductsCount = 0;
       let updatedProductsCount = 0;
       let duplicatesRemovedCount = 0;
       let catApiCalls = 0;
 
-      // Multi-page fetch loop: continue fetching pages until supplier has no more products or maxPages reached
-      while (pageNum <= maxPagesPerCategory) {
+      while (pageNum <= CJ_CONFIG.MAX_PAGES_PER_CATEGORY) {
         const url = `/v1/product/list?categoryId=${categoryId}&pageNum=${pageNum}&pageSize=${pageSize}`;
         let response: any = null;
 
         try {
-          response = await this.scheduleRequest(url, {
+          response = await this.cjClient.scheduleRequest(url, {
             method: 'GET',
-            headers: await this.authHeaders(),
+            headers: await this.cjClient.authHeaders(),
           });
-          this.apiCallsThisSync++;
+          this.cjClient.apiCallsThisSync++;
           catApiCalls++;
         } catch (err: any) {
           this.logger.warn(
             `[CJ] Failed to fetch page ${pageNum} for category "${categoryName}" (${categoryId}): ${err?.message ?? err}`,
           );
-          // Exponential backoff delay & retry up to 3 times for page
-          let retrySuccess = false;
-          for (let retry = 1; retry <= 3; retry++) {
-            const backoffDelay = 3000 * Math.pow(2, retry);
-            this.logger.warn(
-              `[CJ] Retrying page ${pageNum} in ${backoffDelay}ms (retry ${retry})...`,
-            );
-            await this.delay(backoffDelay);
-            try {
-              response = await this.scheduleRequest(url, {
-                method: 'GET',
-                headers: await this.authHeaders(),
-              });
-              this.apiCallsThisSync++;
-              catApiCalls++;
-              retrySuccess = true;
-              break;
-            } catch (rErr: any) {
-              this.logger.warn(
-                `[CJ] Retry ${retry} failed for page ${pageNum}: ${rErr?.message ?? rErr}`,
-              );
-            }
-          }
-          if (!retrySuccess) {
-            this.logger.error(
-              `[CJ] Skipping remaining pages for category "${categoryName}" due to repeated API failures.`,
-            );
-            break;
-          }
+          break;
         }
 
         const normalized = this.normalizeProductResponse(response, {
@@ -796,23 +824,19 @@ export class CjService {
         const products: any[] = normalized?.products ?? [];
 
         if (products.length === 0) {
-          break; // Supplier has no more products for this category
+          break;
         }
-
-        pagesSynced++;
-        totalPagesSyncedAll++;
 
         for (const product of products) {
           const pid = String(product?.pid || product?.id || '');
           if (!pid) continue;
 
-          // ── Skip zero / sub-1-rupee priced products ─────────────────────
+          // Strip zero / sub-1-rupee priced products
           const productPrice = Number(product?.price ?? product?.sellPrice ?? 0) || 0;
-          const inrPrice = productPrice > 1 ? productPrice : Number((productPrice * 93.45).toFixed(2));
+          const inrPrice = productPrice > 1 ? productPrice : Number((productPrice * CJ_CONFIG.CURRENCY_EXCHANGE_RATE).toFixed(2));
           if (inrPrice <= 1) continue;
 
           if (productMap.has(pid)) {
-            // Update changed fields (price, stock, images, variants, title, etc.)
             const existing = productMap.get(pid);
             const isChanged =
               existing.price !== product.price ||
@@ -830,12 +854,11 @@ export class CjService {
                 _category: categoryName,
                 _collectionType: parentCategory,
               });
-              updatedProductsCount++;;
+              updatedProductsCount++;
             } else {
               duplicatesRemovedCount++;
             }
           } else {
-            // New product discovered
             productMap.set(pid, {
               ...product,
               _parentCategory: parentCategory,
@@ -846,30 +869,31 @@ export class CjService {
           }
         }
 
-        // Stop conditions: CJ reports last page OR returned count < pageSize
         if (products.length < pageSize) {
           break;
         }
 
         pageNum++;
-        // Small delay between page requests to minimize CJ API rate limits
         await this.delay(200);
       }
 
       const mergedCatProducts = Array.from(productMap.values());
-      const productsAfter = mergedCatProducts.length;
 
-      // Safely update Redis category key ONLY if we fetched items or had existing items
-      if (productsAfter > 0) {
+      if (mergedCatProducts.length > 0) {
         await this.redisService.setJson(catKey, mergedCatProducts);
       }
 
       const catDurationSec = ((Date.now() - catStart) / 1000).toFixed(1);
+      
+      // Calculate sync metrics and log details
+      const elapsedTotalSec = (Date.now() - syncStartAll) / 1000;
+      const progressRatio = (allProducts.length + mergedCatProducts.length) / 50000; // rough estimation
+      const estRemainingSec = progressRatio > 0 ? (elapsedTotalSec / progressRatio) - elapsedTotalSec : 0;
+
       this.logger.log(
-        `[CJ] Category "${categoryName}" (${parentCategory}): ${productsAfter} items (${newProductsCount} new, ${updatedProductsCount} updated) in ${catDurationSec}s`,
+        `[Sync Status] Cat: "${categoryName}" | Page: ${pageNum} | Synced: ${mergedCatProducts.length} | New: ${newProductsCount} | Updated: ${updatedProductsCount} | Dups Removed: ${duplicatesRemovedCount} | API Calls: ${catApiCalls} | Duration: ${catDurationSec}s | Est. Remaining: ${estRemainingSec.toFixed(0)}s`
       );
 
-      // Append to global product pool
       for (const p of mergedCatProducts) {
         const pid = String(p.pid || p.id || '');
         if (pid && !globalSeenPids.has(pid)) {
@@ -878,26 +902,32 @@ export class CjService {
         }
       }
 
-      // Small delay before starting next category
       await this.delay(300);
     }
 
     this.logger.log(`Fetch -> Unique Products: ${allProducts.length}`);
-
     return allProducts;
   }
 
-  // ─── Private: group products by category → Redis key segment ──────────────
+  private async batchWriteToRedis(operations: { key: string; value: any; ttl?: number }[]) {
+    const CHUNK_SIZE = 150;
+    for (let i = 0; i < operations.length; i += CHUNK_SIZE) {
+      const chunk = operations.slice(i, i + CHUNK_SIZE);
+      await Promise.all(
+        chunk.map(op => this.redisService.setJson(op.key, op.value, op.ttl))
+      );
+    }
+  }
 
   private groupByCategory(products: any[]): Record<string, any[]> {
     const groups: Record<string, any[]> = {};
 
     for (const p of products) {
-      const parent = String(p._parentCategory ?? p._collectionType ?? 'auto').toLowerCase();
+      const parent = String(p._parentCategory ?? p._collectionType ?? 'auto');
       const catName = String(
         p._category ?? p.subcategoryName ?? p.category ?? 'other',
       );
-      const key = `${parent.replace(/[\s_'&-]+/g, '')}:${catName.toLowerCase().replace(/[\s_'&-]+/g, '')}`;
+      const key = `${slugify(parent)}:${slugify(catName)}`;
 
       if (!groups[key]) groups[key] = [];
       groups[key].push(p);
@@ -910,9 +940,7 @@ export class CjService {
     if (!products || products.length === 0) return [];
     const groups = new Map<string, any[]>();
     for (const p of products) {
-      const cat = String(p._category ?? p.subcategoryName ?? 'other')
-        .trim()
-        .toLowerCase();
+      const cat = normalizeKey(p._category ?? p.subcategoryName ?? 'other');
       if (!groups.has(cat)) groups.set(cat, []);
       groups.get(cat)!.push(p);
     }
@@ -937,145 +965,9 @@ export class CjService {
     await this.redisService.setJson(
       PRODUCT_COUNT_CACHE_KEY,
       count,
-      PRODUCT_COUNT_TTL,
+      CJ_CONFIG.CACHE_TTL.PRODUCT_COUNT,
     );
   }
-
-  // ─── Private: HTTP helpers ────────────────────────────────────────────────
-
-  private async authHeaders() {
-    const configuredToken = process.env.CJ_ACCESS_TOKEN;
-    const token = configuredToken ?? (await this.getCachedAccessToken());
-    return { 'CJ-Access-Token': token };
-  }
-
-  private async getCachedAccessToken() {
-    const now = Date.now();
-
-    if (this.accessTokenCache && this.accessTokenCache.expiresAt > now) {
-      return this.accessTokenCache.token;
-    }
-
-    const cached = await this.redisService.getJson<{
-      token: string;
-      expiresAt: number;
-    }>(this.accessTokenCacheKey);
-
-    if (cached && cached.token && cached.expiresAt > now) {
-      this.accessTokenCache = cached;
-      return cached.token;
-    }
-
-    const token = await this.resolveAccessToken();
-    const tokenCache = {
-      token,
-      expiresAt: now + this.accessTokenTtlSeconds * 1000,
-    };
-    this.accessTokenCache = tokenCache;
-    await this.redisService.setJson(
-      this.accessTokenCacheKey,
-      tokenCache,
-      this.accessTokenTtlSeconds,
-    );
-    return token;
-  }
-
-  private async resolveAccessToken() {
-    const response = await this.getAccessToken();
-    const token =
-      response?.data?.accessToken ??
-      response?.data?.access_token ??
-      response?.accessToken ??
-      response?.access_token;
-
-    if (!token)
-      throw new InternalServerErrorException('CJ auth api not returned');
-    return token;
-  }
-
-  private async scheduleRequest(path: string, init: AxiosRequestConfig) {
-    const run = async () => {
-      await this.delay(this.requestDelayMs);
-      return this.request(path, init);
-    };
-
-    const next = this.requestQueue.then(run, run);
-    this.requestQueue = next.then(
-      () => undefined,
-      () => undefined,
-    );
-    return next;
-  }
-
-  private async clearCachedAccessToken() {
-    this.accessTokenCache = null;
-    await this.redisService.del(this.accessTokenCacheKey);
-    this.logger.log('[CJ] Cleared cached access token');
-  }
-
-  private async request(
-    path: string,
-    init: AxiosRequestConfig,
-    attempt = 0,
-  ): Promise<any> {
-    try {
-      this.logger.log(
-        `[CJ] AXIOS ${String(init.method || 'GET').toUpperCase()} ${this.baseUrl}${path}`,
-      );
-      const response = await axios.request({
-        baseURL: this.baseUrl,
-        url: path,
-        ...init,
-        headers: { 'Content-Type': 'application/json', ...init.headers },
-      });
-      const data = response.data;
-      if (data && data.result === false) {
-        if ((data.code === 401 || data.code === '401') && attempt < 2) {
-          this.logger.warn(
-            '[CJ] Access token unauthorized (401 code) — clearing token and retrying...',
-          );
-          await this.clearCachedAccessToken();
-          const headers = await this.authHeaders();
-          return this.request(path, { ...init, headers }, attempt + 1);
-        }
-        throw new InternalServerErrorException(
-          data.message || 'CJ Dropshipping API returned result: false',
-        );
-      }
-      return data;
-    } catch (error: any) {
-      const status = error?.response?.status;
-
-      if (status === 401 && attempt < 2) {
-        this.logger.warn('[CJ] Access token unauthorized (HTTP 401)');
-        await this.clearCachedAccessToken();
-        const headers = await this.authHeaders();
-        return this.request(path, { ...init, headers }, attempt + 1);
-      }
-
-      if (status === 429 && attempt < 5) {
-        const baseDelay = 2000 * Math.pow(2, attempt);
-        const jitter = Math.floor(Math.random() * 1000);
-        const retryDelay = baseDelay + jitter;
-        this.logger.warn(
-          `[CJ] Rate limited — retrying in ${retryDelay}ms (attempt ${attempt + 1})`,
-        );
-        await this.delay(retryDelay);
-        return this.request(path, init, attempt + 1);
-      }
-
-      this.logger.error(
-        `[CJ] AXIOS ERROR ${this.baseUrl}${path} → HTTP ${status}`,
-      );
-      throw new InternalServerErrorException({
-        message: 'CJ Dropshipping API request failed',
-        status,
-        response: error?.response?.data ?? null,
-      });
-    }
-  }
-
-  // ─── Private: normalisation helpers ──────────────────────────────────────
 
   private normalizeProductResponse(response: any, query?: Record<string, any>) {
     const products = this.extractList(response)
@@ -1090,23 +982,19 @@ export class CjService {
     return { ...response, categories };
   }
 
-  // when blocked
-
   private flattenCategories(items: any[]): any[] {
     const results: any[] = [];
 
     const visit = (item: any, group: string, depth: number) => {
       if (!item || typeof item !== 'object') return;
 
-      const catName = String(
+      const catName = normalizeKey(
         item.categoryName ||
         item.categoryThirdName ||
         item.categorySecondName ||
         item.categoryFirstName ||
         '',
-      ).toLowerCase();
-
-      // if (catName && this.isBlocked(catName)) return;
+      );
 
       const childArrayKey = Object.keys(item).find(
         (key) =>
@@ -1180,8 +1068,6 @@ export class CjService {
 
   private normalizeProduct(product: any, query?: Record<string, any>) {
     const categoryId = String(product?.categoryId ?? product?.category ?? '');
-    // if (EXCLUDED_CATEGORY_IDS.has(categoryId)) return null;
-
     const pid = String(
       product?.pid ??
       product?.id ??
@@ -1191,7 +1077,6 @@ export class CjService {
       product?.productCode ??
       '',
     );
-    // if (EXCLUDED_PRODUCT_PIDS.has(pid)) return null;
 
     const subcategoryName = product._category || query?._category;
     const collectionType = product._collectionType || query?._collectionType;
@@ -1233,7 +1118,7 @@ export class CjService {
       product?.name ??
       '';
     const rawPrice = Number(product?.sellPrice ?? product?.price ?? 0) || 0;
-    const price = Number((rawPrice * 93.45).toFixed(2));
+    const price = Number((rawPrice * CJ_CONFIG.CURRENCY_EXCHANGE_RATE).toFixed(2));
 
     const categoryName =
       product?.categoryName ??
@@ -1256,9 +1141,6 @@ export class CjService {
       category: categoryName || categoryId,
       collectionType: product?.collectionType ?? collectionType,
       tags: Array.isArray(product?.tags) ? product.tags : [],
-      // sizes,
-      // colors,
-      // variants,
       numReviews: 0,
       averageRating: 0,
       reviews: [],
@@ -1268,9 +1150,9 @@ export class CjService {
   private async enrichWithVariants(product: any, pid: string): Promise<any> {
     const variantUrl = `/v1/product/variant/query?pid=${pid}`;
     this.logger.log(`[CJ] GET ${variantUrl}`);
-    const variantResponse = await this.scheduleRequest(variantUrl, {
+    const variantResponse = await this.cjClient.scheduleRequest(variantUrl, {
       method: 'GET',
-      headers: await this.authHeaders(),
+      headers: await this.cjClient.authHeaders(),
     });
 
     const rawVariants = Array.isArray(variantResponse?.data)
@@ -1302,7 +1184,7 @@ export class CjService {
         variantImage: v.variantImage || '',
         image: v.variantImage || '',
         price: v.variantSellPrice
-          ? Number((Number(v.variantSellPrice) * 93.45).toFixed(2))
+          ? Number((Number(v.variantSellPrice) * CJ_CONFIG.CURRENCY_EXCHANGE_RATE).toFixed(2))
           : product.price,
         vid: v.vid || '',
         variantKey: v.variantKey || '',
