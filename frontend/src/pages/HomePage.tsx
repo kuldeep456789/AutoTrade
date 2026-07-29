@@ -226,9 +226,9 @@ const HomePage = () => {
         <div className="max-w-[1920px] mx-auto px-6 sm:px-10 lg:px-16">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 sm:mb-10 gap-4">
             <div>
-              <p className="text-red-500 font-bold tracking-[0.2em] text-xs sm:text-sm uppercase mb-2">Shop By Category</p>
+              {/* <p className="text-red-500 font-bold tracking-[0.2em] text-xs sm:text-sm uppercase mb-2">Shop By Category</p> */}
               <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white uppercase">
-                Explore Premium Collections
+                Explore Catogries
               </h2>
             </div>
             <Link
@@ -284,7 +284,6 @@ const HomePage = () => {
           <div className="max-w-[1920px] mx-auto px-6 sm:px-10 lg:px-16 py-8 sm:py-10 lg:py-12">
             <div className="flex items-end justify-between mb-6 sm:mb-8">
               <div>
-                <p className="text-red-500 font-bold tracking-[0.2em] text-xs uppercase mb-1">Featured Store</p>
                 <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight leading-none text-white">COLLECTION</h2>
               </div>
             </div>

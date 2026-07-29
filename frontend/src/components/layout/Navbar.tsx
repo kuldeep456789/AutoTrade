@@ -15,91 +15,7 @@ import { formatINR } from '../../lib/currency';
 import MiniCart from './MiniCart';
 
 import ThemeToggle from '../theme/ThemeToggle';
-
-interface SubItem { label: string; to: string; }
-interface NavCategory {
-  label: string;
-  to: string;
-  subs: SubItem[];
-}
-
-const navCategories: NavCategory[] = [
-  {
-    label: 'Exterior Accessories',
-    to: '/collections/exterior-accessories',
-    subs: [
-      { label: 'Car Stickers', to: '/collections/car-stickers' },
-      { label: 'Other Exterior Accessories', to: '/collections/other-exterior-accessories' },
-      { label: 'Car Covers', to: '/collections/car-covers' },
-    ],
-  },
-  {
-    label: 'Interior Accessories',
-    to: '/collections/interior-accessories',
-    subs: [
-      { label: 'Floor Mats', to: '/collections/floor-mats' },
-      { label: 'Car Aromatherapy', to: '/collections/car-aromatherapy' },
-      { label: 'Car Perfume', to: '/collections/car-perfume' },
-      { label: 'Key Case for Car', to: '/collections/key-case-for-car' },
-      { label: 'Steering Covers', to: '/collections/steering-covers' },
-      { label: 'Automobiles Seat Covers', to: '/collections/automobiles-seat-covers' },
-      { label: 'Stowing Tidying', to: '/collections/stowing-tidying' },
-    ],
-  },
-  {
-    label: 'Tools, Maintenance & Care',
-    to: '/collections/tools-maintenance-care',
-    subs: [
-      { label: 'Car Washer', to: '/collections/car-washer' },
-      { label: 'Diagnostic Tools', to: '/collections/diagnostic-tools' },
-      { label: 'Paint Care', to: '/collections/paint-care' },
-      { label: 'Other Maintenance Products', to: '/collections/other-maintenance-products' },
-    ],
-  },
-  {
-    label: 'Car Electronics',
-    to: '/collections/car-electronics',
-    subs: [
-      { label: 'Vehicle Camera', to: '/collections/vehicle-camera' },
-      { label: 'DVR & Dash Camera', to: '/collections/dvr-dash-camera' },
-      { label: 'Car Monitors', to: '/collections/car-monitors' },
-      { label: 'Vehicle GPS', to: '/collections/vehicle-gps' },
-      { label: 'Car Mirror Video', to: '/collections/car-mirror-video' },
-      { label: 'Car Radios', to: '/collections/car-radios' },
-      { label: 'GPS Trackers', to: '/collections/gps-trackers' },
-      { label: 'Car Multimedia Player', to: '/collections/car-multimedia-player' },
-      { label: 'Alarm Systems & Security', to: '/collections/alarm-systems-security' },
-      { label: 'Jump Starter', to: '/collections/jump-starter' },
-    ],
-  },
-  {
-    label: 'Motorcycle Accessories & Parts',
-    to: '/collections/motorcycle-accessories',
-    subs: [
-      { label: 'Lighting', to: '/collections/motorcycle-lighting' },
-      { label: 'Exhaust & Exhaust Systems', to: '/collections/exhaust-systems' },
-      { label: 'Motor Brake System', to: '/collections/motor-brake-system' },
-      { label: 'Motorcycle Seat Covers', to: '/collections/motorcycle-seat-covers' },
-      { label: 'Other Motorcycle Accessories', to: '/collections/other-motorcycle-accessories' },
-      { label: 'Helmet Headset', to: '/collections/helmet-headset' },
-      { label: 'Body & Frame', to: '/collections/body-frame' },
-    ],
-  },
-  {
-    label: 'Auto Replacement Parts',
-    to: '/collections/auto-replacement-parts',
-    subs: [
-      { label: 'Interior Parts', to: '/collections/interior-parts' },
-      { label: 'Car Brake System', to: '/collections/car-brake-system' },
-      { label: 'Spark Plugs & Ignition System', to: '/collections/spark-plugs-ignition' },
-      { label: 'Automobiles Sensors', to: '/collections/automobiles-sensors' },
-      { label: 'Exterior Parts', to: '/collections/exterior-parts' },
-      { label: 'Other Replacement Parts', to: '/collections/other-replacement-parts' },
-      { label: 'Car Lights', to: '/collections/car-lights' },
-      { label: 'Windscreen Wipers & Windows', to: '/collections/windscreen-wipers-windows' },
-    ],
-  },
-];
+import { NAV_CATEGORIES as navCategories } from '../../config/categories';
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -225,18 +141,23 @@ const Navbar = () => {
     const qLower = debouncedQuery.toLowerCase();
     const toSlug = (n: string) => n.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
-    categoriesData.forEach((cat: any) => {
-      if (cat.name?.toLowerCase().includes(qLower) || cat.group?.toLowerCase().includes(qLower)) {
-        let slug = toSlug(cat.name);
-        if (cat.group?.toLowerCase() === 'men' && slug === 'jeans') {
-          slug = 'men-jeans';
-        }
+    navCategories.forEach((cat) => {
+      if (cat.label.toLowerCase().includes(qLower)) {
         suggestionList.push({
           type: 'category',
-          label: `${cat.group} > ${cat.name}`,
-          to: `/collections/${cat.group.toLowerCase()}/${slug}`
+          label: cat.label,
+          to: cat.to,
         });
       }
+      cat.subs.forEach((sub) => {
+        if (sub.label.toLowerCase().includes(qLower)) {
+          suggestionList.push({
+            type: 'category',
+            label: `${cat.label} > ${sub.label}`,
+            to: sub.to,
+          });
+        }
+      });
     });
 
     products.forEach((p: any) => {

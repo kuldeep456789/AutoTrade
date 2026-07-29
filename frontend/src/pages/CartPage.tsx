@@ -13,26 +13,6 @@ import { formatINR } from '../lib/currency';
 import { motion, AnimatePresence } from 'framer-motion';
 import MinimumOrderModal from '../components/checkout/MinimumOrderModal';
 
-const getItemDescription = (name: string) => {
-  const n = name.toLowerCase();
-  if (n.includes('shirt') || n.includes('top') || n.includes('tee')) {
-    return { desc: "Breathable cotton-blend top for all-day comfort.", fact: "Fun Fact: T-shirts evolved from 19th-century undergarments." };
-  }
-  if (n.includes('jeans') || n.includes('denim') || n.includes('pants') || n.includes('trousers')) {
-    return { desc: "Durable premium fabric with an optimal stretch fit.", fact: "Fun Fact: The first denim pants were reinforced with copper rivets." };
-  }
-  if (n.includes('dress') || n.includes('gown')) {
-    return { desc: "Elegant silhouette crafted from luxurious flowing fabrics.", fact: "Fun Fact: The 'little black dress' was popularized in the 1920s." };
-  }
-  if (n.includes('jacket') || n.includes('coat') || n.includes('hoodie') || n.includes('sweater')) {
-    return { desc: "Weather-ready outerwear with superior thermal insulation.", fact: "Fun Fact: The modern zipper was first used widely on jackets in the 1930s." };
-  }
-  if (n.includes('shoe') || n.includes('sneaker') || n.includes('boot')) {
-    return { desc: "Ergonomic footwear designed for maximum support and style.", fact: "Fun Fact: Sneakers got their name because their rubber soles make them quiet." };
-  }
-  return { desc: "High-quality material offering a perfect blend of style and durability.", fact: "Fun Fact: Fashion is one of the world's oldest and largest industries." };
-};
-
 const CartPage = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -159,7 +139,7 @@ const CartPage = () => {
                   {cartItems.reduce((sum, i) => sum + i.qty, 0)} {cartItems.reduce((sum, i) => sum + i.qty, 0) === 1 ? 'Item' : 'Items'}
                 </p>
               </div>
-              <Link to="/collections/men" className="flex items-center gap-1 text-[13px] font-semibold text-zinc-500 hover:text-[hsl(var(--foreground))] cursor-pointer transition-colors">
+              <Link to="/collections/exterior-accessories" className="flex items-center gap-1 text-[13px] font-semibold text-zinc-500 hover:text-[hsl(var(--foreground))] cursor-pointer transition-colors">
                 Continue Shopping <ChevronRight size={14} strokeWidth={2} />
               </Link>
             </div>
@@ -199,34 +179,16 @@ const CartPage = () => {
                             <Link to={`/product/${item._id}`} className="text-[18px] sm:text-[20px] font-semibold leading-tight block truncate hover:underline">
                               {item.name}
                             </Link>
-                            <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5 text-[13px] text-zinc-500">
-                              <span>Color: <span className="text-[hsl(var(--foreground))] font-medium">{item.variant.color}</span></span>
-                              <span>Size: <span className="text-[hsl(var(--foreground))] font-medium">{item.variant.size}</span></span>
-                            </div>
-
-                            {/* Description & Fact */}
-                            {(() => {
-                              const info = getItemDescription(item.name);
-                              return (
-                                <div className="mt-2 space-y-1">
-                                  <p className="text-[12px] text-zinc-600 dark:text-zinc-400 italic">"{info.desc}"</p>
-                                  <p className="text-[11px] font-medium text-blue-600 dark:text-blue-400 flex items-center gap-1">
-                                    <span className="w-1 h-1 rounded-full bg-blue-600 dark:bg-blue-400"></span>
-                                    {info.fact}
-                                  </p>
-                                </div>
-                              );
-                            })()}
-
-                            {/* Rating */}
-                            <div className="flex items-center gap-1.5 mt-2.5">
-                              <div className="flex items-center gap-0.5">
-                                {[1, 2, 3, 4, 5].map((s) => (
-                                  <Star key={s} size={13} strokeWidth={1.5} fill="#f59e0b" className="text-amber-500" />
-                                ))}
+                            {item.variant && (item.variant.color !== 'Default' || item.variant.size !== 'Standard') && (
+                              <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5 text-[13px] text-zinc-500">
+                                {item.variant.color && item.variant.color !== 'Default' && (
+                                  <span>Variant: <span className="text-[hsl(var(--foreground))] font-medium">{item.variant.color}</span></span>
+                                )}
+                                {item.variant.size && item.variant.size !== 'Standard' && (
+                                  <span>Option: <span className="text-[hsl(var(--foreground))] font-medium">{item.variant.size}</span></span>
+                                )}
                               </div>
-                              <span className="text-[12px] text-zinc-500 font-medium">(245 Reviews)</span>
-                            </div>
+                            )}
                           </div>
                           <span className="text-[18px] sm:text-[20px] font-bold shrink-0">{formatINR(item.price)}</span>
                         </div>

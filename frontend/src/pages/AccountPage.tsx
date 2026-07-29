@@ -53,11 +53,11 @@ const AccountPage = () => {
   const [showEditAddressModal, setShowEditAddressModal] = useState(false);
   const [addressModalTitle, setAddressModalTitle] = useState('Edit Address');
   const [selectedAddress, setSelectedAddress] = useState<AddressData>({
-    name: 'Kuldeep Vyas',
-    line1: '19 Residency Road',
-    line2: 'Bengaluru, Karnataka 560025',
+    name: userInfo?.name || '',
+    line1: '',
+    line2: '',
     country: 'India',
-    phone: '+91 98765 43210'
+    phone: userInfo?.phone || '',
   });
 
   const currentUserId = userInfo?._id || userInfo?.id;

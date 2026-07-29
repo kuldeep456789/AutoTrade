@@ -45,16 +45,6 @@ export class AuthController {
     );
   }
 
-  @Post('send-mobile-otp')
-  sendMobileOtp(@Body() body: { phone: string }) {
-    return this.authService.sendMobileOtp(body.phone);
-  }
-
-  @Post('verify-mobile-otp')
-  verifyMobileOtp(@Body() body: { phone: string; code: string }) {
-    return this.authService.verifyMobileOtp(body.phone, body.code);
-  }
-
   @Post('send-email-otp')
   sendEmailOtp(@Body() body: { email: string }) {
     return this.authService.sendEmailOtp(body.email);

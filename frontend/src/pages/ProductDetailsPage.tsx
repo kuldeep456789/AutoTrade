@@ -25,12 +25,8 @@ const normalizeSlug = (value: string) =>
 
 // Mock review data generator seeded per product
 const MOCK_REVIEWS = [
-  { user: 'Rahul M.', rating: 5, comment: 'Amazing quality! The fabric is super soft and the fit is perfect. Got so many compliments.', date: '2 days ago', helpful: 24 },
-  { user: 'Priya S.', rating: 4, comment: 'Great product overall. Runs slightly large so size down. Color is exactly as shown.', date: '1 week ago', helpful: 17 },
-  // { user: 'Arjun K.', rating: 5, comment: 'Best streetwear brand! This is my 4th purchase and quality never disappoints. 10/10.', date: '2 weeks ago', helpful: 31 },
-  // { user: 'Sneha R.', rating: 4, comment: 'Fast delivery and well packaged. The print quality is excellent, washed twice and still looks new.', date: '3 weeks ago', helpful: 12 },
-  // { user: 'Dev T.', rating: 3, comment: 'Good product but shipping took longer than expected. The fit is oversized as described.', date: '1 month ago', helpful: 8 },
-  // { user: 'Meera L.', rating: 5, comment: 'Love love love! The graphic print is vibrant and the cotton is breathable. Perfect summer wear.', date: '1 month ago', helpful: 19 },
+  { user: 'Rahul M.', rating: 5, comment: 'Amazing build quality! Fits perfectly on my vehicle and works as expected.', date: '2 days ago', helpful: 24 },
+  { user: 'Priya S.', rating: 4, comment: 'Great automotive product overall. Easy installation and premium finish.', date: '1 week ago', helpful: 17 },
 ];
 
 const ProductFeaturesAndSpecs = ({ product }: { product: any }) => {
@@ -254,10 +250,6 @@ const ProductDetailsPage = () => {
       : [...new Set(variants.map((v: any) => v.color).filter(Boolean))];
 
   const productName = String(product?.name || product?.title || '').trim();
-
-  console.log("Product:", product);
-  console.log("Variants:", product?.variants);
-  console.log("Colors:", colors);
 
   const discountPct =
     product.discountPrice && product.price > product.discountPrice

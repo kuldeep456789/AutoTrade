@@ -4,7 +4,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import * as bcrypt from 'bcrypt';
 import { UsersService } from '../users/users.service';
 import { AuthService } from './auth.service';
-import { TwilioService } from './services/twilio.service';
 import { MailService } from '../mail/mail.service';
 import { OtpStoreService } from './services/otp-store.service';
 
@@ -23,7 +22,6 @@ describe('AuthService', () => {
     verifyAsync: jest.fn(),
   };
 
-  const twilioService = {} as any;
   const mailService = {} as any;
   const otpStore = {} as any;
 
@@ -35,7 +33,6 @@ describe('AuthService', () => {
         AuthService,
         { provide: UsersService, useValue: usersService },
         { provide: JwtService, useValue: jwtService },
-        { provide: TwilioService, useValue: twilioService },
         { provide: MailService, useValue: mailService },
         { provide: OtpStoreService, useValue: otpStore },
       ],

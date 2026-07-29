@@ -116,5 +116,3 @@ export function getAllCategoryIds(): string[] {
     .map(i => i.categoryId)
     .filter(Boolean);
 }
-
-export const CLOTHING_CATEGORIES = AUTOMOBILE_CATEGORIES;

@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -8,15 +9,16 @@ import * as bcrypt from 'bcrypt';
 import { UsersService, SafeUser } from '../users/users.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
-import { TwilioService } from './services/twilio.service';
 import { MailService } from '../mail/mail.service';
 import { OtpStoreService } from './services/otp-store.service';
+
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
-    private readonly twilioService: TwilioService,
     private readonly mailService: MailService,
     private readonly otpStore: OtpStoreService,
   ) {}
@@ -66,10 +68,7 @@ export class AuthService {
 
     const code = this.otpStore.generate(`register:${normalized}`);
 
-    // DEV HELPER: Log OTP to the backend terminal so you can test easily without waiting for emails
-    console.log(`\n=========================================`);
-    console.log(`[DEV MODE] Registration OTP for ${normalized}: ${code}`);
-    console.log(`=========================================\n`);
+    this.logger.log(`[DEV MODE] Registration OTP for ${normalized}: ${code}`);
 
     await this.mailService.sendOtp(registerDto.firstName, normalized, code);
     return { message: 'Registration OTP sent successfully' };
@@ -182,54 +181,6 @@ export class AuthService {
     }
 
     throw new BadRequestException('Invalid Admin Secret Code or credentials.');
-  }
-
-  async loginByPhone(phone: string) {
-    const user = await this.usersService.findByPhone(phone);
-    if (!user) {
-      // Auto-create account for new phone numbers
-      const email = `user_${phone.replace(/\D/g, '')}@autotrade.app`;
-      const passwordHash = await bcrypt.hash(Math.random().toString(36), 12);
-      const doc = await this.usersService.create(
-        'User',
-        email,
-        passwordHash,
-        phone,
-      );
-      return this.authResponse(doc);
-    }
-    return this.authResponse(this.usersService.toSafeUser(user));
-  }
-
-  async sendMobileOtp(phone: string) {
-    const normalized = phone.replace(/\s/g, '');
-    if (!normalized || normalized.length < 10) {
-      throw new BadRequestException('Valid phone number is required');
-    }
-    const result = await this.twilioService.sendOTP(normalized);
-    if (result.status === 'dev_mode') {
-      const code = result.sid?.replace('dev_', '') || '000000';
-      this.otpStore.generate(`mobile:${normalized}`);
-      this.otpStore.invalidate(`mobile:${normalized}`);
-    }
-    const code = this.otpStore.generate(`mobile:${normalized}`);
-    if (result.status === 'dev_mode') {
-      // In dev mode, store the generated code for verification
-    }
-    return { message: 'OTP sent successfully', reference: result.sid };
-  }
-
-  async verifyMobileOtp(phone: string, code: string) {
-    const normalized = phone.replace(/\s/g, '');
-    if (!normalized || !code) {
-      throw new BadRequestException('Phone and OTP are required');
-    }
-    const twilioValid = await this.twilioService.verifyOTP(normalized, code);
-    const storeValid = this.otpStore.verify(`mobile:${normalized}`, code);
-    if (!twilioValid.valid && !storeValid) {
-      throw new BadRequestException('Invalid or expired OTP');
-    }
-    return this.loginByPhone(normalized);
   }
 
   async sendEmailOtp(email: string) {
