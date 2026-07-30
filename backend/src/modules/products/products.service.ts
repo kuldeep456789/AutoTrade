@@ -13,7 +13,7 @@ import { CreateReviewDto } from './dto/create-review.dto';
 import { Review } from './schemas/review.schema';
 import { Order } from '../orders/schemas/order.schema';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { Model } from 'mongoose';
 
 type ProductQuery = {
   categoryId?: string;

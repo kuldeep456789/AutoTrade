@@ -3,8 +3,6 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   ChevronLeft,
   ChevronRight,
-  Play,
-  Pause,
   ArrowRight,
   Car,
   Armchair,
@@ -16,15 +14,6 @@ import {
   Truck,
   RotateCcw,
   ShieldCheck,
-  Star,
-  Heart,
-  ShoppingCart,
-  Lightbulb,
-  Wind,
-  GitMerge,
-  Disc,
-  Compass,
-  Zap,
 } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../store/store';
@@ -116,6 +105,13 @@ const HomePage = () => {
   }, [autoProducts]);
 
   const carouselRef = useRef<HTMLDivElement>(null);
+
+  // Latest Arrival — next 10 valid products
+  const latestArrivalProducts = useMemo(() => {
+    return autoProducts.slice(10, 20);
+  }, [autoProducts]);
+
+  const latestArrivalRef = useRef<HTMLDivElement>(null);
 
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [countdown, setCountdown] = useState(10);
@@ -443,6 +439,61 @@ const HomePage = () => {
         </section>
       )}
 
+      {/* ───────── LATEST ARRIVAL CAROUSEL ───────── */}
+      {latestArrivalProducts.length > 0 && (
+        <section className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-100/50 dark:bg-zinc-950/80 transition-colors duration-200">
+          <div className="max-w-[1920px] mx-auto px-6 sm:px-10 lg:px-16 py-8 sm:py-10 lg:py-12">
+            <div className="flex items-end justify-between mb-6 sm:mb-8">
+              <div>
+                <h2 className="text-2xl sm:text-2xl lg:text-3xl font-semibold tracking-tight text-zinc-600 dark:text-white uppercase">
+                  Latest Arrival
+                </h2>
+              </div>
+            </div>
+            <div className="relative">
+              <div
+                ref={latestArrivalRef}
+                className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2 -mx-6 px-6 sm:-mx-10 sm:px-10 lg:-mx-16 lg:px-16"
+                style={{ scrollBehavior: 'smooth', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+              >
+                {latestArrivalProducts.map((product: any, index: number) => (
+                  <div key={`latest-${product.pid || product._id || product.id}-${index}`} className="flex-shrink-0 w-[210px] sm:w-[240px] md:w-[250px] lg:w-[260px] snap-start">
+                    <ProductCard product={product} />
+                  </div>
+                ))}
+              </div>
+
+              {latestArrivalProducts.length > 0 && (
+                <div className="flex justify-end mt-4 gap-3">
+                  <button
+                    onClick={() => {
+                      if (latestArrivalRef.current) {
+                        latestArrivalRef.current.scrollBy({ left: -280, behavior: 'smooth' });
+                      }
+                    }}
+                    className="w-10 h-10 rounded-full bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 shadow-md hover:bg-orange-500 hover:text-white transition-all flex items-center justify-center cursor-pointer border border-zinc-200 dark:border-zinc-800"
+                    aria-label="Previous products"
+                  >
+                    <ChevronLeft size={18} strokeWidth={2} />
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (latestArrivalRef.current) {
+                        latestArrivalRef.current.scrollBy({ left: 280, behavior: 'smooth' });
+                      }
+                    }}
+                    className="w-10 h-10 rounded-full bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 shadow-md hover:bg-orange-500 hover:text-white transition-all flex items-center justify-center cursor-pointer border border-zinc-200 dark:border-zinc-800"
+                    aria-label="Next products"
+                  >
+                    <ChevronRight size={18} strokeWidth={2} />
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* ───────── DEAL OF THE DAY & INTERACTIVE CAR EXPLORER ───────── */}
       <section className="bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white py-12 sm:py-16 border-b border-zinc-200 dark:border-zinc-900 transition-colors duration-200">
         <div className="max-w-[1920px] mx-auto px-6 sm:px-10 lg:px-16">
@@ -713,7 +764,7 @@ const HomePage = () => {
           <p className="text-xs font-black text-[#FF7A00] uppercase tracking-widest flex items-center justify-center sm:justify-start gap-2 mb-1">
             Direct Brand Partnerships
           </p>
-          <h2 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-white tracking-tight leading-tight">
+          <h2 className="text-2xl sm:text-2xl lg:text-3xl font-semibold tracking-tight text-zinc-600 dark:text-white uppercase">
             Verified Manufacturer Brands
           </h2>
         </div>

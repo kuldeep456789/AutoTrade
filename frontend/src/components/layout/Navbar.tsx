@@ -8,7 +8,7 @@ import { logout } from '../../store/slices/authSlice';
 import { apiSlice } from '../../store/slices/apiSlice';
 import { clearCartItems } from '../../store/slices/cartSlice';
 import { clearWishlist } from '../../store/slices/wishlistSlice';
-import { useGetProductsQuery, productApiSlice } from '../../store/slices/productApiSlice';
+import { useGetProductsQuery } from '../../store/slices/productApiSlice';
 import { useGetCategoriesQuery } from '../../store/slices/categoryApiSlice';
 import { getProductId } from '../../lib/product';
 import { formatINR } from '../../lib/currency';
@@ -29,7 +29,6 @@ const Navbar = () => {
   const wishlistCount = wishlistItems.length;
   const userInfo = useSelector((state: RootState) => state.auth.userInfo);
   const { data: categoriesData = [] } = useGetCategoriesQuery(undefined);
-  const prefetchProducts = productApiSlice.usePrefetch('getProducts');
 
   const userDisplayName =
     userInfo?.firstName?.trim() ||
