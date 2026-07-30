@@ -289,39 +289,33 @@ export class CjService {
     
     // 1. If keyword is present, resolve using tokenized search index
     if (keyword) {
-      const tokens = keyword.split(/\s+/).filter(Boolean).map(t => slugify(t));
+      const tokens = keyword.split(/\s+/).filter(Boolean).map(t => slugify(t)).filter(t => t.length > 1);
       if (tokens.length > 0) {
+        // Fetch all keyword index buckets in a SINGLE mget HTTP call
         const indexKeys = tokens.map(t => `warehouse:index:keyword:${t}`);
-        const pidLists = await Promise.all(
-          indexKeys.map(k => this.redisService.getJson<string[]>(k))
-        );
+        const pidLists = await this.redisService.mgetJson<string[]>(indexKeys);
 
-        let matchingPids: string[] = [];
-        let first = true;
+        const pidSet = new Set<string>();
         for (const list of pidLists) {
-          if (!list || !Array.isArray(list)) {
-            matchingPids = [];
-            break;
-          }
-          if (first) {
-            matchingPids = [...list];
-            first = false;
-          } else {
-            matchingPids = matchingPids.filter(pid => list.includes(pid));
+          if (list && Array.isArray(list)) {
+            for (const pid of list) {
+              pidSet.add(pid);
+            }
           }
         }
+        const matchingPids = Array.from(pidSet);
 
         if (matchingPids.length > 0) {
           const page = Number(query.pageNum || 1);
           const limit = Number(query.pageSize || CJ_CONFIG.PAGE_SIZE);
-          const start = (page - 1) * limit;
-          const paginatedPids = matchingPids.slice(start, start + limit);
+          // Cap candidate pool at 150 to keep scoring fast; relevance engine picks the best
+          const CANDIDATE_CAP = 150;
+          const candidatePids = matchingPids.slice(0, CANDIDATE_CAP);
 
-          // Batch fetch product details in parallel
-          const products = await Promise.all(
-            paginatedPids.map(pid => this.redisService.getJson<any>(`warehouse:product:${pid}`))
-          );
-          const filteredProducts = products.filter(Boolean);
+          // Batch fetch ALL candidate product details in a SINGLE mget HTTP call
+          const productKeys = candidatePids.map(pid => `warehouse:product:${pid}`);
+          const productResults = await this.redisService.mgetJson<any>(productKeys);
+          const filteredProducts = productResults.filter(Boolean);
 
           return {
             result: true,
@@ -337,6 +331,7 @@ export class CjService {
         }
       }
     }
+
 
     // 2. Clamp pageSize and resolve category fallback
     const cjQuery = { ...query };

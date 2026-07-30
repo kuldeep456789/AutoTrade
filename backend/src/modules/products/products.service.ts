@@ -51,11 +51,7 @@ export class ProductsService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    // Clear stale API response cache keys on startup to immediately serve 137k warehouse products
-    await this.redisService.delPattern('api:products:*');
-    this.logger.log(
-      '[Products] Startup: Flushed stale api:products:* cache keys',
-    );
+    this.logger.log('[Products] Module initialized — preserving existing api:products:* cache keys');
   }
 
   async getProducts(query: ProductQuery = {}) {
@@ -77,7 +73,7 @@ export class ProductsService implements OnModuleInit {
     const isSearchQuery = Boolean(
       (query.q || query.keyword || query.search || '').trim(),
     );
-    const ttlSeconds = isSearchQuery ? 300 : this.productTtlSeconds;
+    const ttlSeconds = isSearchQuery ? 1800 : this.productTtlSeconds;
 
     if (
       result &&
@@ -235,7 +231,7 @@ export class ProductsService implements OnModuleInit {
       const searchResult = await this.cjService.getProducts({
         keyword: cleanQuery,
         pageNum: '1',
-        pageSize: '2500',
+        pageSize: '500',
         categoryId: query.categoryId,
         subcategoryName: query.subcategoryName,
         collectionType: query.collectionType,

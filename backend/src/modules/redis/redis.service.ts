@@ -69,6 +69,29 @@ export class RedisService {
     }
   }
 
+  /**
+   * Batch-fetch multiple keys in a single Upstash REST HTTP call (MGET).
+   * Dramatically reduces network round-trips compared to N individual getJson calls.
+   */
+  async mgetJson<T>(keys: string[]): Promise<(T | null)[]> {
+    if (!this.isReady() || keys.length === 0) return keys.map(() => null);
+
+    try {
+      const results = await this.client!.mget<any[]>(...keys);
+      return results.map((value) => {
+        if (value === null || value === undefined) return null;
+        if (typeof value === 'string') {
+          try { return JSON.parse(value) as T; } catch { return value as unknown as T; }
+        }
+        return value as T;
+      });
+    } catch (error: any) {
+      this.logger.warn(`[UPSTASH ERROR] mgetJson failed: ${error?.message ?? error}`);
+      return keys.map(() => null);
+    }
+  }
+
+
   async setJson<T>(
     key: string,
     value: T,

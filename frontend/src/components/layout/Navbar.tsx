@@ -126,7 +126,7 @@ const Navbar = () => {
   // Debounced live search
   const [debouncedQuery, setDebouncedQuery] = useState('');
   useEffect(() => {
-    debounceRef.current = setTimeout(() => setDebouncedQuery(searchQuery), 350);
+    debounceRef.current = setTimeout(() => setDebouncedQuery(searchQuery), 200);
     return () => clearTimeout(debounceRef.current);
   }, [searchQuery]);
 

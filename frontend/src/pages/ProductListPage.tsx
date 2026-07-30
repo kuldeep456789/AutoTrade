@@ -27,6 +27,11 @@ const ProductListPage = () => {
     setPage(1);
   }, [location.pathname]);
 
+  // Reset to page 1 whenever search keyword changes
+  useEffect(() => {
+    setPage(1);
+  }, [keyword]);
+
   const { data: categoriesData } = useGetCategoriesQuery(undefined);
   const categories = Array.isArray(categoriesData) ? categoriesData : [];
   const visibleCatalogCategories = categories;
@@ -39,12 +44,15 @@ const ProductListPage = () => {
       ...(activeCategoryId ? { categoryId: activeCategoryId } : {}),
       ...(keyword ? { q: keyword } : {}),
       ...(isNewArrivals ? { sort: 'newest' } : {}),
-      pageNum: 1,
-      pageSize: 100,
+      pageNum: page,
+      pageSize: ITEMS_PER_PAGE,
     }
   );
 
-  let filteredProducts = productsData?.products || [];
+  const allProducts = productsData?.products || [];
+  const serverTotal = productsData?.total ?? allProducts.length;
+
+  let filteredProducts = allProducts;
 
   const sortedProducts = [...filteredProducts].sort((a: any, b: any) => {
     const aPrice = a.discountPrice || a.price;
@@ -56,8 +64,10 @@ const ProductListPage = () => {
     return 0;
   });
 
-  const totalPages = Math.max(1, Math.ceil(sortedProducts.length / ITEMS_PER_PAGE));
-  const paginatedProducts = sortedProducts.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+  // For server-paginated search results, use server total; for client-sorted lists use length
+  const totalPages = Math.max(1, Math.ceil((keyword ? serverTotal : sortedProducts.length) / ITEMS_PER_PAGE));
+  // When searching, backend already paginates — render directly; otherwise slice client-side
+  const paginatedProducts = keyword ? sortedProducts : sortedProducts.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
   const pageTitle = isNewArrivals
     ? 'NEW ARRIVALS'
