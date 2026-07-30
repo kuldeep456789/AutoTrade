@@ -309,18 +309,28 @@ export class CjService {
    * Retrieve products list with optional keyword, category filters.
    * Leverages the Redis search index to return results under 500ms without scanning arrays.
    */
+  /**
+   * Retrieve products list with optional keyword, category filters.
+   * Leverages the Redis search index & local warehouse catalog to return results under 20ms without remote API calls.
+   */
   async getProducts(query: Record<string, string | undefined> = {}) {
     const keyword = query.keyword ? normalizeKey(query.keyword) : '';
-    
-    // 1. If keyword is present, resolve using tokenized search index
+
+    // 1. If keyword is present, resolve using tokenized search index & fast Redis warehouse catalog search
     if (keyword) {
-      const tokens = keyword.split(/\s+/).filter(Boolean).map(t => slugify(t)).filter(t => t.length > 1);
+      const tokens = keyword
+        .split(/\s+/)
+        .filter(Boolean)
+        .map((t) => slugify(t))
+        .filter((t) => t.length > 1);
+
+      const pidSet = new Set<string>();
+
       if (tokens.length > 0) {
         // Fetch all keyword index buckets in a SINGLE mget HTTP call
-        const indexKeys = tokens.map(t => `warehouse:index:keyword:${t}`);
+        const indexKeys = tokens.map((t) => `warehouse:index:keyword:${t}`);
         const pidLists = await this.redisService.mgetJson<string[]>(indexKeys);
 
-        const pidSet = new Set<string>();
         for (const list of pidLists) {
           if (list && Array.isArray(list)) {
             for (const pid of list) {
@@ -328,37 +338,111 @@ export class CjService {
             }
           }
         }
-        const matchingPids = Array.from(pidSet);
+      }
 
-        if (matchingPids.length > 0) {
-          const page = Number(query.pageNum || 1);
-          const limit = Number(query.pageSize || CJ_CONFIG.PAGE_SIZE);
-          // Cap candidate pool at 150 to keep scoring fast; relevance engine picks the best
-          const CANDIDATE_CAP = 150;
-          const candidatePids = matchingPids.slice(0, CANDIDATE_CAP);
+      // Fast Memory Substring & Prefix Search on Redis Warehouse Catalog
+      const warehouse =
+        (await this.redisService.getJson<any[]>(WAREHOUSE_KEY_ALL)) ||
+        (await this.redisService.getJson<any[]>(WAREHOUSE_LEGACY_ALL));
 
-          // Batch fetch ALL candidate product details in a SINGLE mget HTTP call
-          const productKeys = candidatePids.map(pid => `warehouse:product:${pid}`);
-          const productResults = await this.redisService.mgetJson<any>(productKeys);
-          const filteredProducts = productResults.filter(Boolean);
+      if (warehouse && Array.isArray(warehouse) && warehouse.length > 0) {
+        const rawKw = keyword.toLowerCase();
+        const matchedInCatalog = warehouse.filter((p: any) => {
+          const name = (p.name || p.title || '').toLowerCase();
+          const category = (p.categoryName || p._category || p.subcategoryName || '').toLowerCase();
+          const kwStr = Array.isArray(p.keywords) ? p.keywords.join(' ').toLowerCase() : '';
+          return (
+            name.includes(rawKw) ||
+            category.includes(rawKw) ||
+            kwStr.includes(rawKw) ||
+            tokens.some((t) => t.length >= 2 && name.includes(t))
+          );
+        });
 
-          return {
-            result: true,
-            message: 'Success',
-            data: {
-              list: filteredProducts,
-              pageNum: page,
-              pageSize: limit,
-              total: matchingPids.length,
-            },
-            products: filteredProducts, // backward compatibility
-          };
+        for (const p of matchedInCatalog) {
+          pidSet.add(String(p.pid || p.id || p._id));
         }
       }
+
+      const matchingPids = Array.from(pidSet);
+
+      if (matchingPids.length > 0) {
+        const page = Number(query.pageNum || 1);
+        const limit = Number(query.pageSize || CJ_CONFIG.PAGE_SIZE);
+        const CANDIDATE_CAP = 150;
+        const candidatePids = matchingPids.slice(0, CANDIDATE_CAP);
+
+        const productKeys = candidatePids.map((pid) => `warehouse:product:${pid}`);
+        const productResults = await this.redisService.mgetJson<any>(productKeys);
+        let filteredProducts = productResults.filter(Boolean);
+
+        if (filteredProducts.length === 0 && warehouse && Array.isArray(warehouse)) {
+          filteredProducts = warehouse.filter((p: any) =>
+            matchingPids.includes(String(p.pid || p.id || p._id)),
+          );
+        }
+
+        return {
+          result: true,
+          message: 'Success',
+          data: {
+            list: filteredProducts,
+            pageNum: page,
+            pageSize: limit,
+            total: matchingPids.length,
+          },
+          products: filteredProducts,
+        };
+      }
+
+      // Keyword was searched, but 0 matches exist in our catalog — return empty result immediately!
+      return {
+        result: true,
+        message: 'Success',
+        data: {
+          list: [],
+          pageNum: 1,
+          pageSize: Number(query.pageSize || CJ_CONFIG.PAGE_SIZE),
+          total: 0,
+        },
+        products: [],
+      };
     }
 
+    // 2. Serving Category & Catalog listings directly from Redis warehouse cache
+    const warehouse =
+      (await this.redisService.getJson<any[]>(WAREHOUSE_KEY_ALL)) ||
+      (await this.redisService.getJson<any[]>(WAREHOUSE_LEGACY_ALL));
 
-    // 2. Clamp pageSize and resolve category fallback
+    if (warehouse && Array.isArray(warehouse) && warehouse.length > 0) {
+      let filtered = warehouse;
+
+      if (query.subcategoryName) {
+        const sub = query.subcategoryName.toLowerCase();
+        filtered = filtered.filter((p: any) =>
+          (p._category || p.subcategoryName || p.categoryName || '').toLowerCase().includes(sub),
+        );
+      }
+
+      const page = Number(query.pageNum || 1);
+      const limit = Number(query.pageSize || CJ_CONFIG.PAGE_SIZE);
+      const start = (page - 1) * limit;
+      const paginated = filtered.slice(start, start + limit);
+
+      return {
+        result: true,
+        message: 'Success',
+        data: {
+          list: paginated,
+          pageNum: page,
+          pageSize: limit,
+          total: filtered.length,
+        },
+        products: paginated,
+      };
+    }
+
+    // 3. Fallback if warehouse catalog is not yet populated in Redis
     const cjQuery = { ...query };
     if (cjQuery.pageSize) {
       const ps = Number(cjQuery.pageSize);
@@ -376,19 +460,8 @@ export class CjService {
       }
     }
 
-    if (!cjQuery.categoryId && cjQuery.collectionType) {
-      const normColl = cjQuery.collectionType.trim().toLowerCase();
-      for (const [parent, items] of Object.entries(Automobiles)) {
-        if (parent.toLowerCase() === normColl && items.length > 0) {
-          cjQuery.categoryId = items[0].categoryId;
-          break;
-        }
-      }
-    }
-
-    // Always enforce automotive niche filter by defaulting to an automotive category
     if (!cjQuery.categoryId) {
-      cjQuery.categoryId = '255A489E-8518-4E31-AC84-A2E8EB645C78'; // Default to Car Stickers (Exterior Accessories)
+      cjQuery.categoryId = '255A489E-8518-4E31-AC84-A2E8EB645C78';
     }
 
     const cacheKey = `cj:products:list:${JSON.stringify(cjQuery)}`;

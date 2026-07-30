@@ -1,18 +1,20 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link, Navigate, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useSearchParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import type { RootState } from '../store/store';
 import { logout } from '../store/slices/authSlice';
-import { toggleWishlist } from '../store/slices/wishlistSlice';
-import { addToCart, saveShippingAddress } from '../store/slices/cartSlice';
+import { toggleWishlist, clearWishlist } from '../store/slices/wishlistSlice';
+import { addToCart, saveShippingAddress, clearCartItems } from '../store/slices/cartSlice';
+import { apiSlice } from '../store/slices/apiSlice';
 import { useGetUserOrdersQuery } from '../store/slices/orderApiSlice';
 import { useGetMyReturnsQuery } from '../store/slices/returnApiSlice';
-import { Package, User, MapPin, Heart, Settings, LogOut, ChevronRight, ShoppingBag, Clock, CheckCircle, XCircle, Trash2, Plus, Pencil, Bell, Moon, Sun, Mail, Phone, Truck, RotateCcw, Camera } from 'lucide-react';
+import { Package, User, MapPin, Heart, Settings, LogOut, ChevronRight, ShoppingBag, Clock, CheckCircle, XCircle, Trash2, Plus, Pencil, Bell, Moon, Sun, Mail, Phone, Truck, RotateCcw, Camera, X } from 'lucide-react';
 import { formatINR } from '../lib/currency';
 import { useTheme } from '../context/ThemeContext';
 import EditProfileModal from '../components/profile/EditProfileModal';
 import ChangePasswordModal from '../components/profile/ChangePasswordModal';
 import EditAddressModal, { type AddressData } from '../components/profile/EditAddressModal';
+import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 
 const tabs = [
@@ -40,6 +42,7 @@ const PAGE_SIZE = 5;
 
 const AccountPage = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const userInfo = useSelector((state: RootState) => state.auth.userInfo);
   const wishlistItems = useSelector((state: RootState) => state.wishlist.wishlistItems);
   const { theme, toggleTheme } = useTheme();
@@ -50,6 +53,7 @@ const AccountPage = () => {
   const prevTabRef = useRef(activeTab);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showEditAddressModal, setShowEditAddressModal] = useState(false);
   const [addressModalTitle, setAddressModalTitle] = useState('Edit Address');
   const [selectedAddress, setSelectedAddress] = useState<AddressData>({
@@ -329,7 +333,7 @@ const AccountPage = () => {
             })}
             <div className="shrink-0 lg:pt-4 lg:mt-3 lg:border-t border-zinc-200 dark:border-zinc-800 flex items-center">
               <button
-                onClick={() => dispatch(logout())}
+                onClick={() => setShowLogoutModal(true)}
                 className="flex items-center gap-2.5 sm:gap-3.5 rounded-xl px-4 py-3 sm:py-3.5 text-xs sm:text-sm font-semibold text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-500/10 transition-all duration-200 border border-transparent hover:border-red-500/20 whitespace-nowrap cursor-pointer"
               >
                 <LogOut size={18} strokeWidth={1.75} />
@@ -880,6 +884,81 @@ const AccountPage = () => {
         title={addressModalTitle}
         onSave={handleSaveAddress}
       />
+
+      {/* Logout Confirmation Modal */}
+      <AnimatePresence>
+        {showLogoutModal && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowLogoutModal(false)}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 16 }}
+              transition={{ type: 'spring', duration: 0.3 }}
+              className="relative w-full max-w-md bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 sm:p-8 shadow-2xl text-center overflow-hidden z-10 animate-fadeIn"
+            >
+              {/* Close X Button */}
+              <button
+                onClick={() => setShowLogoutModal(false)}
+                className="absolute top-5 right-5 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors cursor-pointer"
+                aria-label="Close modal"
+              >
+                <X size={20} />
+              </button>
+
+              {/* Red Circular Icon */}
+              <div className="w-16 h-16 rounded-full bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 flex items-center justify-center mx-auto mb-5 shadow-sm border border-red-100 dark:border-red-900/20">
+                <LogOut size={28} />
+              </div>
+
+              {/* Title */}
+              <h3 className="text-xl font-bold text-zinc-900 dark:text-white tracking-tight">Confirm Logout</h3>
+
+              {/* Message */}
+              <div className="mt-3.5 space-y-1.5">
+                <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 leading-normal">
+                  Are you sure you want to logout from your account?
+                </p>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 normal-case leading-relaxed">
+                  You will need to login again to access your account.
+                </p>
+              </div>
+
+              {/* Buttons */}
+              <div className="mt-8 grid grid-cols-2 gap-3.5">
+                <button
+                  type="button"
+                  onClick={() => setShowLogoutModal(false)}
+                  className="h-12 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold text-sm hover:bg-zinc-50 dark:hover:bg-zinc-700/80 transition-colors active:scale-[0.98] cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    dispatch(logout());
+                    dispatch(apiSlice.util.resetApiState());
+                    dispatch(clearCartItems());
+                    dispatch(clearWishlist());
+                    setShowLogoutModal(false);
+                    navigate('/');
+                  }}
+                  className="h-12 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm flex items-center justify-center gap-2 transition-colors active:scale-[0.98] shadow-md shadow-red-600/10 cursor-pointer"
+                >
+                  <LogOut size={16} />
+                  Confirm Logout
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

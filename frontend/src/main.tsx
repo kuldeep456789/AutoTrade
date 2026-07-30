@@ -5,6 +5,7 @@ import { Toaster } from 'react-hot-toast'
 import './index.css'
 import App from './App.tsx'
 import { ThemeProvider } from './context/ThemeContext'
+import { CurrencyProvider } from './context/CurrencyContext'
 
 import store from './store/store.ts'
 
@@ -12,7 +13,9 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <Provider store={store}>
       <ThemeProvider>
-        <App />
+        <CurrencyProvider>
+          <App />
+        </CurrencyProvider>
         <Toaster
           position="bottom-center"
           toastOptions={{

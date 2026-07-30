@@ -41,7 +41,7 @@ const AnnouncementBanner = () => {
   return (
     <div
       className="bg-black text-zinc-300 text-xs sm:text-[13px] border-b border-zinc-800 z-40 w-full relative"
-      style={{ marginTop: '72px' }}
+      style={{ marginTop: '80px' }}
     >
       <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-10 h-11 flex items-center justify-between">
         {/* Left Side: Category Mega Dropdowns */}

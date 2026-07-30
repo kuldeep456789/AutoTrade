@@ -9,6 +9,7 @@ import type { RootState } from '../../store/store';
 import WishlistLoginPopup from '../WishlistLoginPopup';
 import { getProductId } from '../../lib/product';
 import { formatINR } from '../../lib/currency';
+import { useCurrency } from '../../context/CurrencyContext';
 
 interface ProductCardProps {
   product: any;
@@ -17,7 +18,7 @@ interface ProductCardProps {
 const PLACEHOLDER_IMAGE = 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=600&auto=format&fit=crop&q=80';
 
 export const ProductCardSkeleton = () => (
-  <div className="flex flex-col w-full bg-[#111111] border border-[#262626] rounded-[20px] overflow-hidden shadow-sm animate-pulse h-[380px]">
+  <div className="flex flex-col w-full bg-[#111111] border border-[#262626] rounded-[20px] overflow-hidden shadow-sm animate-pulse h-[440px]">
     <div className="aspect-square w-full bg-[#1c1c1e]" />
     <div className="p-5 space-y-3">
       <div className="h-3 w-2/3 bg-[#262626] rounded" />
@@ -28,6 +29,7 @@ export const ProductCardSkeleton = () => (
 );
 
 const ProductCard = ({ product }: ProductCardProps) => {
+  const { formatCurrency } = useCurrency();
   const [imageFailed, setImageFailed] = useState(false);
   const [usePlaceholder, setUsePlaceholder] = useState(false);
   const [hovered, setHovered] = useState(false);
@@ -49,11 +51,12 @@ const ProductCard = ({ product }: ProductCardProps) => {
   const hoverImage = product?.images?.[1] || null;
 
   const currentPrice = product.discountPrice && product.discountPrice < product.price ? product.discountPrice : product.price;
-  const originalPrice = product.discountPrice && product.discountPrice < product.price ? product.price : undefined;
+  const rawOriginal = product.originalPrice || product.mrp || (product.discountPrice && product.discountPrice < product.price ? product.price : undefined);
+  const displayOriginalPrice = rawOriginal && Number(rawOriginal) > Number(currentPrice)
+    ? Number(rawOriginal)
+    : Math.round(Number(currentPrice) * 1.3);
 
-  const discountPct = originalPrice && originalPrice > currentPrice
-    ? Math.round(((originalPrice - currentPrice) / originalPrice) * 100)
-    : 0;
+  const discountPct = Math.round(((displayOriginalPrice - currentPrice) / displayOriginalPrice) * 100);
 
   // Stable Mock Rating Generator
   const getMockRating = (name: string) => {
@@ -131,17 +134,19 @@ const ProductCard = ({ product }: ProductCardProps) => {
 
   return (
     <div
-      className="group relative flex flex-col w-full bg-white dark:bg-[#111111] border border-zinc-200 dark:border-[#262626] rounded-[20px] overflow-hidden transition-colors duration-300 ease-in-out hover:border-[#FF7A00]"
+      className="group relative flex flex-col min-h-[430px] sm:min-h-[450px] w-full bg-white dark:bg-[#111111] border border-zinc-200 dark:border-[#262626] rounded-[20px] overflow-hidden transition-colors duration-300 ease-in-out hover:border-[#FF7A00]"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      {/* Product Image Area (takes ~70% visual focus) */}
-      <Link to={`/product/${productId}`} className="relative block aspect-[5/4] w-full bg-zinc-50 dark:bg-[#161616] overflow-hidden">
-        {discountPct > 0 && (
-          <span className="absolute top-4 left-4 z-10 px-2 py-0.5 rounded-md bg-[#FF7A00] text-[10px] font-bold text-white tracking-wider uppercase">
-            -{discountPct}% OFF
+      {/* Product Image Area (Tall 1:1 Aspect Ratio) */}
+      <Link to={`/product/${productId}`} className="relative block aspect-square w-full bg-zinc-50 dark:bg-[#161616] overflow-hidden">
+        {/* Top Badges */}
+        <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5">
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-100 dark:bg-emerald-950/90 text-emerald-800 dark:text-emerald-300 text-[10px] sm:text-[11px] font-bold border border-emerald-300/60 dark:border-emerald-800 shadow-sm backdrop-blur-sm">
+            {/* <span className="text-[10px]">💵</span> */}
+            18% GST
           </span>
-        )}
+        </div>
 
         <img
           src={usePlaceholder || imageFailed ? PLACEHOLDER_IMAGE : (hovered && hoverImage ? hoverImage : primaryImage)}
@@ -154,11 +159,10 @@ const ProductCard = ({ product }: ProductCardProps) => {
         {/* Circular wishlist button */}
         <button
           onClick={handleWishlistClick}
-          className={`absolute top-3 right-3 z-10 flex items-center justify-center w-8 h-8 rounded-full border border-zinc-200 bg-white shadow-sm transition-colors duration-300 cursor-pointer ${
-            isWishlisted
+          className={`absolute top-3 right-3 z-10 flex items-center justify-center w-8 h-8 rounded-full border border-zinc-200 bg-white shadow-sm transition-colors duration-300 cursor-pointer ${isWishlisted
               ? 'text-red-500 border-red-500'
               : 'text-zinc-500 hover:text-red-500 hover:border-red-500'
-          }`}
+            }`}
           aria-label="Wishlist"
         >
           <Heart size={15} fill={isWishlisted ? 'currentColor' : 'none'} strokeWidth={1.5} />
@@ -166,7 +170,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
       </Link>
 
       {/* Product Content Details */}
-      <div className="flex flex-col flex-1 p-3.5 sm:p-4 justify-between bg-white dark:bg-[#111111]">
+      <div className="flex flex-col flex-1 p-4 sm:p-5 justify-between bg-white dark:bg-[#111111]">
         <Link to={`/product/${productId}`} className="block mb-2">
           {/* Product Title */}
           <h3 className="text-[13px] sm:text-[14px] font-inter font-semibold text-zinc-900 dark:text-white group-hover:text-[#FF7A00] transition-colors line-clamp-1 leading-snug tracking-tight normal-case">
@@ -179,25 +183,24 @@ const ProductCard = ({ product }: ProductCardProps) => {
           <div className="space-y-1">
             {/* Price */}
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[16px] sm:text-[18px] font-inter font-bold text-zinc-950 dark:text-white">
-                {formatINR(currentPrice)}
+              <span className="text-[17px] sm:text-[19px] font-inter font-bold text-zinc-950 dark:text-white">
+                {formatCurrency(currentPrice)}
               </span>
-              {originalPrice && (
-                <span className="text-[11px] font-inter font-normal text-zinc-400 dark:text-zinc-500 line-through">
-                  {formatINR(originalPrice)}
-                </span>
-              )}
+              <span className="text-[12px] font-inter font-medium text-zinc-400 dark:text-zinc-500 line-through">
+                {formatCurrency(displayOriginalPrice)}
+              </span>
+              <span className="px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40 text-[10px] font-bold">
+                Bulk Rate
+              </span>
             </div>
-
           </div>
 
           <button
             onClick={handleQuickAdd}
-            className={`px-3.5 h-8.5 rounded-full flex items-center justify-center gap-1.5 transition-all duration-300 active:scale-95 cursor-pointer shrink-0 border text-[11px] font-bold uppercase tracking-wider ${
-              isAdded
+            className={`px-3.5 h-8.5 rounded-full flex items-center justify-center gap-1.5 transition-all duration-300 active:scale-95 cursor-pointer shrink-0 border text-[11px] font-bold uppercase tracking-wider ${isAdded
                 ? 'bg-zinc-950 dark:bg-white border-transparent text-white dark:text-zinc-950'
                 : 'bg-zinc-950 border-zinc-800 text-white hover:bg-zinc-850'
-            }`}
+              }`}
             aria-label="Add to cart"
           >
             {isAdded ? (

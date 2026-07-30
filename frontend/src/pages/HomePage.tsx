@@ -236,16 +236,11 @@ const HomePage = () => {
     <div className="w-full bg-[hsl(var(--background))] text-[hsl(var(--foreground))] font-sans">
       {/* ───────── HERO VIDEO BANNER ───────── */}
       <section className="relative h-[550px] sm:h-[650px] lg:h-[720px] overflow-hidden bg-black text-white">
-        <video
-          autoPlay
-          loop
-          muted
-          playsInline
+        <img
+          src="/img/car2.png"
+          alt="AutoTrade Hero"
           className="absolute inset-0 w-full h-full object-cover"
-        >
-          <source src="/img/Apex-9_interactive_assembly_journey_202607292346.mp4" type="video/mp4" />
-          Your browser does not support the video tag.
-        </video>
+        />
         {/* Soft vignette overlay */}
         <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/45 to-transparent" />
         <div className="absolute inset-0 bg-black/25" />
@@ -253,7 +248,7 @@ const HomePage = () => {
         {/* Hero Content Overlay */}
         <div className="relative z-10 h-full max-w-[1920px] mx-auto px-6 sm:px-10 lg:px-16 flex items-center">
           <div className="max-w-2xl text-left space-y-6 sm:space-y-7">
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.1] uppercase">
+            <h1 className="text-5xl sm:text-6xl lg:text-6xl font-semibold tracking-tight leading-[1.1] uppercase">
               Performance Starts <br className="hidden sm:inline" />
               With <span className="text-[#FF7A00]">The Right Part</span>
             </h1>
@@ -398,7 +393,7 @@ const HomePage = () => {
             <div className="relative">
               <div
                 ref={carouselRef}
-                className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2 -mx-6 px-6 sm:-mx-10 sm:px-10 lg:-mx-16 lg:px-16"
+                className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2"
                 style={{ scrollBehavior: 'smooth', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
               >
                 {carouselProducts.map((product: any, index: number) => (
@@ -407,33 +402,6 @@ const HomePage = () => {
                   </div>
                 ))}
               </div>
-
-              {carouselProducts.length > 0 && (
-                <div className="flex justify-end mt-4 gap-3">
-                  <button
-                    onClick={() => {
-                      if (carouselRef.current) {
-                        carouselRef.current.scrollBy({ left: -280, behavior: 'smooth' });
-                      }
-                    }}
-                    className="w-10 h-10 rounded-full bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 shadow-md hover:bg-orange-500 hover:text-white transition-all flex items-center justify-center cursor-pointer border border-zinc-200 dark:border-zinc-800"
-                    aria-label="Previous products"
-                  >
-                    <ChevronLeft size={18} strokeWidth={2} />
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (carouselRef.current) {
-                        carouselRef.current.scrollBy({ left: 280, behavior: 'smooth' });
-                      }
-                    }}
-                    className="w-10 h-10 rounded-full bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 shadow-md hover:bg-orange-500 hover:text-white transition-all flex items-center justify-center cursor-pointer border border-zinc-200 dark:border-zinc-800"
-                    aria-label="Next products"
-                  >
-                    <ChevronRight size={18} strokeWidth={2} />
-                  </button>
-                </div>
-              )}
             </div>
           </div>
         </section>
@@ -453,7 +421,7 @@ const HomePage = () => {
             <div className="relative">
               <div
                 ref={latestArrivalRef}
-                className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2 -mx-6 px-6 sm:-mx-10 sm:px-10 lg:-mx-16 lg:px-16"
+                className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2"
                 style={{ scrollBehavior: 'smooth', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
               >
                 {latestArrivalProducts.map((product: any, index: number) => (
@@ -462,33 +430,6 @@ const HomePage = () => {
                   </div>
                 ))}
               </div>
-
-              {latestArrivalProducts.length > 0 && (
-                <div className="flex justify-end mt-4 gap-3">
-                  <button
-                    onClick={() => {
-                      if (latestArrivalRef.current) {
-                        latestArrivalRef.current.scrollBy({ left: -280, behavior: 'smooth' });
-                      }
-                    }}
-                    className="w-10 h-10 rounded-full bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 shadow-md hover:bg-orange-500 hover:text-white transition-all flex items-center justify-center cursor-pointer border border-zinc-200 dark:border-zinc-800"
-                    aria-label="Previous products"
-                  >
-                    <ChevronLeft size={18} strokeWidth={2} />
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (latestArrivalRef.current) {
-                        latestArrivalRef.current.scrollBy({ left: 280, behavior: 'smooth' });
-                      }
-                    }}
-                    className="w-10 h-10 rounded-full bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 shadow-md hover:bg-orange-500 hover:text-white transition-all flex items-center justify-center cursor-pointer border border-zinc-200 dark:border-zinc-800"
-                    aria-label="Next products"
-                  >
-                    <ChevronRight size={18} strokeWidth={2} />
-                  </button>
-                </div>
-              )}
             </div>
           </div>
         </section>

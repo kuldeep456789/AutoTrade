@@ -26,47 +26,6 @@ const LoginPage = () => {
 
   const [isRegister, setIsRegister] = useState(location.pathname === '/register');
 
-  // Admin Modal state
-  const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
-  const [adminEmail, setAdminEmail] = useState('admin@autotrade.app');
-  const [adminPassword, setAdminPassword] = useState('');
-  const [showAdminPassword, setShowAdminPassword] = useState(false);
-  const [adminError, setAdminError] = useState('');
-  const [adminSubmitting, setAdminSubmitting] = useState(false);
-
-  const handleAdminModalSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAdminError('');
-    if (!adminEmail.trim() || !adminPassword.trim()) {
-      setAdminError('Please enter both Admin Email ID and Password.');
-      return;
-    }
-    setAdminSubmitting(true);
-    try {
-      const payload = await login({
-        email: adminEmail.trim(),
-        password: adminPassword,
-      }).unwrap();
-
-      if (payload?.user?.role !== 'admin') {
-        setAdminError('Access denied. This account does not have administrator privileges.');
-        setAdminSubmitting(false);
-        return;
-      }
-
-      resetToFreshSession();
-      dispatch(setCredentials({ ...payload.user, accessToken: payload.token || payload.accessToken }));
-      toast.success('Administrator authenticated successfully!');
-      setIsAdminModalOpen(false);
-      navigate('/admin');
-    } catch (err: any) {
-      const msg = err?.data?.message || 'Invalid administrator credentials.';
-      setAdminError(msg);
-    } finally {
-      setAdminSubmitting(false);
-    }
-  };
-
   // Email login fields
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -309,10 +268,6 @@ const LoginPage = () => {
                     Don't have an account?{' '}
                     <button type="button" onClick={() => switchMode(true)} className="font-semibold text-[hsl(var(--foreground))] underline underline-offset-2 cursor-pointer">Sign up</button>
                   </p>
-                  
-                  <button type="button" onClick={() => setIsAdminModalOpen(true)} disabled={isLoading} className="text-[12px] font-semibold text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors cursor-pointer">
-                    Login as Administrator
-                  </button>
                 </div>
               </>
             )}
@@ -414,85 +369,6 @@ const LoginPage = () => {
           </div>
         </section>
       </div>
-
-      {/* ADMIN LOGIN MODAL */}
-      {isAdminModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-[#18181B] border border-zinc-200 dark:border-zinc-800 w-full max-w-md rounded-3xl p-6 sm:p-8 shadow-2xl relative">
-            <button
-              type="button"
-              onClick={() => setIsAdminModalOpen(false)}
-              className="absolute top-5 right-5 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 cursor-pointer"
-            >
-              <X size={20} />
-            </button>
-
-            <div className="text-center mb-6">
-              <div className="w-14 h-14 rounded-2xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 flex items-center justify-center mx-auto mb-3 shadow-md">
-                <Shield size={28} strokeWidth={2} />
-              </div>
-              <h3 className="text-xl font-bold text-zinc-900 dark:text-white tracking-tight">Administrator Portal</h3>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Enter your admin credentials to access the management dashboard.</p>
-            </div>
-
-            {adminError && (
-              <div className="mb-4 text-xs font-semibold text-red-600 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 p-3.5 rounded-xl">
-                {adminError}
-              </div>
-            )}
-
-            <form onSubmit={handleAdminModalSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-zinc-600 dark:text-zinc-400 uppercase tracking-wider mb-1.5">
-                  Admin Email ID
-                </label>
-                <div className="relative">
-                  <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" />
-                  <input
-                    type="email"
-                    value={adminEmail}
-                    onChange={(e) => setAdminEmail(e.target.value)}
-                    placeholder="admin@autotrade.app"
-                    required
-                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 text-sm font-medium focus:outline-none focus:border-zinc-900 dark:focus:border-white transition-colors text-left normal-case"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-zinc-600 dark:text-zinc-400 uppercase tracking-wider mb-1.5">
-                  Admin Password
-                </label>
-                <div className="relative">
-                  <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" />
-                  <input
-                    type={showAdminPassword ? 'text' : 'password'}
-                    value={adminPassword}
-                    onChange={(e) => setAdminPassword(e.target.value)}
-                    placeholder="Enter admin password"
-                    className="w-full h-12 pl-11 pr-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 text-sm font-medium focus:outline-none focus:border-zinc-900 dark:focus:border-white transition-colors"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowAdminPassword((p) => !p)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 cursor-pointer"
-                  >
-                    {showAdminPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={adminSubmitting}
-                className="w-full h-12 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-bold text-sm hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-all duration-200 shadow-md active:scale-[0.98] disabled:opacity-50 mt-2 cursor-pointer"
-              >
-                {adminSubmitting ? 'Authenticating...' : 'Access Administrator Dashboard'}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

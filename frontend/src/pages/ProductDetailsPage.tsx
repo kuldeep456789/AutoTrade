@@ -13,6 +13,7 @@ import WishlistLoginPopup from '../components/WishlistLoginPopup';
 import { getColorHex } from '../utils/colorMap';
 import { getProductId } from '../lib/product';
 import { formatINR } from '../lib/currency';
+import { useCurrency } from '../context/CurrencyContext';
 
 const normalizeSlug = (value: string) =>
   value
@@ -153,6 +154,7 @@ const ProductFeaturesAndSpecs = ({ product }: { product: any }) => {
 };
 
 const ProductDetailsPage = () => {
+  const { formatCurrency } = useCurrency();
   const { id } = useParams();
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -264,10 +266,13 @@ const ProductDetailsPage = () => {
 
   const productName = String(product?.name || product?.title || '').trim();
 
-  const discountPct =
-    product.discountPrice && product.price > product.discountPrice
-      ? Math.round(((product.price - product.discountPrice) / product.price) * 100)
-      : 0;
+  const currentSellingPrice = Number(product.discountPrice || product.price || 0);
+  const rawOriginalPrice = product.originalPrice || product.mrp || (product.discountPrice && product.price > product.discountPrice ? product.price : undefined);
+  const displayOriginalPrice = rawOriginalPrice && Number(rawOriginalPrice) > currentSellingPrice
+    ? Number(rawOriginalPrice)
+    : Math.round(currentSellingPrice * 1.3);
+
+  const discountPct = Math.round(((displayOriginalPrice - currentSellingPrice) / displayOriginalPrice) * 100);
 
   const handleAddToCart = () => {
     const activeColor = selectedColor || (colors && colors.length > 0 ? colors[0] : 'Default');
@@ -470,13 +475,11 @@ const ProductDetailsPage = () => {
 
                   {/* Badges */}
                   <div className="absolute top-3 left-3 flex flex-col gap-2 z-10">
-                    {discountPct > 0 && (
-                      <span className="bg-red-600 text-white text-xs font-bold px-2.5 py-1 rounded-md shadow-md">
-                        -{discountPct}%
-                      </span>
-                    )}
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-950/90 text-emerald-800 dark:text-emerald-300 text-xs font-bold border border-emerald-300/60 dark:border-emerald-800 shadow-sm backdrop-blur-sm">
+                      <span className="text-xs">💵</span>
+                      18% GST Credit
+                    </span>
                   </div>
-
 
                   {/* Zoom hint */}
                   <div className="absolute bottom-3 left-3 bg-black/70 text-white text-[10px] font-medium px-2 py-1 rounded-md flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
@@ -563,18 +566,16 @@ const ProductDetailsPage = () => {
                 <span className="text-[10px] sm:text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest block mb-1">
                   Price
                 </span>
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-white">
-                    {formatINR(product.discountPrice || product.price)}
+                <div className="flex items-center gap-3 flex-wrap">
+                  <span className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white">
+                    {formatCurrency(currentSellingPrice)}
                   </span>
-                  {product.discountPrice && (
-                    <>
-                      <span className="text-sm text-zinc-400 dark:text-zinc-500 line-through">{formatINR(product.price)}</span>
-                      <span className="bg-red-600 text-white font-bold text-xs px-2 py-0.5 rounded shadow">
-                        {discountPct}% OFF
-                      </span>
-                    </>
-                  )}
+                  <span className="text-base text-zinc-400 dark:text-zinc-500 line-through font-medium">
+                    {formatCurrency(displayOriginalPrice)}
+                  </span>
+                  <span className="px-2.5 py-1 rounded-md bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40 text-xs font-bold">
+                    Bulk Rate
+                  </span>
                 </div>
               </div>
             </div>
