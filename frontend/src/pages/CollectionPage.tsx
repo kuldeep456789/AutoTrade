@@ -108,8 +108,13 @@ const CollectionPage = () => {
   const rawTitle = categoryInfo?.title || (normalizedSubcategory ? fromSlug(normalizedSubcategory) : 'All Collections');
   const pageTitle = rawTitle.charAt(0).toUpperCase() + rawTitle.slice(1);
 
-  // Products to render: use exact API returned products for targeted subcategories
-  const filteredProducts = rawProducts;
+  // Products to render: filter out products with invalid price before applying pagination
+  const filteredProducts = useMemo(() => {
+    return rawProducts.filter((p: any) => {
+      const price = p.discountPrice && p.discountPrice < p.price ? p.discountPrice : p.price;
+      return price && Number(price) > 1;
+    });
+  }, [rawProducts]);
 
   // Pagination
   const ITEMS_PER_PAGE = 20;

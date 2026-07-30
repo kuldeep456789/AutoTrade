@@ -114,7 +114,7 @@ export default function AdminProducts() {
         <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex flex-col sm:flex-row gap-4 items-center justify-between bg-zinc-50 dark:bg-zinc-950">
           <div className="relative w-full sm:w-72">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
-            <input 
+            <input
               type="text"
               placeholder="Search products..."
               value={search}
@@ -149,7 +149,7 @@ export default function AdminProducts() {
                 {paginatedProducts.map((p) => {
                   const isDeleting = deletingId === p._id;
                   const image = p.images && p.images.length > 0 ? p.images[0] : '';
-                  
+
                   return (
                     <tr key={p._id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors">
                       <td className="px-6 py-4">
@@ -187,7 +187,7 @@ export default function AdminProducts() {
                           <button className="p-2 text-zinc-400 hover:text-orange-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-colors cursor-pointer">
                             <Edit className="h-4 w-4" />
                           </button>
-                          <button 
+                          <button
                             onClick={() => handleDelete(p._id, p.name)}
                             disabled={isDeleting}
                             className="p-2 text-zinc-400 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-colors disabled:opacity-50 cursor-pointer"
@@ -213,7 +213,7 @@ export default function AdminProducts() {
             )}
           </div>
         )}
-        
+
         {!loading && !error && filtered.length > 0 && (
           <div className="px-6 py-4 border-t border-zinc-200 dark:border-zinc-800 flex flex-col md:flex-row items-center justify-between gap-4 text-xs font-medium text-zinc-500 dark:text-zinc-400">
             <span>Showing {Math.min((currentPage - 1) * ITEMS_PER_PAGE + 1, filtered.length)} to {Math.min(currentPage * ITEMS_PER_PAGE, filtered.length)} of {filtered.length} products</span>

@@ -193,17 +193,23 @@ const ProductCard = ({ product }: ProductCardProps) => {
 
           <button
             onClick={handleQuickAdd}
-            className={`w-9.5 h-9.5 rounded-full flex items-center justify-center transition-all duration-300 active:scale-95 cursor-pointer shrink-0 border hover:-translate-y-0.5 ${
+            className={`px-3.5 h-8.5 rounded-full flex items-center justify-center gap-1.5 transition-all duration-300 active:scale-95 cursor-pointer shrink-0 border text-[11px] font-bold uppercase tracking-wider ${
               isAdded
                 ? 'bg-zinc-950 dark:bg-white border-transparent text-white dark:text-zinc-950'
-                : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-[#262626] text-zinc-800 dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                : 'bg-zinc-950 border-zinc-800 text-white hover:bg-zinc-850'
             }`}
             aria-label="Add to cart"
           >
             {isAdded ? (
-              <Check size={15} strokeWidth={3} className="text-white dark:text-zinc-950" />
+              <>
+                <Check size={13} strokeWidth={3} className="text-white dark:text-zinc-950" />
+                <span>Added</span>
+              </>
             ) : (
-              <ShoppingCart size={15} strokeWidth={2} />
+              <>
+                <ShoppingCart size={13} strokeWidth={2.5} />
+                <span>Add Cart</span>
+              </>
             )}
           </button>
         </div>

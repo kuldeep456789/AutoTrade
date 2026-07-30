@@ -257,13 +257,13 @@ const Navbar = () => {
             />
           </Link>
 
-          {/* Right - Search Bar (Shifted to right, compact & professional) */}
-          <div ref={searchContainerRef} className="hidden md:block w-60 lg:w-68 relative ml-auto mr-3">
+          {/* Middle - Search Bar (Centered and enlarged) */}
+          <div ref={searchContainerRef} className="hidden md:block flex-1 max-w-[400px] lg:max-w-[550px] relative mx-auto">
             <form
               onSubmit={handleSearchSubmit}
               className="relative w-full"
             >
-              <div className={`flex items-center rounded-full border transition-all duration-200 h-[38px] bg-zinc-100 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 focus-within:border-orange-500 overflow-hidden`}>
+              <div className={`flex items-center rounded-lg border transition-all duration-200 h-[42px] bg-zinc-100 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 focus-within:border-orange-500 overflow-hidden`}>
                 <input
                   ref={searchInputRef}
                   type="text"
@@ -284,7 +284,7 @@ const Navbar = () => {
                 )}
                 <button
                   type="submit"
-                  className="bg-orange-500 hover:bg-orange-600 text-white px-4 h-full flex items-center justify-center transition-colors cursor-pointer rounded-r-full shrink-0"
+                  className="bg-orange-500 hover:bg-orange-600 text-white px-4 h-full flex items-center justify-center transition-colors cursor-pointer rounded-r-lg shrink-0"
                   aria-label="Submit search"
                 >
                   <Search className="h-4 w-4 text-white" strokeWidth={2.5} />

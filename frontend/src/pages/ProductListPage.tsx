@@ -6,7 +6,7 @@ import { useGetCategoriesQuery } from '../store/slices/categoryApiSlice';
 import ProductCard from '../components/product/ProductCard';
 import Pagination from '../components/Pagination';
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 20;
 
 const getActiveTabFromPath = (pathname: string) =>
   pathname.includes('/new-arrivals') ? 'ALL' : 'ALL';
