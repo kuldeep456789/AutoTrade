@@ -245,6 +245,31 @@ export class CjService {
     product = await this.redisService.getJson<any>(legacyCacheKey);
     if (product) return product;
 
+    // 3. Fast Warehouse Catalog Search (avoids 3-5s CJ API remote latency)
+    const warehouse =
+      (await this.redisService.getJson<any[]>(WAREHOUSE_KEY_ALL)) ||
+      (await this.redisService.getJson<any[]>(WAREHOUSE_LEGACY_ALL));
+
+    if (warehouse && Array.isArray(warehouse) && warehouse.length > 0) {
+      const cleanPid = decodeURIComponent(pid).trim();
+      const matched = warehouse.find(
+        (p: any) =>
+          String(p.pid || p.id || p._id) === pid ||
+          String(p.pid || p.id || p._id) === cleanPid ||
+          p.sku === pid ||
+          p.sku === cleanPid ||
+          p.name === pid ||
+          p.name === cleanPid
+      );
+
+      if (matched) {
+        this.logger.log(`[CJ] Warehouse catalog HIT for product detail ${pid}`);
+        await this.redisService.setJson(warehouseKey, matched, CJ_CONFIG.CACHE_TTL.PRODUCT_DETAIL);
+        await this.redisService.setJson(legacyCacheKey, matched, CJ_CONFIG.CACHE_TTL.PRODUCT_DETAIL);
+        return matched;
+      }
+    }
+
     // 3. Fallback to API if not indexed
     const url = `/v1/product/list?pid=${pid}`;
     this.logger.log(`[CJ] GET ${url}`);

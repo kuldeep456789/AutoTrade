@@ -707,64 +707,31 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* Brand Logo Ticker (Infinite Scroll) */}
-      <section className="bg-zinc-50 dark:bg-zinc-950 py-12 border-b border-zinc-200 dark:border-zinc-900 overflow-hidden relative">
-        <style dangerouslySetInnerHTML={{
-          __html: `
-          @keyframes marquee {
-            0% { transform: translateX(0%); }
-            100% { transform: translateX(-50%); }
-          }
-          .animate-marquee {
-            display: flex;
-            width: max-content;
-            animation: marquee 25s linear infinite;
-          }
-          .animate-marquee:hover {
-            animation-play-state: paused;
-          }
-        `}} />
-        <div className="max-w-[1920px] mx-auto px-6 sm:px-10 lg:px-16 mb-8">
-          <p className="text-xs font-black text-[#FF7A00] uppercase tracking-widest flex items-center gap-2 mb-1">
+      {/* Brand Logos Section (Static & Centered - No Duplicates, No Scroll) */}
+      <section className="bg-zinc-50 dark:bg-zinc-950 py-12 border-b border-zinc-200 dark:border-zinc-900 relative">
+        <div className="max-w-[1920px] mx-auto px-6 sm:px-10 lg:px-16 mb-8 text-center sm:text-left">
+          <p className="text-xs font-black text-[#FF7A00] uppercase tracking-widest flex items-center justify-center sm:justify-start gap-2 mb-1">
             Direct Brand Partnerships
           </p>
           <h2 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-white tracking-tight leading-tight">
             Verified Manufacturer Brands
           </h2>
         </div>
-        <div className="relative w-full flex overflow-x-hidden before:absolute before:left-0 before:top-0 before:z-10 before:h-full before:w-16 sm:before:w-28 before:bg-gradient-to-r before:from-zinc-50 dark:before:from-zinc-950 before:to-transparent after:absolute after:right-0 after:top-0 after:z-10 after:h-full after:w-16 sm:after:w-28 after:bg-gradient-to-l after:from-zinc-50 dark:after:from-zinc-950 after:to-transparent">
-          <div className="animate-marquee gap-6 sm:gap-10 items-center flex">
-            {/* Set 1 */}
-            {[
-              { src: '/video/CONTINENTAL_minimalist_vector_logo_2K_202607301318.jpeg', name: 'Continental' },
-              { src: '/video/Minimalist_vector_logo_CASTROL_2K_202607301318.jpeg', name: 'Castrol' },
-              { src: '/video/Minimalist_vector_logo_MOBIL_1_202607301318.jpeg', name: 'Mobil 1' },
-              { src: '/video/Premium_minimalist_vector_logo_MANN_202607301318.jpeg', name: 'Mann Filter' },
-              { src: '/video/one.jpeg', name: 'AutoTrade Partner' }
-            ].map((logo, lIdx) => (
-              <img
-                key={`logo-1-${lIdx}`}
-                src={logo.src}
-                alt={logo.name}
-                className="h-20 sm:h-28 w-auto object-contain shrink-0 opacity-90"
-              />
-            ))}
-            {/* Set 2 (Duplicate for infinite loop) */}
-            {[
-              { src: '/video/CONTINENTAL_minimalist_vector_logo_2K_202607301318.jpeg', name: 'Continental' },
-              { src: '/video/Minimalist_vector_logo_CASTROL_2K_202607301318.jpeg', name: 'Castrol' },
-              { src: '/video/Minimalist_vector_logo_MOBIL_1_202607301318.jpeg', name: 'Mobil 1' },
-              { src: '/video/Premium_minimalist_vector_logo_MANN_202607301318.jpeg', name: 'Mann Filter' },
-              { src: '/video/one.jpeg', name: 'AutoTrade Partner' }
-            ].map((logo, lIdx) => (
-              <img
-                key={`logo-2-${lIdx}`}
-                src={logo.src}
-                alt={logo.name}
-                className="h-20 sm:h-28 w-auto object-contain shrink-0 opacity-90"
-              />
-            ))}
-          </div>
+        <div className="max-w-[1920px] mx-auto px-6 sm:px-10 lg:px-16 flex flex-wrap items-center justify-center gap-6 sm:gap-10">
+          {[
+            { src: '/video/CONTINENTAL_minimalist_vector_logo_2K_202607301318.jpeg', name: 'Continental' },
+            { src: '/video/Minimalist_vector_logo_CASTROL_2K_202607301318.jpeg', name: 'Castrol' },
+            { src: '/video/Minimalist_vector_logo_MOBIL_1_202607301318.jpeg', name: 'Mobil 1' },
+            { src: '/video/Premium_minimalist_vector_logo_MANN_202607301318.jpeg', name: 'Mann Filter' },
+            { src: '/video/one.jpeg', name: 'AutoTrade Partner' }
+          ].map((logo, lIdx) => (
+            <img
+              key={`logo-static-${lIdx}`}
+              src={logo.src}
+              alt={logo.name}
+              className="h-20 sm:h-28 w-auto object-contain shrink-0 opacity-90 hover:opacity-100 transition-opacity"
+            />
+          ))}
         </div>
       </section>
 
