@@ -402,7 +402,7 @@ const HomePage = () => {
                 style={{ scrollBehavior: 'smooth', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
               >
                 {carouselProducts.map((product: any, index: number) => (
-                  <div key={`${product.pid || product._id || product.id}-${index}`} className="flex-shrink-0 w-[210px] sm:w-[240px] md:w-[250px] lg:w-[260px] snap-start">
+                  <div key={`${product.pid || product._id || product.id}-${index}`} className="flex-shrink-0 w-[240px] sm:w-[280px] md:w-[300px] lg:w-[320px] snap-start">
                     <ProductCard product={product} />
                   </div>
                 ))}
@@ -457,7 +457,7 @@ const HomePage = () => {
                 style={{ scrollBehavior: 'smooth', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
               >
                 {latestArrivalProducts.map((product: any, index: number) => (
-                  <div key={`latest-${product.pid || product._id || product.id}-${index}`} className="flex-shrink-0 w-[210px] sm:w-[240px] md:w-[250px] lg:w-[260px] snap-start">
+                  <div key={`latest-${product.pid || product._id || product.id}-${index}`} className="flex-shrink-0 w-[240px] sm:w-[280px] md:w-[300px] lg:w-[320px] snap-start">
                     <ProductCard product={product} />
                   </div>
                 ))}

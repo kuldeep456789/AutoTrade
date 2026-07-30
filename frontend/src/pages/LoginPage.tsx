@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Lock, Mail, Shield, X } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, Shield, X, ArrowLeft } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { RootState } from '../store/store';
 import { setCredentials } from '../store/slices/authSlice';
@@ -11,8 +11,11 @@ import {
   useLoginMutation,
   useAdminSecretLoginMutation,
   useRegisterMutation,
+  useSendRegisterOtpMutation,
+  useVerifyRegisterOtpMutation,
 } from '../store/slices/userApiSlice';
 import toast from 'react-hot-toast';
+
 
 const LoginPage = () => {
   const dispatch = useDispatch();
@@ -79,10 +82,24 @@ const LoginPage = () => {
   const [showRegisterPassword, setShowRegisterPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  // Register OTP Flow state
+  const [registerStep, setRegisterStep] = useState<'form' | 'otp'>('form');
+  const [otpValues, setOtpValues] = useState(['', '', '', '', '', '']);
+  const [countdown, setCountdown] = useState(0);
+  const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
+
   const [errorMessage, setErrorMessage] = useState('');
   const [login, { isLoading: loginLoading }] = useLoginMutation();
   const [register, { isLoading: registerLoading }] = useRegisterMutation();
-  const isLoading = loginLoading || registerLoading;
+  const [sendRegisterOtp, { isLoading: sendingRegisterOtp }] = useSendRegisterOtpMutation();
+  const [verifyRegisterOtp, { isLoading: verifyingRegisterOtp }] = useVerifyRegisterOtpMutation();
+  const isLoading = loginLoading || registerLoading || sendingRegisterOtp || verifyingRegisterOtp;
+
+  useEffect(() => {
+    if (countdown <= 0) return;
+    const int = setInterval(() => setCountdown((c) => c - 1), 1000);
+    return () => clearInterval(int);
+  }, [countdown]);
 
   useEffect(() => {
     if (userInfo) {
@@ -96,6 +113,7 @@ const LoginPage = () => {
 
   const switchMode = (toRegister: boolean) => {
     setIsRegister(toRegister);
+    setRegisterStep('form');
     setErrorMessage('');
   };
 
@@ -131,7 +149,7 @@ const LoginPage = () => {
     if (registerPassword !== confirmPassword) { setErrorMessage('Passwords do not match.'); return; }
     
     try {
-      const payload = await register({
+      await sendRegisterOtp({
         firstName: fullName.trim(),
         lastName: '',
         adminSecret: adminSecret.trim() || undefined,
@@ -139,6 +157,50 @@ const LoginPage = () => {
         password: registerPassword,
         ...(registerPhone ? { phone: `+91${registerPhone.replace(/\D/g, '')}` } : {}),
       }).unwrap();
+      setRegisterStep('otp');
+      setCountdown(30);
+      toast.success('Registration OTP sent to your email');
+      setTimeout(() => otpRefs.current[0]?.focus(), 100);
+    } catch (err: any) {
+      const msg = err?.data?.message || 'Failed to send registration OTP.';
+      setErrorMessage(msg);
+      toast.error(msg);
+    }
+  };
+
+  const handleOtpChange = (idx: number, val: string) => {
+    if (!/^\d?$/.test(val)) return;
+    const next = [...otpValues];
+    next[idx] = val;
+    setOtpValues(next);
+    if (val && idx < 5) otpRefs.current[idx + 1]?.focus();
+  };
+
+  const handleOtpKeyDown = (idx: number, e: React.KeyboardEvent) => {
+    if (e.key === 'Backspace' && !otpValues[idx] && idx > 0) {
+      otpRefs.current[idx - 1]?.focus();
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const code = otpValues.join('');
+    if (code.length !== 6) { setErrorMessage('Enter the 6-digit OTP'); return; }
+    setErrorMessage('');
+    try {
+      const registerDto = {
+        firstName: fullName.trim(),
+        lastName: '',
+        adminSecret: adminSecret.trim() || undefined,
+        email: registerEmail.trim(),
+        password: registerPassword,
+        ...(registerPhone ? { phone: `+91${registerPhone.replace(/\D/g, '')}` } : {}),
+      };
+      const payload = await verifyRegisterOtp({
+        registerDto,
+        code,
+      }).unwrap();
+
       resetToFreshSession();
       dispatch(setCredentials({ ...payload.user, accessToken: payload.token || payload.accessToken }));
       if (payload?.user?.role === 'admin') {
@@ -149,9 +211,11 @@ const LoginPage = () => {
         navigate(redirect);
       }
     } catch (err: any) {
-      const msg = err?.data?.message || 'Registration failed. Please try again.';
+      const msg = err?.data?.message || 'Invalid or expired OTP';
       setErrorMessage(msg);
       toast.error(msg);
+      setOtpValues(['', '', '', '', '', '']);
+      otpRefs.current[0]?.focus();
     }
   };
 
@@ -255,57 +319,97 @@ const LoginPage = () => {
 
             {/* REGISTER FORM */}
             {isRegister && (
-              <form onSubmit={handleRegister} className="space-y-4" noValidate>
-                <div>
-                  <label className="mb-2 block text-[11px] font-semibold uppercase tracking-widest text-zinc-500">Full Name</label>
-                  <div className="flex items-center gap-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-[hsl(var(--card))] px-4 py-3.5 transition focus-within:border-zinc-500">
-                    <input type="text" placeholder="Aarav Sharma" value={fullName} onChange={(e) => setFullName(e.target.value)} className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-zinc-400 text-left normal-case" />
+              registerStep === 'form' ? (
+                <form onSubmit={handleRegister} className="space-y-4" noValidate>
+                  <div>
+                    <label className="mb-2 block text-[11px] font-semibold uppercase tracking-widest text-zinc-500">Full Name</label>
+                    <div className="flex items-center gap-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-[hsl(var(--card))] px-4 py-3.5 transition focus-within:border-zinc-500">
+                      <input type="text" placeholder="Aarav Sharma" value={fullName} onChange={(e) => setFullName(e.target.value)} className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-zinc-400 text-left normal-case" />
+                    </div>
                   </div>
-                </div>
 
-                <div>
-                  <label className="mb-2 block text-[11px] font-semibold uppercase tracking-widest text-zinc-500">Email address</label>
-                  <div className="flex items-center gap-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-[hsl(var(--card))] px-4 py-3.5 transition focus-within:border-zinc-500">
-                    <Mail size={17} className="shrink-0 text-zinc-400" />
-                    <input type="email" placeholder="you@example.com" value={registerEmail} onChange={(e) => setRegisterEmail(e.target.value)} className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-zinc-400 text-left normal-case" />
+                  <div>
+                    <label className="mb-2 block text-[11px] font-semibold uppercase tracking-widest text-zinc-500">Email address</label>
+                    <div className="flex items-center gap-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-[hsl(var(--card))] px-4 py-3.5 transition focus-within:border-zinc-500">
+                      <Mail size={17} className="shrink-0 text-zinc-400" />
+                      <input type="email" placeholder="you@example.com" value={registerEmail} onChange={(e) => setRegisterEmail(e.target.value)} className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-zinc-400 text-left normal-case" />
+                    </div>
                   </div>
-                </div>
 
-                <div>
-                  <label className="mb-2 block text-[11px] font-semibold uppercase tracking-widest text-zinc-500">Password</label>
-                  <div className="flex items-center gap-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-[hsl(var(--card))] px-4 py-3.5 transition focus-within:border-zinc-500">
-                    <Lock size={17} className="shrink-0 text-zinc-400" />
-                    <input type={showRegisterPassword ? 'text' : 'password'} placeholder="Minimum 6 characters" value={registerPassword} onChange={(e) => setRegisterPassword(e.target.value)} className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-zinc-400 text-left normal-case" />
-                    <button type="button" onClick={() => setShowRegisterPassword((p) => !p)} className="text-zinc-400 hover:text-zinc-700 dark:hover:text-white cursor-pointer">
-                      {showRegisterPassword ? <EyeOff size={17} /> : <Eye size={17} />}
-                    </button>
+                  <div>
+                    <label className="mb-2 block text-[11px] font-semibold uppercase tracking-widest text-zinc-500">Password</label>
+                    <div className="flex items-center gap-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-[hsl(var(--card))] px-4 py-3.5 transition focus-within:border-zinc-500">
+                      <Lock size={17} className="shrink-0 text-zinc-400" />
+                      <input type={showRegisterPassword ? 'text' : 'password'} placeholder="Minimum 6 characters" value={registerPassword} onChange={(e) => setRegisterPassword(e.target.value)} className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-zinc-400 text-left normal-case" />
+                      <button type="button" onClick={() => setShowRegisterPassword((p) => !p)} className="text-zinc-400 hover:text-zinc-700 dark:hover:text-white cursor-pointer">
+                        {showRegisterPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                      </button>
+                    </div>
                   </div>
-                </div>
 
-                <div>
-                  <label className="mb-2 block text-[11px] font-semibold uppercase tracking-widest text-zinc-500">Confirm password</label>
-                  <div className="flex items-center gap-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-[hsl(var(--card))] px-4 py-3.5 transition focus-within:border-zinc-500">
-                    <Lock size={17} className="shrink-0 text-zinc-400" />
-                    <input type={showConfirmPassword ? 'text' : 'password'} placeholder="Re-enter your password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-zinc-400 text-left normal-case" />
-                    <button type="button" onClick={() => setShowConfirmPassword((p) => !p)} className="text-zinc-400 hover:text-zinc-700 dark:hover:text-white cursor-pointer">
-                      {showConfirmPassword ? <EyeOff size={17} /> : <Eye size={17} />}
-                    </button>
+                  <div>
+                    <label className="mb-2 block text-[11px] font-semibold uppercase tracking-widest text-zinc-500">Confirm password</label>
+                    <div className="flex items-center gap-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-[hsl(var(--card))] px-4 py-3.5 transition focus-within:border-zinc-500">
+                      <Lock size={17} className="shrink-0 text-zinc-400" />
+                      <input type={showConfirmPassword ? 'text' : 'password'} placeholder="Re-enter your password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-zinc-400 text-left normal-case" />
+                      <button type="button" onClick={() => setShowConfirmPassword((p) => !p)} className="text-zinc-400 hover:text-zinc-700 dark:hover:text-white cursor-pointer">
+                        {showConfirmPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                      </button>
+                    </div>
                   </div>
-                </div>
 
-                {errorMessage && (
-                  <div className="rounded-xl border border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-950/30 px-4 py-3 text-sm font-semibold text-red-700 dark:text-red-300">{errorMessage}</div>
-                )}
+                  {errorMessage && (
+                    <div className="rounded-xl border border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-950/30 px-4 py-3 text-sm font-semibold text-red-700 dark:text-red-300">{errorMessage}</div>
+                  )}
 
-                <button type="submit" disabled={isLoading} className="mt-2 w-full rounded-xl bg-[hsl(var(--foreground))] text-[hsl(var(--background))] h-14 text-sm font-semibold tracking-wider transition hover:shadow-md disabled:opacity-60 cursor-pointer">
-                  {isLoading ? 'Creating account...' : 'Create account'}
-                </button>
+                  <button type="submit" disabled={isLoading} className="mt-2 w-full rounded-xl bg-[hsl(var(--foreground))] text-[hsl(var(--background))] h-14 text-sm font-semibold tracking-wider transition hover:shadow-md disabled:opacity-60 cursor-pointer">
+                    {isLoading ? 'Creating account...' : 'Create account'}
+                  </button>
 
-                <p className="text-center text-xs text-zinc-500 normal-case tracking-normal">
-                  Already have an account?{' '}
-                  <button type="button" onClick={() => switchMode(false)} className="font-semibold text-[hsl(var(--foreground))] underline underline-offset-2 cursor-pointer">Login</button>
-                </p>
-              </form>
+                  <p className="text-center text-xs text-zinc-500 normal-case tracking-normal">
+                    Already have an account?{' '}
+                    <button type="button" onClick={() => switchMode(false)} className="font-semibold text-[hsl(var(--foreground))] underline underline-offset-2 cursor-pointer">Login</button>
+                  </p>
+                </form>
+              ) : (
+                <form onSubmit={handleVerifyOtp} className="space-y-4" noValidate>
+                  <button type="button" onClick={() => setRegisterStep('form')} className="flex items-center gap-1.5 text-[12px] font-semibold text-zinc-500 hover:text-[hsl(var(--foreground))] transition-colors cursor-pointer mb-2">
+                    <ArrowLeft size={14} strokeWidth={2} /> Back to Register Form
+                  </button>
+                  <p className="text-[13px] text-zinc-500 mb-4">OTP sent to {registerEmail}</p>
+                  
+                  <div className="flex gap-2 justify-center mb-2">
+                    {otpValues.map((val, i) => (
+                      <input
+                        key={i}
+                        ref={(el) => { otpRefs.current[i] = el; }}
+                        type="text" inputMode="numeric" maxLength={1} value={val}
+                        onChange={(e) => handleOtpChange(i, e.target.value)}
+                        onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                        className={`w-11 h-12 text-center text-lg font-bold rounded-xl border-2 bg-[hsl(var(--card))] outline-none transition-all duration-150 ${
+                          val ? 'border-[hsl(var(--foreground))]' : 'border-zinc-200 dark:border-zinc-700 focus:border-zinc-500'
+                        }`}
+                      />
+                    ))}
+                  </div>
+
+                  {errorMessage && (
+                    <div className="rounded-xl border border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-950/30 px-4 py-3 text-sm font-semibold text-red-700 dark:text-red-300">{errorMessage}</div>
+                  )}
+
+                  <button type="submit" disabled={isLoading || otpValues.join('').length !== 6} className="mt-2 w-full rounded-xl bg-[hsl(var(--foreground))] text-[hsl(var(--background))] h-14 text-sm font-semibold tracking-wider transition hover:shadow-md disabled:opacity-60 cursor-pointer">
+                    {isLoading ? 'Verifying...' : 'Verify & Create Account'}
+                  </button>
+
+                  <div className="text-center">
+                    {countdown > 0 ? (
+                      <span className="text-[12px] text-zinc-400">Resend in {countdown}s</span>
+                    ) : (
+                      <button type="button" onClick={handleRegister} className="text-[12px] font-semibold text-[hsl(var(--foreground))] underline underline-offset-2 hover:opacity-80 cursor-pointer">Resend OTP</button>
+                    )}
+                  </div>
+                </form>
+              )
             )}
           </div>
         </section>

@@ -26,9 +26,8 @@ export async function bootstrap() {
 
   // Enforce DTO validation globally
   app.useGlobalPipes(new ValidationPipe({
-    whitelist: true,
+    whitelist: false,
     transform: true,
-    forbidNonWhitelisted: true,
   }));
 
   // CORS Configuration

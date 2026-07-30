@@ -6,10 +6,13 @@ import { ContactService } from './contact.service';
 import { Contact, ContactSchema } from './schemas/contact.schema';
 import { UsersModule } from '../users/users.module';
 
+import { MailModule } from '../mail/mail.module';
+
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Contact.name, schema: ContactSchema }]),
     UsersModule,
+    MailModule,
     JwtModule.registerAsync({
       useFactory: () => ({
         secret: process.env.JWT_SECRET ?? 'development-jwt-secret',

@@ -2,11 +2,13 @@ import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Contact } from './schemas/contact.schema';
+import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class ContactService {
   constructor(
     @InjectModel(Contact.name) private contactModel: Model<Contact>,
+    private mailService: MailService,
   ) {}
 
   async createContactMessage(data: {
@@ -28,6 +30,13 @@ export class ContactService {
         '[ContactService] Contact message saved to MongoDB successfully ID:',
         saved._id,
       );
+
+      // Send email alert to admin asynchronously
+      this.mailService.sendSystemAlert(
+        `New Contact Message: ${saved.subject}`,
+        `You have received a new contact message from <b>${saved.name}</b> (${saved.email}).<br><br><b>Message:</b><br>${saved.message}`
+      ).catch(e => console.error('[ContactService] Failed to send email alert:', e));
+
       return {
         success: true,
         message: 'Message sent successfully',

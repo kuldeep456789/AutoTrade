@@ -131,12 +131,12 @@ const ProductCard = ({ product }: ProductCardProps) => {
 
   return (
     <div
-      className="group relative flex flex-col w-full bg-white dark:bg-[#111111] border border-zinc-200 dark:border-[#262626] rounded-[20px] overflow-hidden transition-all duration-300 ease-in-out hover:scale-[1.03] hover:border-[#FF7A00]"
+      className="group relative flex flex-col w-full bg-white dark:bg-[#111111] border border-zinc-200 dark:border-[#262626] rounded-[20px] overflow-hidden transition-colors duration-300 ease-in-out hover:border-[#FF7A00]"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
       {/* Product Image Area (takes ~70% visual focus) */}
-      <Link to={`/product/${productId}`} className="relative block aspect-square w-full bg-zinc-50 dark:bg-[#161616] overflow-hidden">
+      <Link to={`/product/${productId}`} className="relative block aspect-[5/4] w-full bg-zinc-50 dark:bg-[#161616] overflow-hidden">
         {discountPct > 0 && (
           <span className="absolute top-4 left-4 z-10 px-2 py-0.5 rounded-md bg-[#FF7A00] text-[10px] font-bold text-white tracking-wider uppercase">
             -{discountPct}% OFF
@@ -147,38 +147,38 @@ const ProductCard = ({ product }: ProductCardProps) => {
           src={usePlaceholder || imageFailed ? PLACEHOLDER_IMAGE : (hovered && hoverImage ? hoverImage : primaryImage)}
           alt={productName}
           onError={() => setImageFailed(true)}
-          className="w-full h-full object-cover transition-transform duration-300 ease-in-out scale-100 group-hover:scale-105"
+          className="w-full h-full object-cover transition-opacity duration-300"
           loading="lazy"
         />
 
-        {/* Circular glass wishlist button */}
+        {/* Circular wishlist button */}
         <button
           onClick={handleWishlistClick}
-          className={`absolute top-4 right-4 z-10 flex items-center justify-center w-9 h-9 rounded-full border bg-white/5 backdrop-blur-md transition-all duration-300 cursor-pointer group-hover:rotate-12 ${
+          className={`absolute top-3 right-3 z-10 flex items-center justify-center w-8 h-8 rounded-full border border-zinc-200 bg-white shadow-sm transition-colors duration-300 cursor-pointer ${
             isWishlisted
-              ? 'text-red-500 border-red-500/20 bg-red-500/10'
-              : 'text-zinc-400 border-white/10 hover:text-red-500 hover:border-red-500/20'
+              ? 'text-red-500 border-red-500'
+              : 'text-zinc-500 hover:text-red-500 hover:border-red-500'
           }`}
           aria-label="Wishlist"
         >
-          <Heart size={15} fill={isWishlisted ? 'currentColor' : 'none'} strokeWidth={2} />
+          <Heart size={15} fill={isWishlisted ? 'currentColor' : 'none'} strokeWidth={1.5} />
         </button>
       </Link>
 
       {/* Product Content Details */}
-      <div className="flex flex-col flex-1 p-5 justify-between bg-white dark:bg-[#111111]">
-        <Link to={`/product/${productId}`} className="block">
+      <div className="flex flex-col flex-1 p-3.5 sm:p-4 justify-between bg-white dark:bg-[#111111]">
+        <Link to={`/product/${productId}`} className="block mb-2">
           {/* Product Title */}
-          <h3 className="text-[14.5px] sm:text-[15.5px] font-inter font-semibold text-zinc-900 dark:text-white group-hover:text-[#FF7A00] transition-colors line-clamp-1 leading-snug tracking-tight normal-case">
+          <h3 className="text-[13px] sm:text-[14px] font-inter font-semibold text-zinc-900 dark:text-white group-hover:text-[#FF7A00] transition-colors line-clamp-1 leading-snug tracking-tight normal-case">
             {productName}
           </h3>
         </Link>
 
         {/* Price, Rating & Quick Add Row */}
-        <div className="mt-3.5 flex items-end justify-between gap-2">
+        <div className="mt-3.5 flex items-center justify-between gap-2">
           <div className="space-y-1">
             {/* Price */}
-            <div className="flex items-baseline gap-2 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="text-[16px] sm:text-[18px] font-inter font-bold text-zinc-950 dark:text-white">
                 {formatINR(currentPrice)}
               </span>
@@ -208,7 +208,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
             ) : (
               <>
                 <ShoppingCart size={13} strokeWidth={2.5} />
-                <span>Add Cart</span>
+                <span>ADD CART</span>
               </>
             )}
           </button>

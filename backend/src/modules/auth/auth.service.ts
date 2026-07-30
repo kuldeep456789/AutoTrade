@@ -21,7 +21,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly mailService: MailService,
     private readonly otpStore: OtpStoreService,
-  ) {}
+  ) { }
   async register(registerDto: RegisterDto) {
     if (!registerDto.firstName || !registerDto.email || !registerDto.password) {
       throw new BadRequestException(
@@ -71,7 +71,7 @@ export class AuthService {
     this.logger.log(`[DEV MODE] Registration OTP for ${normalized}: ${code}`);
 
     await this.mailService.sendOtp(registerDto.firstName, normalized, code);
-    return { message: 'Registration OTP sent successfully' };
+    return { message: 'Registration OTP sent successfully' }
   }
 
   async verifyRegisterOtp(registerDto: RegisterDto, code: string) {

@@ -13,22 +13,41 @@ export class MailService {
   constructor() {
     const mailUser = process.env.MAIL_USER || process.env.SMTP_USER;
     const mailPass = process.env.MAIL_PASS || process.env.SMTP_PASS;
+    const mailHost = process.env.SMTP_HOST || process.env.MAIL_HOST;
+    const mailPort = process.env.SMTP_PORT || process.env.MAIL_PORT || 587;
+    const mailSecure = process.env.SMTP_SECURE === 'true';
+
     this.fromEmail =
       process.env.MAIL_FROM ||
       process.env.FROM_EMAIL ||
       `AutoTrade <${mailUser || 'noreply@autotrade.com'}>`;
 
     if (mailUser && mailPass) {
-      this.transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-          user: mailUser.trim(),
-          pass: mailPass.trim(),
-        },
-      });
-      this.logger.log(
-        `Nodemailer transport initialized for Gmail account: ${mailUser}`,
-      );
+      if (mailHost) {
+        this.transporter = nodemailer.createTransport({
+          host: mailHost,
+          port: Number(mailPort),
+          secure: mailSecure,
+          auth: {
+            user: mailUser.trim(),
+            pass: mailPass.trim(),
+          },
+        });
+        this.logger.log(
+          `Nodemailer transport initialized for Custom SMTP: ${mailHost}:${mailPort}`,
+        );
+      } else {
+        this.transporter = nodemailer.createTransport({
+          service: 'gmail',
+          auth: {
+            user: mailUser.trim(),
+            pass: mailPass.trim(),
+          },
+        });
+        this.logger.log(
+          `Nodemailer transport initialized for Gmail account: ${mailUser}`,
+        );
+      }
     } else {
       this.logger.warn(
         'Nodemailer credentials (MAIL_USER / MAIL_PASS) not configured.',
@@ -72,58 +91,62 @@ export class MailService {
       // Inline fallback template if template file is missing
       if (templateName === 'otp' || templateName === 'forgot-password') {
         return `
-          <div style="font-family: Arial, sans-serif; padding: 24px; max-width: 480px; margin: 0 auto; border: 1px solid #e4e4e7; border-radius: 16px;">
-            <h2 style="color: #111; margin-bottom: 8px;">AutoTrade Verification</h2>
-            <p style="color: #555; font-size: 14px;">Hello ${variables.name || 'User'},</p>
-            <p style="color: #555; font-size: 14px;">Your 6-digit verification code is:</p>
-            <div style="background: #f4f4f5; font-size: 32px; font-weight: bold; letter-spacing: 6px; text-align: center; padding: 16px; margin: 24px 0; border-radius: 12px; color: #111;">
-              ${variables.otp}
+            <div style="font-family: Arial, sans-serif; padding: 24px; max-width: 480px; margin: 0 auto; border: 1px solid #e4e4e7; border-radius: 16px;">
+              <h2 style="color: #111; margin-bottom: 8px;">AutoTrade Verification</h2>
+              <p style="color: #555; font-size: 14px;">Hello ${variables.name || 'User'},</p>
+              <p style="color: #555; font-size: 14px;">Your 6-digit verification code is:</p>
+              <div style="background: #f4f4f5; font-size: 32px; font-weight: bold; letter-spacing: 6px; text-align: center; padding: 16px; margin: 24px 0; border-radius: 12px; color: #111;">
+                ${variables.otp}
+              </div>
+              <p style="color: #888; font-size: 12px;">This code is valid for ${variables.expiry || 10} minutes. Please do not share this code with anyone.</p>
             </div>
-            <p style="color: #888; font-size: 12px;">This code is valid for ${variables.expiry || 10} minutes. Please do not share this code with anyone.</p>
-          </div>
-        `;
+          `;
       }
       return '';
     }
   }
 
   private async sendEmail(to: string, subject: string, html: string) {
+    // mailinator
+    let recipient = to;
+
+    if (process.env.MAILINATOR_MODE === 'true') {
+      const inbox =
+        process.env.MAILINATOR_INBOX ||
+        to.split('@')[0] ||
+        'autotrade';
+
+      recipient = `${inbox}@mailinator.com`;
+
+      this.logger.log(
+        `[MAILINATOR] Redirecting email from ${to} -> ${recipient}`,
+      );
+    }
+
+    // nodemailer
     if (this.transporter) {
       try {
         await this.transporter.sendMail({
           from: this.fromEmail,
-          to,
+          to: recipient,
           subject,
           html,
         });
-        this.logger.log(`Nodemailer sent email to ${to} (Subject: ${subject})`);
+
+        this.logger.log(
+          `Nodemailer sent email to ${recipient} (Subject: ${subject})`,
+        );
+
         return;
       } catch (err: any) {
         this.logger.error(
-          `Nodemailer transport error sending to ${to}: ${err?.message}`,
+          `Nodemailer transport error sending to ${recipient}: ${err?.message}`,
         );
       }
     }
 
-    if (this.resend) {
-      try {
-        const { data, error } = await this.resend.emails.send({
-          from: this.fromEmail,
-          to,
-          subject,
-          html,
-        });
-        if (!error) {
-          this.logger.log(`Resend sent email to ${to} (ID: ${data?.id})`);
-          return;
-        }
-      } catch (err: any) {
-        this.logger.error(`Resend error: ${err?.message}`);
-      }
-    }
-
-    this.logger.log(`[DEV EMAIL LOG] To: ${to} | Subject: ${subject}`);
-    this.logger.debug(`Email Content:\n${html}`);
+    this.logger.log(`[DEV EMAIL LOG] To: ${recipient}`);
+    this.logger.debug(html);
   }
 
   async sendOtp(
@@ -219,14 +242,14 @@ export class MailService {
   async sendSystemAlert(subject: string, message: string) {
     const to = process.env.ADMIN_ALERT_EMAIL || 'admin@autotrade.com';
     const html = `
-      <div style="font-family: Arial, sans-serif; padding: 24px; max-width: 600px; margin: 0 auto; border: 1px solid #fda4af; border-radius: 16px; background-color: #fff1f2;">
-        <h2 style="color: #be123c; margin-bottom: 8px;">AutoTrade System Alert</h2>
-        <p style="color: #333; font-size: 14px; font-weight: bold;">Subject: ${subject}</p>
-        <p style="color: #555; font-size: 14px;">${message}</p>
-        <hr style="border: 0; border-top: 1px solid #fda4af; margin: 20px 0;" />
-        <p style="color: #9f1239; font-size: 11px;">This is an automated alert generated by the AutoTrade Backend service.</p>
-      </div>
-    `;
+        <div style="font-family: Arial, sans-serif; padding: 24px; max-width: 600px; margin: 0 auto; border: 1px solid #fda4af; border-radius: 16px; background-color: #fff1f2;">
+          <h2 style="color: #be123c; margin-bottom: 8px;">AutoTrade System Alert</h2>
+          <p style="color: #333; font-size: 14px; font-weight: bold;">Subject: ${subject}</p>
+          <p style="color: #555; font-size: 14px;">${message}</p>
+          <hr style="border: 0; border-top: 1px solid #fda4af; margin: 20px 0;" />
+          <p style="color: #9f1239; font-size: 11px;">This is an automated alert generated by the AutoTrade Backend service.</p>
+        </div>
+      `;
     await this.sendEmail(to, subject, html);
   }
 }
