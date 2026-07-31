@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../store/store';
 import { useCreateReturnMutation, useGetMyReturnsQuery } from '../store/slices/returnApiSlice';
@@ -76,9 +76,7 @@ const ReturnsPage = () => {
   const [formError, setFormError] = useState('');
   const [selectedReturn, setSelectedReturn] = useState<string | null>(null);
 
-  if (!userInfo) {
-    return <Navigate to="/login?redirect=/returns" replace />;
-  }
+
 
 
 

@@ -1,9 +1,4 @@
-/**
- * src/config/categories.ts
- *
- * Senior Developer Architecture: Single Source of Truth for
- * Automotive Categories, Subcategories, Navigation, and Slug Mappings.
- */
+// Shared category configuration, subcategory lists, and navigation slug mappings.
 
 export interface SubCategoryItem {
   label: string;
@@ -153,3 +148,12 @@ export const CATEGORY_SLUG_MAP: Record<string, { subcategoryName?: string; colle
   'car-lights': { subcategoryName: 'Car Lights', collectionType: 'Auto Replacement Parts', title: 'Car Lights' },
   'windscreen-wipers-windows': { subcategoryName: 'Windscreen Wipers & Windows', collectionType: 'Auto Replacement Parts', title: 'Windscreen Wipers & Windows' },
 };
+
+export const normalizeSlug = (value: string) =>
+  value
+    .toLowerCase()
+    .trim()
+    .replace(/['"]/g, '')
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');

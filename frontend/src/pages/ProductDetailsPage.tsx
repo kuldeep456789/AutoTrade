@@ -12,17 +12,8 @@ import ProductCard from '../components/product/ProductCard';
 import WishlistLoginPopup from '../components/WishlistLoginPopup';
 import { getColorHex } from '../utils/colorMap';
 import { getProductId } from '../lib/product';
-import { formatINR } from '../lib/currency';
 import { useCurrency } from '../context/CurrencyContext';
-
-const normalizeSlug = (value: string) =>
-  value
-    .toLowerCase()
-    .trim()
-    .replace(/['"]/g, '')
-    .replace(/&/g, ' and ')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+import { normalizeSlug } from '../config/categories';
 
 // Mock review data generator seeded per product
 const MOCK_REVIEWS = [

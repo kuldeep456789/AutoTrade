@@ -107,10 +107,10 @@ function App() {
           <Route path="/placeorder" element={<PrivateRoute><PlaceOrderPage /></PrivateRoute>} />
           <Route path="/order/:id" element={<PrivateRoute><OrderSuccessPage /></PrivateRoute>} />
           <Route path="/orders/:id" element={<PrivateRoute><OrderTrackingPage /></PrivateRoute>} />
-          <Route path="/contact" element={<ContactPage />} />
+          <Route path="/contact" element={<PrivateRoute><ContactPage /></PrivateRoute>} />
           <Route path="/track-order" element={<TrackOrderPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/returns" element={<ReturnsPage />} />
+          <Route path="/returns" element={<PrivateRoute><ReturnsPage /></PrivateRoute>} />
         </Route>
       </Routes>
       </Router>

@@ -1,14 +1,6 @@
 import { apiSlice } from './apiSlice';
-import { filterExcluded } from '../../constants/products';
 
 const PRODUCTS_URL = '/api/products';
-
-const transformListResponse = (response: any) => {
-  if (response?.products) {
-    return { ...response, products: filterExcluded(response.products) };
-  }
-  return response;
-};
 
 export const productApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
@@ -35,7 +27,7 @@ export const productApiSlice = apiSlice.injectEndpoints({
         url: PRODUCTS_URL,
         params,
       }),
-      transformResponse: transformListResponse,
+
       providesTags: ['Product'],
       // Keep cache for 10 minutes — warehouse refreshes hourly so this is safe
       keepUnusedDataFor: 600,
@@ -60,7 +52,7 @@ export const productApiSlice = apiSlice.injectEndpoints({
       query: (productId) => ({
         url: `${PRODUCTS_URL}/${productId}/related`,
       }),
-      transformResponse: transformListResponse,
+
       providesTags: (_, __, productId) => [{ type: 'Product' as const, id: `related-${productId}` }],
       keepUnusedDataFor: 600,
     }),

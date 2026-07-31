@@ -9,7 +9,6 @@ import { apiSlice } from '../../store/slices/apiSlice';
 import { clearCartItems } from '../../store/slices/cartSlice';
 import { clearWishlist } from '../../store/slices/wishlistSlice';
 import { useGetProductsQuery, productApiSlice } from '../../store/slices/productApiSlice';
-import { useGetCategoriesQuery } from '../../store/slices/categoryApiSlice';
 import { getProductId } from '../../lib/product';
 
 import MiniCart from './MiniCart';
@@ -30,7 +29,6 @@ const Navbar = () => {
   const wishlistItems = useSelector((state: RootState) => state.wishlist.wishlistItems);
   const wishlistCount = wishlistItems.length;
   const userInfo = useSelector((state: RootState) => state.auth.userInfo);
-  useGetCategoriesQuery(undefined);
 
   const userDisplayName =
     userInfo?.firstName?.trim() ||

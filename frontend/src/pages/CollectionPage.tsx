@@ -6,16 +6,7 @@ import { useGetProductsQuery } from '../store/slices/productApiSlice';
 import ProductCard, { ProductCardSkeleton } from '../components/product/ProductCard';
 import Pagination from '../components/Pagination';
 
-import { CATEGORY_SLUG_MAP } from '../config/categories';
-
-const normalizeSlug = (value: string) =>
-  value
-    .toLowerCase()
-    .trim()
-    .replace(/['"]/g, '')
-    .replace(/&/g, ' and ')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+import { CATEGORY_SLUG_MAP, normalizeSlug } from '../config/categories';
 
 const toSlug = (value: string) => normalizeSlug(value);
 const fromSlug = (value: string) => value.replace(/-/g, ' ');

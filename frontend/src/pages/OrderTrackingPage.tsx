@@ -1,4 +1,4 @@
-import { Link, useParams, Navigate } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../store/store';
 import { useGetOrderDetailsQuery } from '../store/slices/orderApiSlice';
@@ -112,14 +112,11 @@ const OrderTrackingPage = () => {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    if (!userInfo) return;
     const t = setTimeout(() => setLoaded(true), 100);
     return () => clearTimeout(t);
-  }, [userInfo]);
+  }, []);
 
-  if (!userInfo) {
-    return <Navigate to={id ? `/login?redirect=/orders/${id}` : '/login?redirect=/account'} replace />;
-  }
+
 
   if (isLoading) return <Skeleton />;
 

@@ -258,9 +258,9 @@ export const adminApi = {
       const contacts = (await res.json()) || [];
 
       try {
-        const issuesRes = await request<CustomerIssue[]>('GET', '/issues');
-        if (Array.isArray(issuesRes)) {
-          const formattedIssues = issuesRes.map((i: any) => ({
+        const issuesRes = await request<{ issues: CustomerIssue[] }>('GET', '/issues');
+        if (issuesRes && Array.isArray(issuesRes.issues)) {
+          const formattedIssues = issuesRes.issues.map((i: any) => ({
             _id: i._id,
             name: i.user?.name || i.user?.email || 'Customer',
             email: i.user?.email || 'customer@example.com',

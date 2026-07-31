@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../store/store';
 import { ChevronRight, Mail, MapPin, Phone, Send, Check, User, Tag, PenLine, Clock, Copy, CheckCircle2, MessageCircle } from 'lucide-react';
@@ -30,9 +30,7 @@ const ContactPage = () => {
     }
   }, [userInfo]);
 
-  if (!userInfo) {
-    return <Navigate to="/login?redirect=/contact" replace />;
-  }
+
 
   const handleCopyEmail = () => {
     navigator.clipboard.writeText('support@autotrade.in');

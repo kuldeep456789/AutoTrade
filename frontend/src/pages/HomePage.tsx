@@ -709,11 +709,11 @@ const HomePage = () => {
         </div>
         <div className="max-w-[1920px] mx-auto px-6 sm:px-10 lg:px-16 flex flex-wrap items-center justify-center gap-6 sm:gap-10">
           {[
-            { src: '/video/CONTINENTAL_minimalist_vector_logo_2K_202607301318.jpeg', name: 'Continental' },
-            { src: '/video/Minimalist_vector_logo_CASTROL_2K_202607301318.jpeg', name: 'Castrol' },
-            { src: '/video/Minimalist_vector_logo_MOBIL_1_202607301318.jpeg', name: 'Mobil 1' },
-            { src: '/video/Premium_minimalist_vector_logo_MANN_202607301318.jpeg', name: 'Mann Filter' },
-            { src: '/video/one.jpeg', name: 'AutoTrade Partner' }
+            { src: '/img/CONTINENTAL_minimalist_vector_logo_2K_202607301318.jpeg', name: 'Continental' },
+            { src: '/img/Minimalist_vector_logo_CASTROL_2K_202607301318.jpeg', name: 'Castrol' },
+            { src: '/img/Minimalist_vector_logo_MOBIL_1_202607301318.jpeg', name: 'Mobil 1' },
+            { src: '/img/Premium_minimalist_vector_logo_MANN_202607301318.jpeg', name: 'Mann Filter' },
+            { src: '/img/one.jpeg', name: 'AutoTrade Partner' }
           ].map((logo, lIdx) => (
             <img
               key={`logo-static-${lIdx}`}
