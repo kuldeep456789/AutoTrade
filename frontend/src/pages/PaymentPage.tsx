@@ -5,7 +5,7 @@ import type { RootState } from '../store/store';
 import { savePaymentMethod } from '../store/slices/cartSlice';
 import CheckoutSteps from '../components/checkout/CheckoutSteps';
 import OrderSummarySidebar from '../components/checkout/OrderSummarySidebar';
-import { CreditCard, ShieldCheck, Smartphone, Landmark, Check, Lock, Sparkles, Truck } from 'lucide-react';
+import { CreditCard, Smartphone, Landmark, Check, Sparkles } from 'lucide-react';
 
 const paymentOptions = [
   {

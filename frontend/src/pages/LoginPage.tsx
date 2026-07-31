@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Lock, Mail, Shield, X, ArrowLeft } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, ArrowLeft } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { RootState } from '../store/store';
 import { setCredentials } from '../store/slices/authSlice';
@@ -9,8 +9,6 @@ import { clearCartItems } from '../store/slices/cartSlice';
 import { clearWishlist } from '../store/slices/wishlistSlice';
 import {
   useLoginMutation,
-  useAdminSecretLoginMutation,
-  useRegisterMutation,
   useSendRegisterOtpMutation,
   useVerifyRegisterOtpMutation,
 } from '../store/slices/userApiSlice';
@@ -33,11 +31,9 @@ const LoginPage = () => {
 
   // Register fields
   const [fullName, setFullName] = useState('');
-  const [adminSecret, setAdminSecret] = useState('');
   const [registerEmail, setRegisterEmail] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [registerPhone, setRegisterPhone] = useState('');
   const [showRegisterPassword, setShowRegisterPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -49,10 +45,9 @@ const LoginPage = () => {
 
   const [errorMessage, setErrorMessage] = useState('');
   const [login, { isLoading: loginLoading }] = useLoginMutation();
-  const [register, { isLoading: registerLoading }] = useRegisterMutation();
   const [sendRegisterOtp, { isLoading: sendingRegisterOtp }] = useSendRegisterOtpMutation();
   const [verifyRegisterOtp, { isLoading: verifyingRegisterOtp }] = useVerifyRegisterOtpMutation();
-  const isLoading = loginLoading || registerLoading || sendingRegisterOtp || verifyingRegisterOtp;
+  const isLoading = loginLoading || sendingRegisterOtp || verifyingRegisterOtp;
 
   useEffect(() => {
     if (countdown <= 0) return;
@@ -111,10 +106,8 @@ const LoginPage = () => {
       await sendRegisterOtp({
         firstName: fullName.trim(),
         lastName: '',
-        adminSecret: adminSecret.trim() || undefined,
         email: registerEmail.trim(),
         password: registerPassword,
-        ...(registerPhone ? { phone: `+91${registerPhone.replace(/\D/g, '')}` } : {}),
       }).unwrap();
       setRegisterStep('otp');
       setCountdown(30);
@@ -150,10 +143,8 @@ const LoginPage = () => {
       const registerDto = {
         firstName: fullName.trim(),
         lastName: '',
-        adminSecret: adminSecret.trim() || undefined,
         email: registerEmail.trim(),
         password: registerPassword,
-        ...(registerPhone ? { phone: `+91${registerPhone.replace(/\D/g, '')}` } : {}),
       };
       const payload = await verifyRegisterOtp({
         registerDto,

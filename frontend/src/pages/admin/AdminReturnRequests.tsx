@@ -10,7 +10,6 @@ export default function AdminReturnRequests() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedStatus, setSelectedStatus] = useState('');
-  const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [reviewModalReturn, setReviewModalReturn] = useState<AdminReturn | null>(null);
   const [adminNote, setAdminNote] = useState('');
   const tabsRef = useRef<HTMLDivElement>(null);
@@ -42,7 +41,6 @@ export default function AdminReturnRequests() {
 
   const handleStatusChange = async (returnId: string, newStatus: string) => {
     try {
-      setUpdatingId(returnId);
       await adminApi.returns.updateStatus(returnId, newStatus, adminNote);
       setReturns(prev =>
         prev.map(r => r._id === returnId ? { ...r, status: newStatus, adminRemarks: adminNote } : r)
@@ -51,7 +49,6 @@ export default function AdminReturnRequests() {
     } catch (err: any) {
       toast.error(err?.message ?? 'Failed to update status');
     } finally {
-      setUpdatingId(null);
       closeReviewModal();
     }
   };

@@ -18,4 +18,3 @@ export interface CjCreateOrderDto {
   platform?: string;
   products: CjOrderProductItem[];
 }
-

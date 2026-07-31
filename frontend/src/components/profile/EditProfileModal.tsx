@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useDispatch } from 'react-redux';
-import { X, Loader2, User, Mail, Phone, Calendar, Users2, Image, Camera, Trash2 } from 'lucide-react';
+import { X, Loader2, User, Mail, Phone, Camera, Trash2 } from 'lucide-react';
 import { useUpdateProfileMutation } from '../../store/slices/userApiSlice';
 import { setCredentials } from '../../store/slices/authSlice';
 import type { UserInfo } from '../../store/slices/authSlice';

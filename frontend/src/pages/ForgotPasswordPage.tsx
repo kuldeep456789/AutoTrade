@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Mail, Lock, ArrowLeft, Check, Eye, EyeOff } from 'lucide-react';
 import {
   useSendEmailOtpMutation,
@@ -11,7 +11,6 @@ import toast from 'react-hot-toast';
 type Step = 'email' | 'otp' | 'password' | 'done';
 
 const ForgotPasswordPage = () => {
-  const navigate = useNavigate();
   const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
   const [otpValues, setOtpValues] = useState(['', '', '', '', '', '']);

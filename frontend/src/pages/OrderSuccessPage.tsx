@@ -1,7 +1,7 @@
 import { Link, useParams } from 'react-router-dom';
 import { useGetOrderDetailsQuery } from '../store/slices/orderApiSlice';
 import { useGetProductDetailsQuery } from '../store/slices/productApiSlice';
-import { CheckCircle, Clock, CreditCard, Package, MapPin, Truck, FileText, ShoppingBag } from 'lucide-react';
+import { CheckCircle, Clock, CreditCard, Package, Truck, FileText, ShoppingBag } from 'lucide-react';
 import { formatINR } from '../lib/currency';
 
 const statusConfig: Record<string, { label: string; className: string }> = {

@@ -8,9 +8,6 @@ import Pagination from '../components/Pagination';
 
 const ITEMS_PER_PAGE = 20;
 
-const getActiveTabFromPath = (pathname: string) =>
-  pathname.includes('/new-arrivals') ? 'ALL' : 'ALL';
-
 const ProductListPage = () => {
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -20,10 +17,8 @@ const ProductListPage = () => {
   const [page, setPage] = useState(1);
   const isNewArrivals = location.pathname.includes('/new-arrivals');
   const [sortBy] = useState(isNewArrivals ? 'Newest' : 'Popularity');
-  const [activeTab, setActiveTab] = useState(() => getActiveTabFromPath(location.pathname));
 
   useEffect(() => {
-    setActiveTab(getActiveTabFromPath(location.pathname));
     setPage(1);
   }, [location.pathname]);
 

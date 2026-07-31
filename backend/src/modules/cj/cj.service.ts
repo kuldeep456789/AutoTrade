@@ -9,7 +9,11 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { RedisService } from '../redis/redis.service';
 import { Order } from '../orders/schemas/order.schema';
-import { Automobiles, getAllSyncTargets, getCategoryInfoBySubname } from './collections';
+import {
+  Automobiles,
+  getAllSyncTargets,
+  getCategoryInfoBySubname,
+} from './collections';
 import { CjCreateOrderDto, CjOrderProductItem } from './dto/cj-order.dto';
 import { CJ_CONFIG } from '../../config/cj.config';
 import {
@@ -74,20 +78,26 @@ export class CjService {
       ...payload,
     };
     try {
-      return await this.cjClient.scheduleRequest('/v1/shopping/order/createOrderV2', {
-        method: 'POST',
-        headers,
-        data: body,
-      });
+      return await this.cjClient.scheduleRequest(
+        '/v1/shopping/order/createOrderV2',
+        {
+          method: 'POST',
+          headers,
+          data: body,
+        },
+      );
     } catch (err: any) {
       this.logger.warn(
         `[CJ] createOrderV2 failed, attempting fallback to POST /v1/shopping/order/createOrder...`,
       );
-      return await this.cjClient.scheduleRequest('/v1/shopping/order/createOrder', {
-        method: 'POST',
-        headers,
-        data: body,
-      });
+      return await this.cjClient.scheduleRequest(
+        '/v1/shopping/order/createOrder',
+        {
+          method: 'POST',
+          headers,
+          data: body,
+        },
+      );
     }
   }
 
@@ -219,13 +229,20 @@ export class CjService {
     if (cached) return cached;
 
     this.logger.log('[CJ] GET /v1/product/getCategory');
-    const response = await this.cjClient.scheduleRequest('/v1/product/getCategory', {
-      method: 'GET',
-      headers: await this.cjClient.authHeaders(),
-    });
+    const response = await this.cjClient.scheduleRequest(
+      '/v1/product/getCategory',
+      {
+        method: 'GET',
+        headers: await this.cjClient.authHeaders(),
+      },
+    );
 
     const normalized = this.normalizeCategoryResponse(response);
-    await this.redisService.setJson(cacheKey, normalized, CJ_CONFIG.CACHE_TTL.CATEGORIES);
+    await this.redisService.setJson(
+      cacheKey,
+      normalized,
+      CJ_CONFIG.CACHE_TTL.CATEGORIES,
+    );
     return normalized;
   }
 
@@ -259,13 +276,21 @@ export class CjService {
           p.sku === pid ||
           p.sku === cleanPid ||
           p.name === pid ||
-          p.name === cleanPid
+          p.name === cleanPid,
       );
 
       if (matched) {
         this.logger.log(`[CJ] Warehouse catalog HIT for product detail ${pid}`);
-        await this.redisService.setJson(warehouseKey, matched, CJ_CONFIG.CACHE_TTL.PRODUCT_DETAIL);
-        await this.redisService.setJson(legacyCacheKey, matched, CJ_CONFIG.CACHE_TTL.PRODUCT_DETAIL);
+        await this.redisService.setJson(
+          warehouseKey,
+          matched,
+          CJ_CONFIG.CACHE_TTL.PRODUCT_DETAIL,
+        );
+        await this.redisService.setJson(
+          legacyCacheKey,
+          matched,
+          CJ_CONFIG.CACHE_TTL.PRODUCT_DETAIL,
+        );
         return matched;
       }
     }
@@ -291,8 +316,16 @@ export class CjService {
 
     try {
       const enriched = await this.enrichWithVariants(matchedProduct, pid);
-      await this.redisService.setJson(legacyCacheKey, enriched, CJ_CONFIG.CACHE_TTL.PRODUCT_DETAIL);
-      await this.redisService.setJson(warehouseKey, enriched, CJ_CONFIG.CACHE_TTL.PRODUCT_DETAIL);
+      await this.redisService.setJson(
+        legacyCacheKey,
+        enriched,
+        CJ_CONFIG.CACHE_TTL.PRODUCT_DETAIL,
+      );
+      await this.redisService.setJson(
+        warehouseKey,
+        enriched,
+        CJ_CONFIG.CACHE_TTL.PRODUCT_DETAIL,
+      );
       return enriched;
     } catch (err: any) {
       this.logger.warn(
@@ -300,8 +333,16 @@ export class CjService {
       );
     }
 
-    await this.redisService.setJson(legacyCacheKey, matchedProduct, CJ_CONFIG.CACHE_TTL.PRODUCT_DETAIL);
-    await this.redisService.setJson(warehouseKey, matchedProduct, CJ_CONFIG.CACHE_TTL.PRODUCT_DETAIL);
+    await this.redisService.setJson(
+      legacyCacheKey,
+      matchedProduct,
+      CJ_CONFIG.CACHE_TTL.PRODUCT_DETAIL,
+    );
+    await this.redisService.setJson(
+      warehouseKey,
+      matchedProduct,
+      CJ_CONFIG.CACHE_TTL.PRODUCT_DETAIL,
+    );
     return matchedProduct;
   }
 
@@ -349,8 +390,15 @@ export class CjService {
         const rawKw = keyword.toLowerCase();
         const matchedInCatalog = warehouse.filter((p: any) => {
           const name = (p.name || p.title || '').toLowerCase();
-          const category = (p.categoryName || p._category || p.subcategoryName || '').toLowerCase();
-          const kwStr = Array.isArray(p.keywords) ? p.keywords.join(' ').toLowerCase() : '';
+          const category = (
+            p.categoryName ||
+            p._category ||
+            p.subcategoryName ||
+            ''
+          ).toLowerCase();
+          const kwStr = Array.isArray(p.keywords)
+            ? p.keywords.join(' ').toLowerCase()
+            : '';
           return (
             name.includes(rawKw) ||
             category.includes(rawKw) ||
@@ -372,11 +420,18 @@ export class CjService {
         const CANDIDATE_CAP = 150;
         const candidatePids = matchingPids.slice(0, CANDIDATE_CAP);
 
-        const productKeys = candidatePids.map((pid) => `warehouse:product:${pid}`);
-        const productResults = await this.redisService.mgetJson<any>(productKeys);
+        const productKeys = candidatePids.map(
+          (pid) => `warehouse:product:${pid}`,
+        );
+        const productResults =
+          await this.redisService.mgetJson<any>(productKeys);
         let filteredProducts = productResults.filter(Boolean);
 
-        if (filteredProducts.length === 0 && warehouse && Array.isArray(warehouse)) {
+        if (
+          filteredProducts.length === 0 &&
+          warehouse &&
+          Array.isArray(warehouse)
+        ) {
           filteredProducts = warehouse.filter((p: any) =>
             matchingPids.includes(String(p.pid || p.id || p._id)),
           );
@@ -420,7 +475,9 @@ export class CjService {
       if (query.subcategoryName) {
         const sub = query.subcategoryName.toLowerCase();
         filtered = filtered.filter((p: any) =>
-          (p._category || p.subcategoryName || p.categoryName || '').toLowerCase().includes(sub),
+          (p._category || p.subcategoryName || p.categoryName || '')
+            .toLowerCase()
+            .includes(sub),
         );
       }
 
@@ -476,7 +533,11 @@ export class CjService {
     });
 
     const normalized = this.normalizeProductResponse(response, cjQuery);
-    await this.redisService.setJson(cacheKey, normalized, CJ_CONFIG.CACHE_TTL.PRODUCT_LIST);
+    await this.redisService.setJson(
+      cacheKey,
+      normalized,
+      CJ_CONFIG.CACHE_TTL.PRODUCT_LIST,
+    );
     return normalized;
   }
 
@@ -504,7 +565,11 @@ export class CjService {
     });
 
     const normalized = this.normalizeProductResponse(response, query);
-    await this.redisService.setJson(cacheKey, normalized, CJ_CONFIG.CACHE_TTL.PRODUCT_CATEGORY);
+    await this.redisService.setJson(
+      cacheKey,
+      normalized,
+      CJ_CONFIG.CACHE_TTL.PRODUCT_CATEGORY,
+    );
     return normalized;
   }
 
@@ -515,8 +580,8 @@ export class CjService {
     const categories = categoryId
       ? [categoryId]
       : ((await this.getCategories())?.categories
-        ?.map((c: any) => c.id)
-        .filter(Boolean) ?? []);
+          ?.map((c: any) => c.id)
+          .filter(Boolean) ?? []);
     const allProducts: any[] = [];
 
     for (const catId of categories) {
@@ -598,15 +663,22 @@ export class CjService {
       let parentCat = 'auto';
       for (const [parent, items] of Object.entries(Automobiles)) {
         if (
-          items.some((i) => i.name.toLowerCase() === subcategoryName.toLowerCase())
+          items.some(
+            (i) => i.name.toLowerCase() === subcategoryName.toLowerCase(),
+          )
         ) {
           parentCat = parent;
           break;
         }
       }
       const legacyCatKey = legacyCategoryKey(parentCat, subcategoryName);
-      const legacyCatData = await this.redisService.getJson<any[]>(legacyCatKey);
-      if (legacyCatData && Array.isArray(legacyCatData) && legacyCatData.length > 0) {
+      const legacyCatData =
+        await this.redisService.getJson<any[]>(legacyCatKey);
+      if (
+        legacyCatData &&
+        Array.isArray(legacyCatData) &&
+        legacyCatData.length > 0
+      ) {
         const total = legacyCatData.length;
         const effectivePageSize = Math.min(pageSize, 250);
         const start = (pageNum - 1) * effectivePageSize;
@@ -666,7 +738,13 @@ export class CjService {
     if (subcategoryName) {
       const norm = normalizeKey(subcategoryName);
       pool = pool.filter((p) => {
-        const val = normalizeKey(p.subcategoryName ?? p._category ?? p.category ?? p.categoryName ?? '');
+        const val = normalizeKey(
+          p.subcategoryName ??
+            p._category ??
+            p.category ??
+            p.categoryName ??
+            '',
+        );
         return val === norm || val.includes(norm) || norm.includes(val);
       });
     }
@@ -682,7 +760,9 @@ export class CjService {
             p.categoryName ??
             '',
         );
-        return val === normColl || val.includes(normColl) || normColl.includes(val);
+        return (
+          val === normColl || val.includes(normColl) || normColl.includes(val)
+        );
       });
     }
 
@@ -796,7 +876,8 @@ export class CjService {
         const parent = product._parentCategory || product.collectionType || '';
         if (parent) {
           const parentKey = slugify(parent);
-          if (!collectionGroups.has(parentKey)) collectionGroups.set(parentKey, []);
+          if (!collectionGroups.has(parentKey))
+            collectionGroups.set(parentKey, []);
           collectionGroups.get(parentKey)!.push(product);
         }
 
@@ -804,8 +885,10 @@ export class CjService {
         const tokens: string[] = [];
         if (product.name) tokens.push(...product.name.split(/\s+/));
         if (product.sku) tokens.push(product.sku);
-        if (product.categoryName) tokens.push(...product.categoryName.split(/\s+/));
-        if (product.subcategoryName) tokens.push(...product.subcategoryName.split(/\s+/));
+        if (product.categoryName)
+          tokens.push(...product.categoryName.split(/\s+/));
+        if (product.subcategoryName)
+          tokens.push(...product.subcategoryName.split(/\s+/));
 
         for (const token of tokens) {
           const cleanToken = slugify(token);
@@ -818,7 +901,10 @@ export class CjService {
 
       // Write subcategory groups
       for (const [subKey, products] of subcategoryGroups.entries()) {
-        writeOps.push({ key: `warehouse:subcategory:${subKey}`, value: products });
+        writeOps.push({
+          key: `warehouse:subcategory:${subKey}`,
+          value: products,
+        });
       }
 
       // Write collection/brand groups
@@ -833,10 +919,15 @@ export class CjService {
 
       // Write keyword search indexes
       for (const [token, pids] of keywordMap.entries()) {
-        writeOps.push({ key: `warehouse:index:keyword:${token}`, value: Array.from(new Set(pids)) });
+        writeOps.push({
+          key: `warehouse:index:keyword:${token}`,
+          value: Array.from(new Set(pids)),
+        });
       }
 
-      this.logger.log(`[Cron] Preparing batch writes of ${writeOps.length} keys to Redis...`);
+      this.logger.log(
+        `[Cron] Preparing batch writes of ${writeOps.length} keys to Redis...`,
+      );
       await this.batchWriteToRedis(writeOps);
       this.logger.log(`[Cron] Batch Redis writes completed.`);
 
@@ -848,7 +939,9 @@ export class CjService {
       this.logger.log(
         `[Cron] Execution Time: ${(durationMs / 1000).toFixed(1)}s`,
       );
-      this.logger.log(`[Cron] API Calls Used: ~${this.cjClient.apiCallsThisSync}`);
+      this.logger.log(
+        `[Cron] API Calls Used: ~${this.cjClient.apiCallsThisSync}`,
+      );
       this.logger.log(`[Cron] Sync Completed Successfully`);
 
       await this.saveProductCount(allProducts.length);
@@ -949,8 +1042,14 @@ export class CjService {
           if (!pid) continue;
 
           // Strip zero / sub-1-rupee priced products
-          const productPrice = Number(product?.price ?? product?.sellPrice ?? 0) || 0;
-          const inrPrice = productPrice > 1 ? productPrice : Number((productPrice * CJ_CONFIG.CURRENCY_EXCHANGE_RATE).toFixed(2));
+          const productPrice =
+            Number(product?.price ?? product?.sellPrice ?? 0) || 0;
+          const inrPrice =
+            productPrice > 1
+              ? productPrice
+              : Number(
+                  (productPrice * CJ_CONFIG.CURRENCY_EXCHANGE_RATE).toFixed(2),
+                );
           if (inrPrice <= 1) continue;
 
           if (productMap.has(pid)) {
@@ -961,7 +1060,7 @@ export class CjService {
               existing.name !== product.name ||
               existing.title !== product.title ||
               JSON.stringify(existing.productImageSet ?? []) !==
-              JSON.stringify(product.productImageSet ?? []);
+                JSON.stringify(product.productImageSet ?? []);
 
             if (isChanged) {
               productMap.set(pid, {
@@ -1001,14 +1100,18 @@ export class CjService {
       }
 
       const catDurationSec = ((Date.now() - catStart) / 1000).toFixed(1);
-      
+
       // Calculate sync metrics and log details
       const elapsedTotalSec = (Date.now() - syncStartAll) / 1000;
-      const progressRatio = (allProducts.length + mergedCatProducts.length) / 50000; // rough estimation
-      const estRemainingSec = progressRatio > 0 ? (elapsedTotalSec / progressRatio) - elapsedTotalSec : 0;
+      const progressRatio =
+        (allProducts.length + mergedCatProducts.length) / 50000; // rough estimation
+      const estRemainingSec =
+        progressRatio > 0
+          ? elapsedTotalSec / progressRatio - elapsedTotalSec
+          : 0;
 
       this.logger.log(
-        `[Sync Status] Cat: "${categoryName}" | Page: ${pageNum} | Synced: ${mergedCatProducts.length} | New: ${newProductsCount} | Updated: ${updatedProductsCount} | Dups Removed: ${duplicatesRemovedCount} | API Calls: ${catApiCalls} | Duration: ${catDurationSec}s | Est. Remaining: ${estRemainingSec.toFixed(0)}s`
+        `[Sync Status] Cat: "${categoryName}" | Page: ${pageNum} | Synced: ${mergedCatProducts.length} | New: ${newProductsCount} | Updated: ${updatedProductsCount} | Dups Removed: ${duplicatesRemovedCount} | API Calls: ${catApiCalls} | Duration: ${catDurationSec}s | Est. Remaining: ${estRemainingSec.toFixed(0)}s`,
       );
 
       for (const p of mergedCatProducts) {
@@ -1026,12 +1129,14 @@ export class CjService {
     return allProducts;
   }
 
-  private async batchWriteToRedis(operations: { key: string; value: any; ttl?: number }[]) {
+  private async batchWriteToRedis(
+    operations: { key: string; value: any; ttl?: number }[],
+  ) {
     const CHUNK_SIZE = 150;
     for (let i = 0; i < operations.length; i += CHUNK_SIZE) {
       const chunk = operations.slice(i, i + CHUNK_SIZE);
       await Promise.all(
-        chunk.map(op => this.redisService.setJson(op.key, op.value, op.ttl))
+        chunk.map((op) => this.redisService.setJson(op.key, op.value, op.ttl)),
       );
     }
   }
@@ -1107,10 +1212,10 @@ export class CjService {
 
       const catName = normalizeKey(
         item.categoryName ||
-        item.categoryThirdName ||
-        item.categorySecondName ||
-        item.categoryFirstName ||
-        '',
+          item.categoryThirdName ||
+          item.categorySecondName ||
+          item.categoryFirstName ||
+          '',
       );
 
       const childArrayKey = Object.keys(item).find(
@@ -1187,12 +1292,12 @@ export class CjService {
     const categoryId = String(product?.categoryId ?? product?.category ?? '');
     const pid = String(
       product?.pid ??
-      product?.id ??
-      product?.productId ??
-      product?.productPid ??
-      product?.product_id ??
-      product?.productCode ??
-      '',
+        product?.id ??
+        product?.productId ??
+        product?.productPid ??
+        product?.product_id ??
+        product?.productCode ??
+        '',
     );
 
     const subcategoryName = product._category || query?._category;
@@ -1235,7 +1340,9 @@ export class CjService {
       product?.name ??
       '';
     const rawPrice = Number(product?.sellPrice ?? product?.price ?? 0) || 0;
-    const price = Number((rawPrice * CJ_CONFIG.CURRENCY_EXCHANGE_RATE).toFixed(2));
+    const price = Number(
+      (rawPrice * CJ_CONFIG.CURRENCY_EXCHANGE_RATE).toFixed(2),
+    );
 
     const categoryName =
       product?.categoryName ??
@@ -1301,7 +1408,11 @@ export class CjService {
         variantImage: v.variantImage || '',
         image: v.variantImage || '',
         price: v.variantSellPrice
-          ? Number((Number(v.variantSellPrice) * CJ_CONFIG.CURRENCY_EXCHANGE_RATE).toFixed(2))
+          ? Number(
+              (
+                Number(v.variantSellPrice) * CJ_CONFIG.CURRENCY_EXCHANGE_RATE
+              ).toFixed(2),
+            )
           : product.price,
         vid: v.vid || '',
         variantKey: v.variantKey || '',
@@ -1344,7 +1455,8 @@ export class CjService {
       if (value && !this.CJ_IGNORE_PARAMS.has(key)) {
         if (key === 'pageSize') {
           const num = Number(value);
-          result[key] = !isNaN(num) && num > 0 ? String(Math.min(num, 200)) : value;
+          result[key] =
+            !isNaN(num) && num > 0 ? String(Math.min(num, 200)) : value;
         } else {
           result[key] = value;
         }

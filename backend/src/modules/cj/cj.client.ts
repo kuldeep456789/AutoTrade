@@ -68,7 +68,8 @@ export interface SyncMetrics {
 export class CjClient {
   private readonly logger = new Logger(CjClient.name);
   private readonly baseUrl =
-    process.env.CJ_API_BASE_URL ?? 'https://developers.cjdropshipping.com/api2.0';
+    process.env.CJ_API_BASE_URL ??
+    'https://developers.cjdropshipping.com/api2.0';
   private readonly accessTokenCacheKey = 'cj:access_token';
   private accessTokenCache: { token: string; expiresAt: number } | null = null;
   private requestQueue: Promise<void> = Promise.resolve();
@@ -153,7 +154,9 @@ export class CjClient {
 
   async scheduleRequest(path: string, init: AxiosRequestConfig): Promise<any> {
     const run = async () => {
-      await new Promise((resolve) => setTimeout(resolve, CJ_CONFIG.REQUEST_DELAY_MS));
+      await new Promise((resolve) =>
+        setTimeout(resolve, CJ_CONFIG.REQUEST_DELAY_MS),
+      );
       return this.request(path, init);
     };
 

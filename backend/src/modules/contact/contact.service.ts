@@ -32,10 +32,14 @@ export class ContactService {
       );
 
       // Send email alert to admin asynchronously
-      this.mailService.sendSystemAlert(
-        `New Contact Message: ${saved.subject}`,
-        `You have received a new contact message from <b>${saved.name}</b> (${saved.email}).<br><br><b>Message:</b><br>${saved.message}`
-      ).catch(e => console.error('[ContactService] Failed to send email alert:', e));
+      this.mailService
+        .sendSystemAlert(
+          `New Contact Message: ${saved.subject}`,
+          `You have received a new contact message from <b>${saved.name}</b> (${saved.email}).<br><br><b>Message:</b><br>${saved.message}`,
+        )
+        .catch((e) =>
+          console.error('[ContactService] Failed to send email alert:', e),
+        );
 
       return {
         success: true,

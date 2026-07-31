@@ -24,7 +24,10 @@ export class CjCronService implements OnModuleInit {
       try {
         await this.checkWarehouseOnStartup();
       } catch (err: any) {
-        this.logger.error('[Cron] Startup warehouse check failed:', err?.message ?? err);
+        this.logger.error(
+          '[Cron] Startup warehouse check failed:',
+          err?.message ?? err,
+        );
       }
     }, 30000);
   }
@@ -35,14 +38,21 @@ export class CjCronService implements OnModuleInit {
   private async checkWarehouseOnStartup() {
     this.logger.log('[Cron] Checking if Redis warehouse is populated...');
     const count = await this.cjService.getProductCount();
-    
+
     if (count === 0) {
-      this.logger.warn('[Cron] Warehouse cache is EMPTY. Running startup catalog sync immediately...');
+      this.logger.warn(
+        '[Cron] Warehouse cache is EMPTY. Running startup catalog sync immediately...',
+      );
       this.executeSyncWithMetrics().catch((err) => {
-        this.logger.error('[Cron] Startup catalog sync failed:', err?.message ?? err);
+        this.logger.error(
+          '[Cron] Startup catalog sync failed:',
+          err?.message ?? err,
+        );
       });
     } else {
-      this.logger.log(`[Cron] Warehouse is active with ${count} products. Waiting for hourly cron.`);
+      this.logger.log(
+        `[Cron] Warehouse is active with ${count} products. Waiting for hourly cron.`,
+      );
     }
   }
 
@@ -66,7 +76,10 @@ export class CjCronService implements OnModuleInit {
     try {
       await this.executeSyncWithMetrics();
     } catch (error: any) {
-      this.logger.error('[Cron] Hourly sync encountered an unhandled error:', error?.message || error);
+      this.logger.error(
+        '[Cron] Hourly sync encountered an unhandled error:',
+        error?.message || error,
+      );
     }
   }
 
@@ -75,7 +88,9 @@ export class CjCronService implements OnModuleInit {
    */
   private async executeSyncWithMetrics() {
     if (this.isSyncing) {
-      this.logger.warn('[Cron] Sync is already active in this process. Skipping.');
+      this.logger.warn(
+        '[Cron] Sync is already active in this process. Skipping.',
+      );
       return;
     }
 
@@ -95,15 +110,22 @@ export class CjCronService implements OnModuleInit {
       try {
         await this.cjService.getAccessToken();
       } catch (err: any) {
-        throw new Error(`CJ API Authentication check failed: ${err?.message ?? err}`);
+        throw new Error(
+          `CJ API Authentication check failed: ${err?.message ?? err}`,
+        );
       }
       this.logger.log('[Cron] Health checks passed successfully.');
 
       // 2. Timeout Wrapper (30 Minutes max execution limit)
       const TIMEOUT_LIMIT = 30 * 60 * 1000;
       const syncPromise = this.cjService.runCatalogSync();
-      const timeoutPromise = new Promise<{ success: boolean; count: number }>((_, reject) =>
-        setTimeout(() => reject(new Error('Sync execution timed out after 30 minutes')), TIMEOUT_LIMIT),
+      const timeoutPromise = new Promise<{ success: boolean; count: number }>(
+        (_, reject) =>
+          setTimeout(
+            () =>
+              reject(new Error('Sync execution timed out after 30 minutes')),
+            TIMEOUT_LIMIT,
+          ),
       );
 
       const result = await Promise.race([syncPromise, timeoutPromise]);
@@ -124,17 +146,19 @@ export class CjCronService implements OnModuleInit {
           timestamp: new Date().toISOString(),
           durationSeconds: Number((durationMs / 1000).toFixed(1)),
           productCount: result.count,
-          memoryHeapUsedMB: Number(((endMemory) / 1024 / 1024).toFixed(2)),
+          memoryHeapUsedMB: Number((endMemory / 1024 / 1024).toFixed(2)),
           consecutiveFailures: this.consecutiveFailures,
         };
         await this.redisService.setJson('cj:sync:last_report', metricsReport);
       } else {
-        throw new Error(`Sync returned incomplete status (count: ${result.count})`);
+        throw new Error(
+          `Sync returned incomplete status (count: ${result.count})`,
+        );
       }
     } catch (error: any) {
       this.consecutiveFailures++;
       const durationMs = Date.now() - startTime;
-      
+
       this.logger.error(
         `[Cron] ❌ Sync FAILED (Consecutive: ${this.consecutiveFailures}) — ${error?.message || error}`,
       );
@@ -162,7 +186,9 @@ export class CjCronService implements OnModuleInit {
    * Send notification on failure.
    */
   private async triggerAlertNotification(errorMessage: string) {
-    this.logger.warn(`[Cron] Repeated failures detected (${this.consecutiveFailures}). Sending email alert...`);
+    this.logger.warn(
+      `[Cron] Repeated failures detected (${this.consecutiveFailures}). Sending email alert...`,
+    );
     try {
       const subject = `CRITICAL: AutoTrade CJ Sync Failure Alert`;
       const message = `The hourly catalog sync for CJ Dropshipping has failed consecutively ${this.consecutiveFailures} times.<br/><br/>
@@ -171,7 +197,9 @@ export class CjCronService implements OnModuleInit {
                        Please check the server logs and verify connection health.`;
       await this.mailService.sendSystemAlert(subject, message);
     } catch (err: any) {
-      this.logger.error(`[Cron] Failed to send email alert: ${err?.message ?? err}`);
+      this.logger.error(
+        `[Cron] Failed to send email alert: ${err?.message ?? err}`,
+      );
     }
   }
 }

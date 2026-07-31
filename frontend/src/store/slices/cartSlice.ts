@@ -29,7 +29,7 @@ interface CartState {
 const initialState: CartState = {
   cartItems: localStorage.getItem('cartItems') 
     ? JSON.parse(localStorage.getItem('cartItems') as string).map((item: any) => {
-        const { increment, ...rest } = item;
+        const { increment: _increment, ...rest } = item;
         return rest;
       })
     : [],

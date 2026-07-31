@@ -8,7 +8,6 @@ import { toggleWishlist } from '../../store/slices/wishlistSlice';
 import type { RootState } from '../../store/store';
 import WishlistLoginPopup from '../WishlistLoginPopup';
 import { getProductId } from '../../lib/product';
-import { formatINR } from '../../lib/currency';
 import { useCurrency } from '../../context/CurrencyContext';
 
 interface ProductCardProps {
@@ -31,7 +30,6 @@ export const ProductCardSkeleton = () => (
 const ProductCard = ({ product }: ProductCardProps) => {
   const { formatCurrency } = useCurrency();
   const [imageFailed, setImageFailed] = useState(false);
-  const [usePlaceholder, setUsePlaceholder] = useState(false);
   const [hovered, setHovered] = useState(false);
   const [isAdded, setIsAdded] = useState(false);
   const [showWishlistPopup, setShowWishlistPopup] = useState(false);
@@ -56,7 +54,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
     ? Number(rawOriginal)
     : Math.round(Number(currentPrice) * 1.3);
 
-  const discountPct = Math.round(((displayOriginalPrice - currentPrice) / displayOriginalPrice) * 100);
+
 
   // Stable Mock Rating Generator
   const getMockRating = (name: string) => {
@@ -73,7 +71,6 @@ const ProductCard = ({ product }: ProductCardProps) => {
   };
 
   const ratingVal = getMockRating(productName);
-  const numStars = Math.round(Number(ratingVal.score));
 
   // ── Hide products with no meaningful price (₹0 – ₹1) ───────────────────────
   if (!currentPrice || Number(currentPrice) <= 1) return null;
@@ -149,7 +146,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
         </div>
 
         <img
-          src={usePlaceholder || imageFailed ? PLACEHOLDER_IMAGE : (hovered && hoverImage ? hoverImage : primaryImage)}
+          src={imageFailed ? PLACEHOLDER_IMAGE : (hovered && hoverImage ? hoverImage : primaryImage)}
           alt={productName}
           onError={() => setImageFailed(true)}
           className="w-full h-full object-cover transition-opacity duration-300"

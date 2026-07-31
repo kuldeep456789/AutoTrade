@@ -112,9 +112,7 @@ export class MailService {
 
     if (process.env.MAILINATOR_MODE === 'true') {
       const inbox =
-        process.env.MAILINATOR_INBOX ||
-        to.split('@')[0] ||
-        'autotrade';
+        process.env.MAILINATOR_INBOX || to.split('@')[0] || 'autotrade';
 
       recipient = `${inbox}@mailinator.com`;
 

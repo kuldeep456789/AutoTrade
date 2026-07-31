@@ -81,16 +81,21 @@ export class RedisService {
       return results.map((value) => {
         if (value === null || value === undefined) return null;
         if (typeof value === 'string') {
-          try { return JSON.parse(value) as T; } catch { return value as unknown as T; }
+          try {
+            return JSON.parse(value) as T;
+          } catch {
+            return value as unknown as T;
+          }
         }
         return value as T;
       });
     } catch (error: any) {
-      this.logger.warn(`[UPSTASH ERROR] mgetJson failed: ${error?.message ?? error}`);
+      this.logger.warn(
+        `[UPSTASH ERROR] mgetJson failed: ${error?.message ?? error}`,
+      );
       return keys.map(() => null);
     }
   }
-
 
   async setJson<T>(
     key: string,

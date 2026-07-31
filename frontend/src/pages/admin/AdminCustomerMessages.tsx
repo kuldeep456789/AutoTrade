@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Mail, RefreshCw, CheckCircle2, Clock, MessageSquare, Send, MessageCircle } from 'lucide-react';
+import { Mail, RefreshCw, CheckCircle2, Clock, MessageSquare, Send, MessageCircle } from 'lucide-react';
 import { adminApi, type ContactMessage } from '../../services/adminApi';
 import toast from 'react-hot-toast';
 
@@ -7,8 +7,8 @@ export default function AdminCustomerMessages() {
   const [messages, setMessages] = useState<ContactMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'pending' | 'resolved'>('all');
+  const search = '';
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [replyingId, setReplyingId] = useState<string | null>(null);
   const [replyText, setReplyText] = useState<{ [key: string]: string }>({});

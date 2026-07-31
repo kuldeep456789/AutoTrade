@@ -3,7 +3,7 @@ import { Link, Navigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../store/store';
 import { useCreateReturnMutation, useGetMyReturnsQuery } from '../store/slices/returnApiSlice';
-import { Check, X, ChevronRight, ChevronDown, RotateCcw, Clock, AlertCircle, PackageCheck, PackageX } from 'lucide-react';
+import { Check, X, ChevronRight, ChevronDown, RotateCcw, AlertCircle, PackageCheck, PackageX } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 
@@ -47,17 +47,11 @@ const shortOrderId = (id: string) => {
   return id.startsWith('#') ? id : `#${id}`;
 };
 
-const nonReturnable = ['Innerwear', 'Accessories', 'Gift Cards', 'Final Sale Items'];
+
 
 const ReturnsPage = () => {
   const userInfo = useSelector((state: RootState) => state.auth.userInfo);
-
-  if (!userInfo) {
-    return <Navigate to="/login?redirect=/returns" replace />;
-  }
-
   const [activeTab, setActiveTab] = useState<'form' | 'history'>('form');
-  const [faqOpen, setFaqOpen] = useState<string | null>(null);
   const [createReturn, { isLoading: isSubmitting }] = useCreateReturnMutation();
   const { data: myReturns = [], isLoading: returnsLoading, refetch } = useGetMyReturnsQuery(undefined, { skip: !userInfo, pollingInterval: 3000 });
 
@@ -82,12 +76,11 @@ const ReturnsPage = () => {
   const [formError, setFormError] = useState('');
   const [selectedReturn, setSelectedReturn] = useState<string | null>(null);
 
-  const handleAddImage = () => {
-    if (imageUrl.trim() && !images.includes(imageUrl.trim())) {
-      setImages((prev) => [...prev, imageUrl.trim()]);
-      setImageUrl('');
-    }
-  };
+  if (!userInfo) {
+    return <Navigate to="/login?redirect=/returns" replace />;
+  }
+
+
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -157,14 +150,7 @@ const ReturnsPage = () => {
     }
   };
 
-  const faqs = [
-    { q: 'How long does a refund take?', a: 'Refunds are processed within 3–5 business days for original payment methods, and instantly for wallet credits.' },
-    { q: 'Can I exchange a size?', a: 'Yes! Select the "Exchange Size" option in the return form and choose your preferred size. We\'ll ship the replacement after the pickup is completed.' },
-    { q: 'Can I return sale items?', a: 'Final sale items, innerwear, and accessories are non-returnable. All other sale items follow the standard 7-day return policy.' },
-    { q: 'How do I cancel a return?', a: 'Contact our support team within 24 hours of submitting the request to cancel. Once pickup is scheduled, cancellation may not be possible.' },
-    { q: 'Who pays for return shipping?', a: 'Return shipping is free for all eligible items. We\'ll provide a free pickup from your address.' },
-    { q: 'Can I return multiple products?', a: 'Yes, you can submit separate return requests for each product in your order. Each request is handled individually.' },
-  ];
+
 
   return (
     <div className="bg-[hsl(var(--background))] min-h-screen text-[hsl(var(--foreground))]">

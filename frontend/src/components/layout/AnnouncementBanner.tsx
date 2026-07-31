@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { ChevronDown, ChevronRight, Boxes } from 'lucide-react';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { NAV_CATEGORIES as navCategories } from '../../config/categories';
 

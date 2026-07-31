@@ -32,9 +32,7 @@ async function checkWarehouse() {
   };
 
   // ── Warehouse Counts ──────────────────────────────────────────────────────
-  const [allVal] = await Promise.all([
-    client.get<any>('products:all'),
-  ]);
+  const [allVal] = await Promise.all([client.get<any>('products:all')]);
 
   const allCount = getLength(allVal);
 
@@ -44,9 +42,7 @@ async function checkWarehouse() {
   // ── Per-Category Keys ─────────────────────────────────────────────────────
   const catKeys = (await client.keys('products:*:*')) || [];
   const currentCatKeys = catKeys.filter(
-    (k) =>
-      !k.includes(':next:') &&
-      !['products:all'].includes(k),
+    (k) => !k.includes(':next:') && !['products:all'].includes(k),
   );
 
   if (currentCatKeys.length > 0) {

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, MapPinHouse, Phone, Building2, Globe, Tag } from 'lucide-react';
+import { X, MapPinHouse, Phone, Building2, Globe } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export interface AddressData {

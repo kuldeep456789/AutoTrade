@@ -2,15 +2,12 @@ import { useState, useEffect } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../store/store';
-import { ChevronRight, Mail, MapPin, Phone, Send, Check, User, Tag, PenLine, Clock, Sparkles, HelpCircle, ChevronDown, Copy, CheckCircle2, MessageCircle } from 'lucide-react';
+import { ChevronRight, Mail, MapPin, Phone, Send, Check, User, Tag, PenLine, Clock, Copy, CheckCircle2, MessageCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const ContactPage = () => {
   const { userInfo } = useSelector((state: RootState) => state.auth);
 
-  if (!userInfo) {
-    return <Navigate to="/login?redirect=/contact" replace />;
-  }
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -32,6 +29,10 @@ const ContactPage = () => {
       }));
     }
   }, [userInfo]);
+
+  if (!userInfo) {
+    return <Navigate to="/login?redirect=/contact" replace />;
+  }
 
   const handleCopyEmail = () => {
     navigator.clipboard.writeText('support@autotrade.in');

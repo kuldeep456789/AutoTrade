@@ -51,7 +51,9 @@ export class ProductsService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    this.logger.log('[Products] Module initialized — preserving existing api:products:* cache keys');
+    this.logger.log(
+      '[Products] Module initialized — preserving existing api:products:* cache keys',
+    );
   }
 
   async getProducts(query: ProductQuery = {}) {
@@ -129,7 +131,10 @@ export class ProductsService implements OnModuleInit {
     try {
       const cjProduct = await this.cjService.getProductById(id);
       const subcategoryName =
-        cjProduct?._category ?? cjProduct?.subcategoryName ?? cjProduct?.categoryName ?? '';
+        cjProduct?._category ??
+        cjProduct?.subcategoryName ??
+        cjProduct?.categoryName ??
+        '';
 
       let products: any[] = [];
 
@@ -142,7 +147,9 @@ export class ProductsService implements OnModuleInit {
           subcategoryName,
         );
         if (warehouseResult && warehouseResult.products.length > 0) {
-          products = warehouseResult.products.filter((p: any) => (p.pid || p.id || p._id) !== id);
+          products = warehouseResult.products.filter(
+            (p: any) => (p.pid || p.id || p._id) !== id,
+          );
         }
       }
 
@@ -150,7 +157,9 @@ export class ProductsService implements OnModuleInit {
       if (products.length === 0) {
         const fallbackResult = await this.cjService.getWarehouseProducts(1, 16);
         if (fallbackResult && fallbackResult.products.length > 0) {
-          products = fallbackResult.products.filter((p: any) => (p.pid || p.id || p._id) !== id);
+          products = fallbackResult.products.filter(
+            (p: any) => (p.pid || p.id || p._id) !== id,
+          );
         }
       }
 
@@ -219,7 +228,10 @@ export class ProductsService implements OnModuleInit {
     ).trim();
 
     // Sanitize input: cap length at 100, remove dangerous injection symbols
-    const cleanQuery = rawSearchQuery.slice(0, 100).replace(/[<>{}$]/g, '').trim();
+    const cleanQuery = rawSearchQuery
+      .slice(0, 100)
+      .replace(/[<>{}$]/g, '')
+      .trim();
 
     if (cleanQuery) {
       const queryKeywords = cleanQuery
@@ -237,13 +249,18 @@ export class ProductsService implements OnModuleInit {
         collectionType: query.collectionType,
       });
 
-      const candidateProducts = searchResult?.products ?? searchResult?.data?.list ?? [];
+      const candidateProducts =
+        searchResult?.products ?? searchResult?.data?.list ?? [];
 
       if (candidateProducts.length > 0) {
         const scoredProducts: { product: any; score: number }[] = [];
 
         for (const p of candidateProducts) {
-          const score = this.computeRelevanceScore(p, cleanQuery, queryKeywords);
+          const score = this.computeRelevanceScore(
+            p,
+            cleanQuery,
+            queryKeywords,
+          );
           if (score > 0) {
             // Price range filtering
             const price = Number(p.discountPrice || p.price || 0);
@@ -264,7 +281,9 @@ export class ProductsService implements OnModuleInit {
             return (b.product.price || 0) - (a.product.price || 0);
           }
           if (sortMode === 'rating') {
-            return (b.product.averageRating || 0) - (a.product.averageRating || 0);
+            return (
+              (b.product.averageRating || 0) - (a.product.averageRating || 0)
+            );
           }
           // Default: relevance score descending
           return b.score - a.score;
@@ -327,7 +346,11 @@ export class ProductsService implements OnModuleInit {
         `[Products] Warehouse MISS sub=${query.subcategoryName ?? '-'} — falling back to live CJ API`,
       );
       const liveData = await this.cjService.getProducts(query);
-      if (liveData && Array.isArray(liveData.products) && liveData.products.length > 0) {
+      if (
+        liveData &&
+        Array.isArray(liveData.products) &&
+        liveData.products.length > 0
+      ) {
         return {
           success: true,
           products: liveData.products,
@@ -361,13 +384,21 @@ export class ProductsService implements OnModuleInit {
     queryStr: string,
     queryKeywords: string[],
   ): number {
-    const title = String(product.name || product.title || product.productName || '').trim();
+    const title = String(
+      product.name || product.title || product.productName || '',
+    ).trim();
     const brand = String(product.brand || product.productBrand || '').trim();
     const sku = String(product.sku || product.variantSku || '').trim();
     const category = String(
-      product.collectionType || product.categoryName || product._category || product.subcategoryName || '',
+      product.collectionType ||
+        product.categoryName ||
+        product._category ||
+        product.subcategoryName ||
+        '',
     ).trim();
-    const tags = Array.isArray(product.tags) ? product.tags.join(' ') : String(product.tags || '');
+    const tags = Array.isArray(product.tags)
+      ? product.tags.join(' ')
+      : String(product.tags || '');
     const desc = String(product.description || '').trim();
 
     const titleLower = title.toLowerCase();
@@ -396,7 +427,10 @@ export class ProductsService implements OnModuleInit {
     const mainText = `${titleLower} ${brandLower} ${skuLower}`;
 
     // 4. All keywords present in Title/Brand/SKU
-    if (queryKeywords.length > 0 && queryKeywords.every((kw) => mainText.includes(kw))) {
+    if (
+      queryKeywords.length > 0 &&
+      queryKeywords.every((kw) => mainText.includes(kw))
+    ) {
       score += 25;
     }
     // 5. Any keyword present in Title/Brand/SKU
@@ -410,7 +444,11 @@ export class ProductsService implements OnModuleInit {
     }
 
     // 7. Tags / Description Match
-    if (queryKeywords.some((kw) => tagsLower.includes(kw) || descLower.includes(kw))) {
+    if (
+      queryKeywords.some(
+        (kw) => tagsLower.includes(kw) || descLower.includes(kw),
+      )
+    ) {
       score += 5;
     }
 

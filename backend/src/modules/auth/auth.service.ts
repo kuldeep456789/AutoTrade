@@ -21,7 +21,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly mailService: MailService,
     private readonly otpStore: OtpStoreService,
-  ) { }
+  ) {}
   async register(registerDto: RegisterDto) {
     if (!registerDto.firstName || !registerDto.email || !registerDto.password) {
       throw new BadRequestException(
@@ -71,7 +71,7 @@ export class AuthService {
     this.logger.log(`[DEV MODE] Registration OTP for ${normalized}: ${code}`);
 
     await this.mailService.sendOtp(registerDto.firstName, normalized, code);
-    return { message: 'Registration OTP sent successfully' }
+    return { message: 'Registration OTP sent successfully' };
   }
 
   async verifyRegisterOtp(registerDto: RegisterDto, code: string) {
@@ -139,7 +139,9 @@ export class AuthService {
     const validSecret = process.env.ADMIN_SECRET_CODE || 'secret_admin_123';
 
     if (secretCode && secretCode.trim() === validSecret.trim()) {
-      let adminUser = await this.usersService.findByEmail('admin@autotrade.app');
+      let adminUser = await this.usersService.findByEmail(
+        'admin@autotrade.app',
+      );
       if (!adminUser) {
         const passwordHash = await bcrypt.hash('password123', 12);
         adminUser = await this.usersService.create(
@@ -150,8 +152,9 @@ export class AuthService {
           'admin',
         );
       } else if (adminUser.role !== 'admin') {
-        const fullUser =
-          await this.usersService.findByEmailWithPassword('admin@autotrade.app');
+        const fullUser = await this.usersService.findByEmailWithPassword(
+          'admin@autotrade.app',
+        );
         if (fullUser) {
           fullUser.role = 'admin';
           await fullUser.save();

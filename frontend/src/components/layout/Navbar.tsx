@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { ShoppingBag, Heart, UserRound, X, Search, Menu, Package, MapPin, Settings, LogOut, Loader2, Shield, Mail, Bell, ChevronDown, ChevronRight } from 'lucide-react';
+import { ShoppingBag, Heart, UserRound, X, Search, Menu, Package, MapPin, Settings, LogOut, Loader2, Shield, Bell } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { RootState } from '../../store/store';
@@ -11,7 +11,7 @@ import { clearWishlist } from '../../store/slices/wishlistSlice';
 import { useGetProductsQuery, productApiSlice } from '../../store/slices/productApiSlice';
 import { useGetCategoriesQuery } from '../../store/slices/categoryApiSlice';
 import { getProductId } from '../../lib/product';
-import { formatINR } from '../../lib/currency';
+
 import MiniCart from './MiniCart';
 import CurrencySelector from './CurrencySelector';
 
@@ -30,7 +30,7 @@ const Navbar = () => {
   const wishlistItems = useSelector((state: RootState) => state.wishlist.wishlistItems);
   const wishlistCount = wishlistItems.length;
   const userInfo = useSelector((state: RootState) => state.auth.userInfo);
-  const { data: categoriesData = [] } = useGetCategoriesQuery(undefined);
+  useGetCategoriesQuery(undefined);
 
   const userDisplayName =
     userInfo?.firstName?.trim() ||
@@ -56,9 +56,7 @@ const Navbar = () => {
   const [miniCartOpen, setMiniCartOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
-  const [hoveredSub, setHoveredSub] = useState<string | null>(null);
-  const dropdownCloseTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
   const [selectedSuggestionIdx, setSelectedSuggestionIdx] = useState(-1);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -173,7 +171,6 @@ const Navbar = () => {
   const suggestionList: { type: string; label: string; to?: string; productId?: string; image?: string; price?: string; category?: string }[] = [];
   if (debouncedQuery.length >= 2) {
     const qLower = debouncedQuery.toLowerCase();
-    const toSlug = (n: string) => n.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
     navCategories.forEach((cat) => {
       if (cat.label.toLowerCase().includes(qLower)) {
@@ -254,28 +251,7 @@ const Navbar = () => {
     );
   };
 
-  const isActive = (path: string) => location.pathname.startsWith(path);
 
-  const handleNavEnter = (label: string) => {
-    clearTimeout(dropdownCloseTimer.current);
-    setOpenDropdown(label);
-    setHoveredSub(null);
-  };
-  const handleNavLeave = () => {
-    dropdownCloseTimer.current = setTimeout(() => {
-      setOpenDropdown(null);
-      setHoveredSub(null);
-    }, 120);
-  };
-  const handleDropdownEnter = () => {
-    clearTimeout(dropdownCloseTimer.current);
-  };
-  const handleDropdownLeave = () => {
-    dropdownCloseTimer.current = setTimeout(() => {
-      setOpenDropdown(null);
-      setHoveredSub(null);
-    }, 120);
-  };
 
   return (
     <>

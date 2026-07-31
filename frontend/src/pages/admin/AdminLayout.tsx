@@ -23,15 +23,15 @@ export default function AdminLayout() {
   const userInfo = useSelector((state: RootState) => state.auth.userInfo);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Strict route protection: non-admins cannot land on admin pages
-  if (!userInfo || userInfo.role !== 'admin') {
-    return <Navigate to="/login?redirect=/admin" replace />;
-  }
-
   // Close sidebar on route change on mobile
   useEffect(() => {
     setSidebarOpen(false);
   }, [location.pathname]);
+
+  // Strict route protection: non-admins cannot land on admin pages
+  if (!userInfo || userInfo.role !== 'admin') {
+    return <Navigate to="/login?redirect=/admin" replace />;
+  }
 
   const isActive = (item: typeof navItems[number]) => {
     if (item.end) return location.pathname === item.to;

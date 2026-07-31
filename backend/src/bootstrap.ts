@@ -9,11 +9,14 @@ import * as express from 'express';
 
 export async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  
+
   // Security Headers and Content Security Policy
-  app.use(helmet({
-    contentSecurityPolicy: process.env.NODE_ENV === 'production' ? undefined : false,
-  }));
+  app.use(
+    helmet({
+      contentSecurityPolicy:
+        process.env.NODE_ENV === 'production' ? undefined : false,
+    }),
+  );
 
   // Response Compression
   app.use(compression());
@@ -21,14 +24,16 @@ export async function bootstrap() {
   // Parse request payloads
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
-  
+
   app.setGlobalPrefix('api');
 
   // Enforce DTO validation globally
-  app.useGlobalPipes(new ValidationPipe({
-    whitelist: false,
-    transform: true,
-  }));
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: false,
+      transform: true,
+    }),
+  );
 
   // CORS Configuration
   const frontendUrl = process.env.FRONTEND_URL;

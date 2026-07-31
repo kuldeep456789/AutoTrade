@@ -1,8 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
-  ChevronLeft,
-  ChevronRight,
   ArrowRight,
   Car,
   Armchair,

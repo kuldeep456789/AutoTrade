@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ChevronRight, Download, Banknote, Calendar, ShoppingBag, MousePointerClick, Truck, UserPlus, Sparkles } from 'lucide-react';
+import { Download, Banknote, Calendar, ShoppingBag, MousePointerClick, Truck, UserPlus, Sparkles } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import toast from 'react-hot-toast';
 import { adminApi, type DashboardStats, type AdminOrder, type AnalyticsData } from '../../services/adminApi';

@@ -3,7 +3,7 @@ import { useSelector } from 'react-redux';
 import type { RootState } from '../store/store';
 import { useGetOrderDetailsQuery } from '../store/slices/orderApiSlice';
 import { useGetProductDetailsQuery, useGetRelatedProductsQuery } from '../store/slices/productApiSlice';
-import { ChevronRight, ShoppingBag, Package, CheckCircle, Clock, Truck, MapPin, AlertCircle, HelpCircle, ArrowRight, RotateCcw } from 'lucide-react';
+import { ChevronRight, ShoppingBag, Package, CheckCircle, Clock, Truck, AlertCircle, HelpCircle, ArrowRight, RotateCcw } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { formatINR } from '../lib/currency';
@@ -106,16 +106,20 @@ const OrderTrackingPage = () => {
   const { id } = useParams();
   const userInfo = useSelector((state: RootState) => state.auth.userInfo);
 
-  if (!userInfo) {
-    return <Navigate to={id ? `/login?redirect=/orders/${id}` : '/login?redirect=/account'} replace />;
-  }
-
-  const { data: order, isLoading, error } = useGetOrderDetailsQuery(id);
-  const { data: myReturns } = useGetMyReturnsQuery(undefined, { skip: !id, pollingInterval: 3000 });
+  const { data: order, isLoading, error } = useGetOrderDetailsQuery(id, { skip: !userInfo || !id });
+  const { data: myReturns } = useGetMyReturnsQuery(undefined, { skip: !userInfo || !id, pollingInterval: 3000 });
   const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
-  useEffect(() => { const t = setTimeout(() => setLoaded(true), 100); return () => clearTimeout(t); }, []);
+  useEffect(() => {
+    if (!userInfo) return;
+    const t = setTimeout(() => setLoaded(true), 100);
+    return () => clearTimeout(t);
+  }, [userInfo]);
+
+  if (!userInfo) {
+    return <Navigate to={id ? `/login?redirect=/orders/${id}` : '/login?redirect=/account'} replace />;
+  }
 
   if (isLoading) return <Skeleton />;
 

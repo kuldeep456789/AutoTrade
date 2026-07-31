@@ -13,7 +13,7 @@ interface OrderSummarySidebarProps {
 
 const OrderSummarySidebar = ({ buttonText, buttonAction, disableButton }: OrderSummarySidebarProps) => {
   const cart = useSelector((state: RootState) => state.cart);
-  const { cartItems, itemsPrice, shippingPrice, taxPrice, totalPrice } = cart;
+  const { cartItems, itemsPrice, totalPrice } = cart;
   const [couponCode, setCouponCode] = useState('');
   const [couponMsg, setCouponMsg] = useState<{ text: string; isError: boolean } | null>(null);
   const dispatch = useDispatch();
