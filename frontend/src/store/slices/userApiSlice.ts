@@ -7,9 +7,6 @@ export const userApiSlice = apiSlice.injectEndpoints({
     login: builder.mutation({
       query: (data) => ({ url: `${AUTH_URL}/login`, method: 'POST', body: data }),
     }),
-    adminSecretLogin: builder.mutation({
-      query: (data) => ({ url: `${AUTH_URL}/admin-secret-login`, method: 'POST', body: data }),
-    }),
     register: builder.mutation({
       query: (data) => ({ url: `${AUTH_URL}/register`, method: 'POST', body: data }),
     }),
@@ -58,7 +55,6 @@ export const userApiSlice = apiSlice.injectEndpoints({
 
 export const {
   useLoginMutation,
-  useAdminSecretLoginMutation,
   useRegisterMutation,
   useSendRegisterOtpMutation,
   useVerifyRegisterOtpMutation,

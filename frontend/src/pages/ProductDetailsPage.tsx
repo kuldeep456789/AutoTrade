@@ -14,6 +14,7 @@ import { getColorHex } from '../utils/colorMap';
 import { getProductId } from '../lib/product';
 import { useCurrency } from '../context/CurrencyContext';
 import { normalizeSlug } from '../config/categories';
+import TrustBadgesBar from '../components/layout/TrustBadgesBar';
 
 // Mock review data generator seeded per product
 const MOCK_REVIEWS = [
@@ -641,39 +642,7 @@ const ProductDetailsPage = () => {
               </button>
             </div>
 
-            {/* 4 Trust Badges Box */}
-            <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/90 p-3.5 shadow-md transition-colors duration-200 mt-4">
-              <div className="grid grid-cols-4 gap-2 text-center">
-                <div className="flex flex-col items-center">
-                  <div className="w-9 h-9 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-500 mb-1.5">
-                    <Award size={16} />
-                  </div>
-                  <span className="text-[10px] font-bold text-orange-500 uppercase">AUTHORISED</span>
-                  <span className="text-[9px] text-zinc-500 dark:text-zinc-400">Since 2014</span>
-                </div>
-                <div className="flex flex-col items-center">
-                  <div className="w-9 h-9 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-500 mb-1.5">
-                    <Truck size={16} />
-                  </div>
-                  <span className="text-[10px] font-bold text-orange-500 uppercase">FREE SHIPPING</span>
-                  <span className="text-[9px] text-zinc-500 dark:text-zinc-400">Pan-India</span>
-                </div>
-                <div className="flex flex-col items-center">
-                  <div className="w-9 h-9 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-500 mb-1.5">
-                    <RotateCcw size={16} />
-                  </div>
-                  <span className="text-[10px] font-bold text-orange-500 uppercase">14-DAY RETURNS</span>
-                  <span className="text-[9px] text-zinc-500 dark:text-zinc-400">No questions</span>
-                </div>
-                <div className="flex flex-col items-center">
-                  <div className="w-9 h-9 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-500 mb-1.5">
-                    <ShieldCheck size={16} />
-                  </div>
-                  <span className="text-[10px] font-bold text-orange-500 uppercase">GENUINE PRODUCT</span>
-                  <span className="text-[9px] text-zinc-500 dark:text-zinc-400">100% authorised</span>
-                </div>
-              </div>
-            </div>
+            <TrustBadgesBar compact className="mt-4" />
 
             {/* Description & Detailed Specs Panel */}
             <ProductFeaturesAndSpecs product={product} />

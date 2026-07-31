@@ -5,7 +5,7 @@ import type { RootState } from '../store/store';
 import CheckoutSteps from '../components/checkout/CheckoutSteps';
 import OrderSummarySidebar from '../components/checkout/OrderSummarySidebar';
 import { MapPin, CreditCard, ShoppingBag, Loader2, Pencil } from 'lucide-react';
-import { formatINR } from '../lib/currency';
+import { useCurrency } from '../context/CurrencyContext';
 import { clearCartItems } from '../store/slices/cartSlice';
 import {
   useCreateOrderMutation,
@@ -32,6 +32,7 @@ const PlaceOrderPage = () => {
   const [createRazorpayOrder, { isLoading: isRazorpayLoading }] = useCreateRazorpayOrderMutation();
   const [verifyRazorpayPayment, { isLoading: isPaymentLoading }] = useVerifyRazorpayPaymentMutation();
   const [localError, setLocalError] = useState('');
+  const { formatCurrency } = useCurrency();
 
   useEffect(() => {
     if (cart.itemsPrice < 50000) {
@@ -52,7 +53,7 @@ const PlaceOrderPage = () => {
     }
 
     if (!Number.isFinite(cart.totalPrice) || cart.totalPrice < 1) {
-      setLocalError(`Your order total must be at least ${formatINR(1)} before online payment can be created.`);
+      setLocalError(`Your order total must be at least ${formatCurrency(1)} before online payment can be created.`);
       return;
     }
 
@@ -209,7 +210,7 @@ const PlaceOrderPage = () => {
                         {item.variant.color} &middot; {item.variant.size} &middot; Qty: {item.qty}
                       </p>
                     </div>
-                    <p className="text-[15px] font-bold text-zinc-900 dark:text-white shrink-0">{formatINR(item.price)}</p>
+                    <p className="text-[15px] font-bold text-zinc-900 dark:text-white shrink-0">{formatCurrency(item.price)}</p>
                   </div>
                 ))}
               </div>

@@ -6,7 +6,7 @@ import { useGetProductsQuery } from '../store/slices/productApiSlice';
 import ProductCard, { ProductCardSkeleton } from '../components/product/ProductCard';
 import Pagination from '../components/Pagination';
 
-import { CATEGORY_SLUG_MAP, normalizeSlug } from '../config/categories';
+import { CATEGORY_SLUG_MAP, NAV_CATEGORIES, normalizeSlug } from '../config/categories';
 
 const toSlug = (value: string) => normalizeSlug(value);
 const fromSlug = (value: string) => value.replace(/-/g, ' ');
@@ -75,25 +75,41 @@ const CollectionPage = () => {
     { skip: !targetCollectionType }
   );
 
-  // Derive unique subcategory tabs
-  const derivedTabs = useMemo(() => {
+  // Build count map from API data
+  const apiCountMap = useMemo(() => {
     const pool =
       Array.isArray(collectionPoolData?.products) && collectionPoolData.products.length > 0
         ? collectionPoolData.products
         : rawProducts;
 
     const catMap = new Map<string, number>();
-
     for (const p of pool) {
       const cat = String(p.subcategoryName ?? p._category ?? '').trim();
       if (!cat) continue;
       catMap.set(cat, (catMap.get(cat) || 0) + 1);
     }
+    return catMap;
+  }, [collectionPoolData, rawProducts]);
 
-    return Array.from(catMap.entries())
+  // Derive subcategory tabs: prefer static config subs so all categories always show,
+  // then fill in counts from API data. Fall back to API-only tabs if no static config.
+  const derivedTabs = useMemo(() => {
+    if (targetCollectionType) {
+      const navCat = NAV_CATEGORIES.find(
+        (c) => c.label === targetCollectionType
+      );
+      if (navCat && navCat.subs.length > 0) {
+        return navCat.subs.map((sub) => ({
+          name: sub.label,
+          count: apiCountMap.get(sub.label) ?? 0,
+        }));
+      }
+    }
+    // Fallback: derive from API data sorted by count
+    return Array.from(apiCountMap.entries())
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count);
-  }, [collectionPoolData, rawProducts]);
+  }, [targetCollectionType, apiCountMap]);
 
   // Page title
   const rawTitle = categoryInfo?.title || (normalizedSubcategory ? fromSlug(normalizedSubcategory) : 'All Collections');
@@ -191,9 +207,7 @@ const CollectionPage = () => {
                       }`}
                   >
                     <span className="capitalize">{formattedName}</span>
-                    <span className={`text-xs sm:text-sm font-semibold ${isActive ? 'text-orange-500 font-extrabold' : 'text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-700 dark:group-hover:text-zinc-300'}`}>
-                      ({tab.count})
-                    </span>
+
                     {isActive ? (
                       <motion.span
                         layoutId="activeSubTab"

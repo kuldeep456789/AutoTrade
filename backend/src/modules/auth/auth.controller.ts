@@ -15,11 +15,6 @@ import { RegisterDto } from './dto/register.dto';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @Post('register')
-  register(@Body() registerDto: RegisterDto) {
-    return this.authService.register(registerDto);
-  }
-
   @Post('send-register-otp')
   sendRegisterOtp(@Body() registerDto: RegisterDto) {
     return this.authService.sendRegisterOtp(registerDto);
@@ -33,17 +28,6 @@ export class AuthController {
   @Post('login')
   login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);
-  }
-
-  @Post('admin-secret-login')
-  adminSecretLogin(
-    @Body() body: { secretCode?: string; email?: string; password?: string },
-  ) {
-    return this.authService.adminSecretLogin(
-      body.secretCode,
-      body.email,
-      body.password,
-    );
   }
 
   @Post('send-email-otp')

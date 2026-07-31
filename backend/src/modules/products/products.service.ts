@@ -249,8 +249,14 @@ export class ProductsService implements OnModuleInit {
         collectionType: query.collectionType,
       });
 
-      const candidateProducts =
+      let candidateProducts =
         searchResult?.products ?? searchResult?.data?.list ?? [];
+
+      // Fallback: If catalog index candidate lookup returns empty, query full warehouse catalog
+      if (!candidateProducts || candidateProducts.length === 0) {
+        const warehouseAll = await this.cjService.getWarehouseProducts(1, 500);
+        candidateProducts = warehouseAll?.products || [];
+      }
 
       if (candidateProducts.length > 0) {
         const scoredProducts: { product: any; score: number }[] = [];
@@ -403,54 +409,94 @@ export class ProductsService implements OnModuleInit {
 
     const titleLower = title.toLowerCase();
     const brandLower = brand.toLowerCase();
-    const skuLower = sku.toLowerCase();
     const categoryLower = category.toLowerCase();
     const tagsLower = tags.toLowerCase();
     const descLower = desc.toLowerCase();
     const qLower = queryStr.toLowerCase();
 
+    /**
+     * Tokenize a text field into an array of lowercase word tokens.
+     * Splits on any non-alphanumeric character so "women's" becomes ["women", "s"]
+     * and handles hyphenated compound words like "full-zip" as ["full", "zip"].
+     */
+    const tokenize = (text: string): string[] =>
+      text
+        .toLowerCase()
+        .split(/[^a-z0-9]+/)
+        .filter((t) => t.length > 0);
+
+    /**
+     * Check whether a single query keyword matches a token in the product field.
+     * Supports prefix matching (incremental search: "wom" matches "women")
+     * but rejects plain substring collisions ("men" must NOT match from "women").
+     *
+     * Rule:
+     *  - A query keyword `kw` matches a product token `tok` if:
+     *      tok === kw          (exact token match)
+     *    OR tok.startsWith(kw) (prefix match — for incremental typing)
+     *  - "men".startsWith("men") => true — matches "men" tokens only
+     *  - "women" token does NOT .startsWith("men"), so "men" never matches "women" ✓
+     */
+    const kwMatchesField = (kw: string, text: string): boolean => {
+      const tokens = tokenize(text);
+      return tokens.some((tok) => tok === kw || tok.startsWith(kw));
+    };
+
+    /**
+     * ALL query keywords must match somewhere in the combined product fields.
+     * If even one keyword has zero matches → score = 0 (product excluded).
+     */
+    const allFields = [titleLower, brandLower, categoryLower, tagsLower, descLower];
+
+    // AND gate: every keyword must match at least one field
+    for (const kw of queryKeywords) {
+      const matchedAnyField = allFields.some((field) => kwMatchesField(kw, field));
+      if (!matchedAnyField) {
+        return 0; // Missing a required keyword → exclude product
+      }
+    }
+
+    // All keywords matched — now score by quality
     let score = 0;
 
-    // 1. Exact Title Match
+    // 1. Exact full-phrase match in title
     if (titleLower === qLower) {
       score += 100;
     }
-    // 2. Starts With Title Match
+    // 2. Title starts with the full phrase
     else if (titleLower.startsWith(qLower)) {
-      score += 50;
+      score += 60;
     }
-    // 3. Contains Full Search Phrase in Title
+    // 3. Title contains the full phrase as a substring
     else if (titleLower.includes(qLower)) {
-      score += 30;
+      score += 35;
     }
 
-    const mainText = `${titleLower} ${brandLower} ${skuLower}`;
+    // 4. Count how many keywords match in title specifically (higher = more relevant)
+    const titleTokens = tokenize(titleLower);
+    const titleMatchCount = queryKeywords.filter((kw) =>
+      titleTokens.some((tok) => tok === kw || tok.startsWith(kw)),
+    ).length;
+    score += titleMatchCount * 10;
 
-    // 4. All keywords present in Title/Brand/SKU
-    if (
-      queryKeywords.length > 0 &&
-      queryKeywords.every((kw) => mainText.includes(kw))
-    ) {
-      score += 25;
-    }
-    // 5. Any keyword present in Title/Brand/SKU
-    else if (queryKeywords.some((kw) => mainText.includes(kw))) {
-      score += 15;
-    }
-
-    // 6. Category / Subcategory Match
-    if (queryKeywords.some((kw) => categoryLower.includes(kw))) {
-      score += 10;
+    // 5. All keywords found in title+brand (tight match)
+    const mainText = `${titleLower} ${brandLower}`;
+    const allInMain = queryKeywords.every((kw) => kwMatchesField(kw, mainText));
+    if (allInMain) {
+      score += 20;
     }
 
-    // 7. Tags / Description Match
-    if (
-      queryKeywords.some(
-        (kw) => tagsLower.includes(kw) || descLower.includes(kw),
-      )
-    ) {
-      score += 5;
-    }
+    // 6. Category match (any keyword)
+    const catMatchCount = queryKeywords.filter((kw) =>
+      kwMatchesField(kw, categoryLower),
+    ).length;
+    score += catMatchCount * 8;
+
+    // 7. Tags / Description match (softer signal)
+    const tagDescMatchCount = queryKeywords.filter((kw) =>
+      kwMatchesField(kw, tagsLower) || kwMatchesField(kw, descLower),
+    ).length;
+    score += tagDescMatchCount * 3;
 
     return score;
   }

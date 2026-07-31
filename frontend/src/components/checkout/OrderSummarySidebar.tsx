@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import type { RootState } from '../../store/store';
 import { ArrowRight, Package, Tag } from 'lucide-react';
-import { formatINR } from '../../lib/currency';
 import { applyCoupon, removeCoupon, COUPONS } from '../../store/slices/cartSlice';
+import { useCurrency } from '../../context/CurrencyContext';
 
 interface OrderSummarySidebarProps {
   buttonText?: string;
@@ -17,6 +17,7 @@ const OrderSummarySidebar = ({ buttonText, buttonAction, disableButton }: OrderS
   const [couponCode, setCouponCode] = useState('');
   const [couponMsg, setCouponMsg] = useState<{ text: string; isError: boolean } | null>(null);
   const dispatch = useDispatch();
+  const { formatCurrency, currencyConfig } = useCurrency();
 
   const handleApplyCoupon = (code: string) => {
     const cleanCode = code.toUpperCase().trim();
@@ -28,12 +29,12 @@ const OrderSummarySidebar = ({ buttonText, buttonAction, disableButton }: OrderS
       return;
     }
     if (itemsPrice < couponDef.min) {
-      setCouponMsg({ text: `Min. cart value of ${formatINR(couponDef.min)} required.`, isError: true });
+      setCouponMsg({ text: `Min. cart value of ${formatCurrency(couponDef.min)} required.`, isError: true });
       return;
     }
     dispatch(applyCoupon(cleanCode));
     const savings = couponDef.discount(itemsPrice);
-    setCouponMsg({ text: `"${cleanCode}" applied! You save ${formatINR(savings)}.`, isError: false });
+    setCouponMsg({ text: `"${cleanCode}" applied! You save ${formatCurrency(savings)}.`, isError: false });
   };
 
   const handleRemoveCoupon = () => {
@@ -56,6 +57,16 @@ const OrderSummarySidebar = ({ buttonText, buttonAction, disableButton }: OrderS
         </span>
       </div>
 
+      {/* Currency indicator */}
+      <div className="px-6 pt-3 pb-0 flex items-center gap-1.5">
+        <span className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
+          Prices shown in
+        </span>
+        <span className="text-[11px] font-bold text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded-md">
+          {currencyConfig.flag} {currencyConfig.code}
+        </span>
+      </div>
+
       {/* Items */}
       <div className="px-6 py-4 max-h-64 overflow-y-auto space-y-4 scrollbar-thin">
         {cartItems.map((item) => (
@@ -71,7 +82,7 @@ const OrderSummarySidebar = ({ buttonText, buttonAction, disableButton }: OrderS
               <p className="text-[11px] text-zinc-400 dark:text-zinc-500 mt-0.5 uppercase tracking-wider">
                 {item.variant.color} &middot; {item.variant.size}
               </p>
-              <p className="text-[13px] font-bold text-zinc-900 dark:text-white mt-1">{formatINR(item.price)}</p>
+              <p className="text-[13px] font-bold text-zinc-900 dark:text-white mt-1">{formatCurrency(item.price)}</p>
             </div>
           </div>
         ))}
@@ -112,7 +123,7 @@ const OrderSummarySidebar = ({ buttonText, buttonAction, disableButton }: OrderS
       <div className="px-6 py-4 border-t border-zinc-200 dark:border-[#2A2A2A] space-y-3">
         <div className="flex justify-between items-center text-[13px]">
           <span className="text-zinc-500 dark:text-zinc-400">Subtotal</span>
-          <span className="font-semibold text-zinc-800 dark:text-zinc-200">{formatINR(itemsPrice)}</span>
+          <span className="font-semibold text-zinc-800 dark:text-zinc-200">{formatCurrency(itemsPrice)}</span>
         </div>
 
       </div>
@@ -120,7 +131,7 @@ const OrderSummarySidebar = ({ buttonText, buttonAction, disableButton }: OrderS
       {/* Total */}
       <div className="px-6 py-4 border-t border-zinc-200 dark:border-[#2A2A2A] flex justify-between items-center bg-zinc-50 dark:bg-zinc-900/30">
         <span className="text-sm font-bold uppercase tracking-wider text-zinc-900 dark:text-white">Total</span>
-        <span className="text-2xl font-bold text-zinc-900 dark:text-white">{formatINR(totalPrice)}</span>
+        <span className="text-2xl font-bold text-zinc-900 dark:text-white">{formatCurrency(totalPrice)}</span>
       </div>
 
 

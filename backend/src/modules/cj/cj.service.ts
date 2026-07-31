@@ -363,7 +363,7 @@ export class CjService {
         .split(/\s+/)
         .filter(Boolean)
         .map((t) => slugify(t))
-        .filter((t) => t.length > 1);
+        .filter((t) => t.length >= 1);
 
       const pidSet = new Set<string>();
 
@@ -387,7 +387,17 @@ export class CjService {
         (await this.redisService.getJson<any[]>(WAREHOUSE_LEGACY_ALL));
 
       if (warehouse && Array.isArray(warehouse) && warehouse.length > 0) {
-        const rawKw = keyword.toLowerCase();
+        /**
+         * Word-token prefix matcher for the candidate pre-filter.
+         * Splits text on non-alphanumeric chars and checks if any token
+         * starts with `term`. This means "men" matches tokens ["men", "mens"]
+         * but NOT "women" (since "women".startsWith("men") is false).
+         */
+        const tokenPrefixMatch = (term: string, text: string): boolean => {
+          const toks = text.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+          return toks.some((tok) => tok === term || tok.startsWith(term));
+        };
+
         const matchedInCatalog = warehouse.filter((p: any) => {
           const name = (p.name || p.title || '').toLowerCase();
           const category = (
@@ -399,11 +409,12 @@ export class CjService {
           const kwStr = Array.isArray(p.keywords)
             ? p.keywords.join(' ').toLowerCase()
             : '';
-          return (
-            name.includes(rawKw) ||
-            category.includes(rawKw) ||
-            kwStr.includes(rawKw) ||
-            tokens.some((t) => t.length >= 2 && name.includes(t))
+
+          // A product is a candidate if EVERY query token matches at least one field
+          return tokens.every((t) =>
+            tokenPrefixMatch(t, name) ||
+            tokenPrefixMatch(t, category) ||
+            tokenPrefixMatch(t, kwStr),
           );
         });
 

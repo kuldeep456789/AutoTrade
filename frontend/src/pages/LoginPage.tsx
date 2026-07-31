@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Lock, Mail, ArrowLeft } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, ArrowLeft, ShieldCheck } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { RootState } from '../store/store';
 import { setCredentials } from '../store/slices/authSlice';
@@ -35,6 +35,7 @@ const LoginPage = () => {
   const [registerEmail, setRegisterEmail] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [adminSecret, setAdminSecret] = useState('');
   const [showRegisterPassword, setShowRegisterPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -88,7 +89,10 @@ const LoginPage = () => {
     setErrorMessage('');
     if (!loginEmail.trim() || !loginPassword.trim()) { setErrorMessage('Email and password are required.'); return; }
     try {
-      const payload = await login({ email: loginEmail.trim(), password: loginPassword }).unwrap();
+      const payload = await login({
+        email: loginEmail.trim(),
+        password: loginPassword,
+      }).unwrap();
       if (payload.requires2FA) {
         setTempToken(payload.tempToken);
         setRequires2FA(true);
@@ -135,6 +139,7 @@ const LoginPage = () => {
         lastName: '',
         email: registerEmail.trim(),
         password: registerPassword,
+        adminSecret: adminSecret.trim() ? adminSecret.trim() : undefined,
       }).unwrap();
       setRegisterStep('otp');
       setCountdown(30);
@@ -172,6 +177,7 @@ const LoginPage = () => {
         lastName: '',
         email: registerEmail.trim(),
         password: registerPassword,
+        adminSecret: adminSecret.trim() ? adminSecret.trim() : undefined,
       };
       const payload = await verifyRegisterOtp({
         registerDto,
@@ -361,6 +367,16 @@ const LoginPage = () => {
                     </div>
                   </div>
 
+                  <div>
+                    <label className="mb-2 block text-[11px] font-semibold uppercase tracking-widest text-zinc-500">
+                      Admin Secret Code <span className="normal-case text-zinc-400 font-normal">(Optional)</span>
+                    </label>
+                    <div className="flex items-center gap-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-[hsl(var(--card))] px-4 py-3.5 transition focus-within:border-zinc-500">
+                      <ShieldCheck size={17} className="shrink-0 text-zinc-400" />
+                      <input type="password" placeholder="Leave blank for regular user" value={adminSecret} onChange={(e) => setAdminSecret(e.target.value)} className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-zinc-400 text-left normal-case" />
+                    </div>
+                  </div>
+
                   {errorMessage && (
                     <div className="rounded-xl border border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-950/30 px-4 py-3 text-sm font-semibold text-red-700 dark:text-red-300">{errorMessage}</div>
                   )}
@@ -389,6 +405,7 @@ const LoginPage = () => {
                         type="text" inputMode="numeric" maxLength={1} value={val}
                         onChange={(e) => handleOtpChange(i, e.target.value)}
                         onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                        style={{ textAlign: 'center' }}
                         className={`w-11 h-12 text-center text-lg font-bold rounded-xl border-2 bg-[hsl(var(--card))] outline-none transition-all duration-150 ${
                           val ? 'border-[hsl(var(--foreground))]' : 'border-zinc-200 dark:border-zinc-700 focus:border-zinc-500'
                         }`}

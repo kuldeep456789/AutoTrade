@@ -107,43 +107,29 @@ export class MailService {
   }
 
   private async sendEmail(to: string, subject: string, html: string) {
-    // mailinator
-    let recipient = to;
-
-    if (process.env.MAILINATOR_MODE === 'true') {
-      const inbox =
-        process.env.MAILINATOR_INBOX || to.split('@')[0] || 'autotrade';
-
-      recipient = `${inbox}@mailinator.com`;
-
-      this.logger.log(
-        `[MAILINATOR] Redirecting email from ${to} -> ${recipient}`,
-      );
-    }
-
     // nodemailer
     if (this.transporter) {
       try {
         await this.transporter.sendMail({
           from: this.fromEmail,
-          to: recipient,
+          to,
           subject,
           html,
         });
 
         this.logger.log(
-          `Nodemailer sent email to ${recipient} (Subject: ${subject})`,
+          `Nodemailer sent email to ${to} (Subject: ${subject})`,
         );
 
         return;
       } catch (err: any) {
         this.logger.error(
-          `Nodemailer transport error sending to ${recipient}: ${err?.message}`,
+          `Nodemailer transport error sending to ${to}: ${err?.message}`,
         );
       }
     }
 
-    this.logger.log(`[DEV EMAIL LOG] To: ${recipient}`);
+    this.logger.log(`[DEV EMAIL LOG] To: ${to}`);
     this.logger.debug(html);
   }
 

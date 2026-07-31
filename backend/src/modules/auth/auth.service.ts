@@ -25,6 +25,22 @@ export class AuthService {
     private readonly mailService: MailService,
     private readonly otpStore: OtpStoreService,
   ) {}
+
+  private validateAdminSecret(adminSecret?: string): { isProvided: boolean; isValid: boolean } {
+    const validSecret = (process.env.ADMIN_SECRET_CODE || 'secret_admin_123').trim();
+    const provided = adminSecret?.trim();
+
+    if (provided && provided !== '') {
+      if (provided !== validSecret) {
+        throw new BadRequestException(
+          'You entered an incorrect Admin Secret Code. Please enter the correct secret code to log in as an admin, or leave this field blank to log in as a regular user.',
+        );
+      }
+      return { isProvided: true, isValid: true };
+    }
+    return { isProvided: false, isValid: false };
+  }
+
   async register(registerDto: RegisterDto) {
     if (!registerDto.firstName || !registerDto.email || !registerDto.password) {
       throw new BadRequestException(
@@ -34,24 +50,20 @@ export class AuthService {
     if (registerDto.password.length < 6) {
       throw new BadRequestException('password must be at least 6 characters');
     }
+
+    const { isProvided, isValid } = this.validateAdminSecret(registerDto.adminSecret);
+
     const name =
       `${registerDto.firstName} ${registerDto.lastName || ''}`.trim();
     const passwordHash = await bcrypt.hash(registerDto.password, 12);
 
-    let role = 'customer';
-    if (
-      registerDto.adminSecret &&
-      process.env.ADMIN_SECRET_CODE &&
-      registerDto.adminSecret === process.env.ADMIN_SECRET_CODE
-    ) {
-      role = 'admin';
-    }
+    const role = (isProvided && isValid) ? 'admin' : 'customer';
 
     const user = await this.usersService.create(
       name,
       registerDto.email.toLowerCase(),
       passwordHash,
-      registerDto.phone,
+      undefined,
       role,
     );
     return this.authResponse(user);
@@ -63,6 +75,10 @@ export class AuthService {
         'firstName, email, and password are required',
       );
     }
+
+    // Validate Admin Secret Code if provided (stops immediately & fails to send OTP if code is incorrect)
+    this.validateAdminSecret(registerDto.adminSecret);
+
     const normalized = registerDto.email.toLowerCase().trim();
     const existingUser = await this.usersService.findByEmail(normalized);
     if (existingUser) {
@@ -78,6 +94,8 @@ export class AuthService {
   }
 
   async verifyRegisterOtp(registerDto: RegisterDto, code: string) {
+    const { isProvided, isValid } = this.validateAdminSecret(registerDto.adminSecret);
+
     const normalized = registerDto.email.toLowerCase().trim();
     if (!code) throw new BadRequestException('OTP is required');
 
@@ -91,20 +109,13 @@ export class AuthService {
       `${registerDto.firstName} ${registerDto.lastName || ''}`.trim();
     const passwordHash = await bcrypt.hash(registerDto.password, 12);
 
-    let role = 'customer';
-    if (
-      registerDto.adminSecret &&
-      process.env.ADMIN_SECRET_CODE &&
-      registerDto.adminSecret === process.env.ADMIN_SECRET_CODE
-    ) {
-      role = 'admin';
-    }
+    const role = (isProvided && isValid) ? 'admin' : 'customer';
 
     const user = await this.usersService.create(
       name,
       normalized,
       passwordHash,
-      registerDto.phone,
+      undefined,
       role,
     );
 
@@ -118,6 +129,7 @@ export class AuthService {
     if (!loginDto.email || !loginDto.password) {
       throw new BadRequestException('email and password are required');
     }
+
     const user = await this.usersService.findByEmailWithPassword(
       loginDto.email.toLowerCase(),
     );
@@ -131,6 +143,7 @@ export class AuthService {
     if (!passwordMatches) {
       throw new UnauthorizedException('Invalid email or password');
     }
+
     if (user.isTwoFactorEnabled) {
       return {
         requires2FA: true,
@@ -176,60 +189,6 @@ export class AuthService {
     }
   }
 
-  async adminSecretLogin(
-    secretCode?: string,
-    email?: string,
-    password?: string,
-  ) {
-    const validSecret = process.env.ADMIN_SECRET_CODE || 'secret_admin_123';
-
-    if (secretCode && secretCode.trim() === validSecret.trim()) {
-      let adminUser = await this.usersService.findByEmail(
-        'admin@autotrade.app',
-      );
-      if (!adminUser) {
-        const passwordHash = await bcrypt.hash('password123', 12);
-        adminUser = await this.usersService.create(
-          'System Admin',
-          'admin@autotrade.app',
-          passwordHash,
-          '+919999999999',
-          'admin',
-        );
-      } else if (adminUser.role !== 'admin') {
-        const fullUser = await this.usersService.findByEmailWithPassword(
-          'admin@autotrade.app',
-        );
-        if (fullUser) {
-          fullUser.role = 'admin';
-          await fullUser.save();
-        }
-        adminUser.role = 'admin';
-      }
-      return this.authResponse(adminUser);
-    }
-
-    if (email && password) {
-      const user = await this.usersService.findByEmailWithPassword(
-        email.toLowerCase().trim(),
-      );
-      if (!user) {
-        throw new UnauthorizedException('Invalid email or password');
-      }
-      const matches = await bcrypt.compare(password, user.password);
-      if (!matches) {
-        throw new UnauthorizedException('Invalid email or password');
-      }
-      if (user.role !== 'admin') {
-        throw new UnauthorizedException(
-          'Access denied. Administrator privileges required.',
-        );
-      }
-      return this.authResponse(this.usersService.toSafeUser(user));
-    }
-
-    throw new BadRequestException('Invalid Admin Secret Code or credentials.');
-  }
 
   async sendEmailOtp(email: string) {
     if (!email) throw new BadRequestException('Email is required');

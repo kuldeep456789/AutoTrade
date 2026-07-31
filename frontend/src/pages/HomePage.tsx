@@ -19,6 +19,7 @@ import type { RootState } from '../store/store';
 import { useGetProductsQuery } from '../store/slices/productApiSlice';
 import ProductCard from '../components/product/ProductCard';
 import { getProductId } from '../lib/product';
+import TrustBadgesBar from '../components/layout/TrustBadgesBar';
 
 const heroCategories = [
   {
@@ -276,55 +277,7 @@ const HomePage = () => {
       </section>
 
       {/* ───────── TRUST BADGES BAR (Full Length) ───────── */}
-      <section className="border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 transition-colors duration-200">
-        <div className="max-w-[1920px] mx-auto px-6 sm:px-10 lg:px-16 py-6">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8 justify-items-center">
-            {/* Badge 1 */}
-            <div className="flex flex-col sm:flex-row items-center gap-3 text-center sm:text-left w-full max-w-[280px]">
-              <div className="w-12 h-12 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-[#FF7A00] shrink-0">
-                <Award className="w-5.5 h-5.5" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-xs sm:text-sm font-bold text-[#FF7A00] uppercase tracking-wider">AUTHORISED</span>
-                <span className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium normal-case mt-0.5">Since 2014</span>
-              </div>
-            </div>
-
-            {/* Badge 2 */}
-            <div className="flex flex-col sm:flex-row items-center gap-3 text-center sm:text-left w-full max-w-[280px]">
-              <div className="w-12 h-12 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-[#FF7A00] shrink-0">
-                <Truck className="w-5.5 h-5.5" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-xs sm:text-sm font-bold text-[#FF7A00] uppercase tracking-wider">FREE SHIPPING</span>
-                <span className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium normal-case mt-0.5">Pan-India Delivery</span>
-              </div>
-            </div>
-
-            {/* Badge 3 */}
-            <div className="flex flex-col sm:flex-row items-center gap-3 text-center sm:text-left w-full max-w-[280px]">
-              <div className="w-12 h-12 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-[#FF7A00] shrink-0">
-                <RotateCcw className="w-5.5 h-5.5" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-xs sm:text-sm font-bold text-[#FF7A00] uppercase tracking-wider">14-DAY RETURNS</span>
-                <span className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium normal-case mt-0.5">No questions asked</span>
-              </div>
-            </div>
-
-            {/* Badge 4 */}
-            <div className="flex flex-col sm:flex-row items-center gap-3 text-center sm:text-left w-full max-w-[280px]">
-              <div className="w-12 h-12 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-[#FF7A00] shrink-0">
-                <ShieldCheck className="w-5.5 h-5.5" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-xs sm:text-sm font-bold text-[#FF7A00] uppercase tracking-wider">GENUINE PRODUCT</span>
-                <span className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium normal-case mt-0.5">100% genuine parts</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      <TrustBadgesBar />
 
       {/* ───────── CATEGORY SHOWCASE ───────── */}
       <section id="collections-showcase" className="bg-zinc-50 dark:bg-zinc-950 py-12 sm:py-16 border-b border-zinc-200 dark:border-zinc-800 transition-colors duration-200">
@@ -511,7 +464,7 @@ const HomePage = () => {
                                     : 'Interior Styling Special'}
                             </span>
                             <Link to={`/product/${getProductId(prod)}`}>
-                              <h4 className="text-sm font-extrabold text-zinc-800 dark:text-zinc-100 group-hover/deal:text-[#FF7A00] transition-colors line-clamp-2 leading-snug tracking-tight">
+                              <h4 className="text-sm font-medium text-zinc-800 dark:text-zinc-100 group-hover/deal:text-[#FF7A00] transition-colors line-clamp-2 leading-snug">
                                 {prod.name}
                               </h4>
                             </Link>
@@ -521,7 +474,7 @@ const HomePage = () => {
                           </div>
 
                           <div className="flex items-baseline gap-2.5">
-                            <span className="text-lg font-black text-[#FF7A00]">₹{price}</span>
+                            <span className="text-sm font-semibold text-[#FF7A00]">₹{price}</span>
                             {discountPercent > 0 && (
                               <>
                                 <span className="text-xs text-zinc-400 dark:text-zinc-500 line-through">₹{originalPrice}</span>
@@ -643,12 +596,12 @@ const HomePage = () => {
                 {/* Hotspot Links Panel */}
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3.5 mt-6">
                   {[
-                    { label: 'Exterior Accessories', val: '1800+ Parts', img: '/img/one.jpeg', defaultLink: '/collections/exterior-accessories' },
-                    { label: 'Interior Accessories', val: '1400+ Parts', img: '/img/two.jpeg', defaultLink: '/collections/interior-accessories' },
-                    { label: 'Tools, Maintenance & Care', val: '650+ Parts', img: '/img/three.jpeg', defaultLink: '/collections/tools-maintenance-care' },
-                    { label: 'Car Electronics', val: '950+ Parts', img: '/img/four.jpeg', defaultLink: '/collections/car-electronics' },
-                    { label: 'Motorcycle Accessories & Parts', val: '500+ Parts', img: '/img/five.jpeg', defaultLink: '/collections/motorcycle-accessories' },
-                    { label: 'Auto Replacement Parts', val: '1200+ Parts', img: '/img/brembo_brake_disc.png', defaultLink: '/collections/auto-replacement-parts' }
+                    { label: 'Exterior Accessories', img: '/img/one.jpeg', defaultLink: '/collections/exterior-accessories' },
+                    { label: 'Interior Accessories', img: '/img/two.jpeg', defaultLink: '/collections/interior-accessories' },
+                    { label: 'Tools, Maintenance & Care', img: '/img/three.jpeg', defaultLink: '/collections/tools-maintenance-care' },
+                    { label: 'Car Electronics', img: '/img/four.jpeg', defaultLink: '/collections/car-electronics' },
+                    { label: 'Motorcycle Accessories & Parts', img: '/img/five.jpeg', defaultLink: '/collections/motorcycle-accessories' },
+                    { label: 'Auto Replacement Parts', img: '/img/brembo_brake_disc.png', defaultLink: '/collections/auto-replacement-parts' }
                   ].map((part, pIdx) => {
                     const actualProd = trendingItems[part.label];
                     const productLink = actualProd ? `/product/${getProductId(actualProd)}` : part.defaultLink;

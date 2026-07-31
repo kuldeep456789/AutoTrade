@@ -169,9 +169,22 @@ const Navbar = () => {
   const suggestionList: { type: string; label: string; to?: string; productId?: string; image?: string; price?: string; category?: string }[] = [];
   if (debouncedQuery.length >= 2) {
     const qLower = debouncedQuery.toLowerCase();
+    const qTokens = qLower.split(/\s+/).filter(Boolean);
+
+    /**
+     * Token-prefix match: every query token must match a word in the label.
+     * "men" matches label "Men's Shirts" (token "men") but NOT "Women's Tops"
+     * because "women".startsWith("men") === false.
+     */
+    const tokenPrefixMatchAll = (label: string): boolean => {
+      const labelTokens = label.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+      return qTokens.every((qt) =>
+        labelTokens.some((lt) => lt === qt || lt.startsWith(qt)),
+      );
+    };
 
     navCategories.forEach((cat) => {
-      if (cat.label.toLowerCase().includes(qLower)) {
+      if (tokenPrefixMatchAll(cat.label)) {
         suggestionList.push({
           type: 'category',
           label: cat.label,
@@ -179,7 +192,7 @@ const Navbar = () => {
         });
       }
       cat.subs.forEach((sub) => {
-        if (sub.label.toLowerCase().includes(qLower)) {
+        if (tokenPrefixMatchAll(`${cat.label} ${sub.label}`)) {
           suggestionList.push({
             type: 'category',
             label: `${cat.label} > ${sub.label}`,
