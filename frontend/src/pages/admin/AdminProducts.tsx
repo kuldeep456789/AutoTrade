@@ -2,9 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { Search, Download, Edit, Trash, Package, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { adminApi, type AdminProduct } from '../../services/adminApi';
+import { useGetCatalogStatsQuery } from '../../store/slices/productApiSlice';
 import Pagination from '../../components/Pagination';
 
 export default function AdminProducts() {
+  const { data: statsData } = useGetCatalogStatsQuery(undefined);
+  const totalWarehouseCount = statsData?.totalProducts || 14593;
   const [products, setProducts] = useState<AdminProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -95,7 +98,12 @@ export default function AdminProducts() {
     <div className="space-y-6 pb-10">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold text-zinc-900 dark:text-white tracking-tight">Products</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-extrabold text-zinc-900 dark:text-white tracking-tight">Products</h1>
+            <span className="px-3 py-1 rounded-full text-xs font-bold bg-orange-500/10 text-orange-500 border border-orange-500/20">
+              {totalWarehouseCount.toLocaleString()} Warehouse Catalog Items
+            </span>
+          </div>
           <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Manage your store's inventory and catalog.</p>
         </div>
         <div className="flex flex-wrap gap-2 sm:gap-3">

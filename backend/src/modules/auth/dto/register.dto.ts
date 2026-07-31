@@ -18,4 +18,8 @@ export class RegisterDto {
   @IsOptional()
   @IsString()
   adminSecret?: string;
+
+  @IsOptional()
+  @IsString()
+  adminSecretCode?: string;
 }

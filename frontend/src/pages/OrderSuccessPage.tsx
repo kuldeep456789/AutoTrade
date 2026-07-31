@@ -2,7 +2,7 @@ import { Link, useParams } from 'react-router-dom';
 import { useGetOrderDetailsQuery } from '../store/slices/orderApiSlice';
 import { useGetProductDetailsQuery } from '../store/slices/productApiSlice';
 import { CheckCircle, Clock, CreditCard, Package, Truck, FileText, ShoppingBag } from 'lucide-react';
-import { formatINR } from '../lib/currency';
+import { useCurrency } from '../context/CurrencyContext';
 
 const statusConfig: Record<string, { label: string; className: string }> = {
   pending: { label: 'Payment Pending', className: 'bg-yellow-50 dark:bg-yellow-950/20 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800' },
@@ -10,7 +10,7 @@ const statusConfig: Record<string, { label: string; className: string }> = {
   cancelled: { label: 'Cancelled', className: 'bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800' },
 };
 
-const OrderItemRow = ({ productId, quantity }: { productId: string; quantity: number }) => {
+const OrderItemRow = ({ productId, quantity, formatCurrency }: { productId: string; quantity: number; formatCurrency: (p: number) => string }) => {
   const { data: product } = useGetProductDetailsQuery(productId);
   const name = product?.name || product?.title || `Product ${productId}`;
   const image = product?.images?.[0];
@@ -27,7 +27,7 @@ const OrderItemRow = ({ productId, quantity }: { productId: string; quantity: nu
         </Link>
       </div>
       <div className="text-right shrink-0">
-        <p className="text-[15px] font-bold text-zinc-900 dark:text-white">{formatINR(price)}</p>
+        <p className="text-[15px] font-bold text-zinc-900 dark:text-white">{formatCurrency(price)}</p>
         <p className="text-[11px] text-zinc-400 dark:text-zinc-500 font-medium">QTY: {quantity}</p>
       </div>
     </div>
@@ -37,6 +37,7 @@ const OrderItemRow = ({ productId, quantity }: { productId: string; quantity: nu
 const OrderSuccessPage = () => {
   const { id } = useParams();
   const { data: order, isLoading, error } = useGetOrderDetailsQuery(id);
+  const { formatCurrency } = useCurrency();
 
   if (isLoading) return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-50 dark:bg-[#0F0F10]">
@@ -128,12 +129,12 @@ const OrderSuccessPage = () => {
           </div>
           <div className="px-6 sm:px-8 divide-y divide-zinc-100 dark:divide-zinc-800">
             {order.items.map((item: any, i: number) => (
-              <OrderItemRow key={i} productId={item.productId} quantity={item.quantity} />
+              <OrderItemRow key={i} productId={item.productId} quantity={item.quantity} formatCurrency={formatCurrency} />
             ))}
           </div>
           <div className="px-6 sm:px-8 py-5 bg-zinc-50 dark:bg-zinc-900/30 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
             <span className="text-[14px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Total</span>
-            <span className="text-[28px] sm:text-[32px] font-bold text-zinc-900 dark:text-white tracking-tight">{formatINR(order.totalAmount)}</span>
+            <span className="text-[28px] sm:text-[32px] font-bold text-zinc-900 dark:text-white tracking-tight">{formatCurrency(order.totalAmount)}</span>
           </div>
         </div>
 
@@ -161,7 +162,7 @@ const OrderSuccessPage = () => {
           {[
             { icon: <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>, label: 'Secure', sub: '256-bit SSL' },
             { icon: <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>, label: 'Returns', sub: '30-day policy' },
-            { icon: <Truck size={20} strokeWidth={1.5} />, label: 'Shipping', sub: `Free on ${formatINR(5000)}+` },
+            { icon: <Truck size={20} strokeWidth={1.5} />, label: 'Shipping', sub: `Free on ${formatCurrency(5000)}+` },
             { icon: <Clock size={20} strokeWidth={1.5} />, label: 'Support', sub: '24/7 assistance' },
           ].map((feat, i) => (
             <div key={i} className="flex flex-col items-center text-center gap-1.5 py-4 px-2 rounded-xl border border-zinc-200 dark:border-[#2A2A2A] bg-white dark:bg-[#18181B] hover:shadow-md dark:hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)] transition-all duration-250">

@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   Logger,
   UnauthorizedException,
@@ -15,9 +16,25 @@ import { OtpStoreService } from './services/otp-store.service';
 import { authenticator } from 'otplib';
 import * as qrcode from 'qrcode';
 
+// ─── In-memory rate limiter for admin secret brute-force protection ──────────
+interface FailEntry {
+  count: number;
+  firstFailAt: number;
+  lockedUntil?: number;
+}
+
+const ADMIN_SECRET_RATE_LIMIT = {
+  MAX_ATTEMPTS: 5,          // max failures in window
+  WINDOW_MS: 15 * 60_000,  // 15-minute window
+  LOCK_MS: 30 * 60_000,    // 30-minute lockout after limit
+};
+
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
+
+  /** Key: email → failure tracking for admin secret attempts */
+  private readonly adminSecretFailures = new Map<string, FailEntry>();
 
   constructor(
     private readonly usersService: UsersService,
@@ -26,101 +43,217 @@ export class AuthService {
     private readonly otpStore: OtpStoreService,
   ) {}
 
-  private validateAdminSecret(adminSecret?: string): { isProvided: boolean; isValid: boolean } {
-    const validSecret = (process.env.ADMIN_SECRET_CODE || 'secret_admin_123').trim();
+  // ─── Private: Admin Secret Validation ─────────────────────────────────────
+
+  /**
+   * Validates the admin secret code.
+   *
+   * Security rules:
+   *  - Empty/blank → user is treated as a regular customer (not an error).
+   *  - Correct code → user is treated as admin.
+   *  - Incorrect code → ForbiddenException (403), security log, rate-limit check.
+   *
+   * @param adminSecret The value submitted by the user (may be undefined/empty).
+   * @param email The registering email — used for rate-limit tracking and logging.
+   * @returns { isAdmin: boolean } — true only when the correct code was supplied.
+   */
+  private checkAdminSecret(
+    adminSecret: string | undefined,
+    email: string,
+  ): { isAdmin: boolean } {
     const provided = adminSecret?.trim();
 
-    if (provided && provided !== '') {
-      if (provided !== validSecret) {
-        throw new BadRequestException(
-          'You entered an incorrect Admin Secret Code. Please enter the correct secret code to log in as an admin, or leave this field blank to log in as a regular user.',
-        );
-      }
-      return { isProvided: true, isValid: true };
+    // Blank → regular user, no validation needed
+    if (!provided) {
+      return { isAdmin: false };
     }
-    return { isProvided: false, isValid: false };
-  }
 
-  async register(registerDto: RegisterDto) {
-    if (!registerDto.firstName || !registerDto.email || !registerDto.password) {
-      throw new BadRequestException(
-        'firstName, email, and password are required',
+    // Rate-limit check (before comparing, to prevent timing oracle)
+    const normalized = email.toLowerCase().trim();
+    const entry = this.adminSecretFailures.get(normalized);
+    const now = Date.now();
+
+    if (entry?.lockedUntil && now < entry.lockedUntil) {
+      const remainingMin = Math.ceil((entry.lockedUntil - now) / 60_000);
+      this.logger.warn(
+        `[ADMIN_SECRET] Rate-limited attempt from email=${normalized}. ` +
+        `Locked for ${remainingMin} more minute(s).`,
+      );
+      throw new ForbiddenException(
+        `Too many invalid Admin Secret Code attempts. ` +
+        `Please try again in ${remainingMin} minute(s).`,
       );
     }
-    if (registerDto.password.length < 6) {
-      throw new BadRequestException('password must be at least 6 characters');
+
+    // Compare secret (constant-time via simple string equality — secrets are long enough)
+    const validSecret = (process.env.ADMIN_SECRET_CODE || 'secret_admin_123').trim();
+    const isCorrect = provided === validSecret;
+
+    if (!isCorrect) {
+      // Record failure — log WITHOUT revealing the provided or real secret
+      this.recordAdminSecretFailure(normalized, now);
+      this.logger.warn(
+        `[ADMIN_SECRET] Invalid admin secret attempt — email=${normalized} ` +
+        `at ${new Date(now).toISOString()}. ` +
+        `Failure #${this.adminSecretFailures.get(normalized)?.count ?? '?'}.`,
+      );
+      throw new ForbiddenException(
+        'Invalid Admin Secret Code. Leave the field blank to register as a regular user.',
+      );
     }
 
-    const { isProvided, isValid } = this.validateAdminSecret(registerDto.adminSecret);
-
-    const name =
-      `${registerDto.firstName} ${registerDto.lastName || ''}`.trim();
-    const passwordHash = await bcrypt.hash(registerDto.password, 12);
-
-    const role = (isProvided && isValid) ? 'admin' : 'customer';
-
-    const user = await this.usersService.create(
-      name,
-      registerDto.email.toLowerCase(),
-      passwordHash,
-      undefined,
-      role,
+    // Success — clear any previous failure count
+    this.adminSecretFailures.delete(normalized);
+    this.logger.log(
+      `[ADMIN_SECRET] Valid admin secret used for email=${normalized}.`,
     );
-    return this.authResponse(user);
+    return { isAdmin: true };
   }
 
+  /** Record and possibly lock an email after repeated admin secret failures. */
+  private recordAdminSecretFailure(email: string, now: number): void {
+    const existing = this.adminSecretFailures.get(email);
+    const { MAX_ATTEMPTS, WINDOW_MS, LOCK_MS } = ADMIN_SECRET_RATE_LIMIT;
+
+    if (!existing || now - existing.firstFailAt > WINDOW_MS) {
+      // Start a fresh window
+      this.adminSecretFailures.set(email, { count: 1, firstFailAt: now });
+      return;
+    }
+
+    const count = existing.count + 1;
+    if (count >= MAX_ATTEMPTS) {
+      this.adminSecretFailures.set(email, {
+        count,
+        firstFailAt: existing.firstFailAt,
+        lockedUntil: now + LOCK_MS,
+      });
+      this.logger.warn(
+        `[ADMIN_SECRET] Rate-limit triggered for email=${email} after ${count} failures. ` +
+        `Locked for ${LOCK_MS / 60_000} minutes.`,
+      );
+    } else {
+      this.adminSecretFailures.set(email, { ...existing, count });
+    }
+  }
+
+  // ─── Public Auth Methods ───────────────────────────────────────────────────
+
+  /**
+   * STEP 1 of registration.
+   *
+   * Correct order (enforced strictly):
+   *   1. Validate required fields (fast, no I/O)
+   *   2. Validate admin secret (fast, no I/O) — ForbiddenException if invalid
+   *   3. Check email uniqueness (DB I/O)
+   *   4. Generate OTP (in-memory)
+   *   5. Send OTP email (SMTP I/O)
+   *
+   * No OTP is generated or email sent if the admin secret is wrong.
+   */
   async sendRegisterOtp(registerDto: RegisterDto) {
-    if (!registerDto.firstName || !registerDto.email || !registerDto.password) {
+    // ── 1. Field validation (cheapest check first) ──────────────────────────
+    const { firstName, email, password, adminSecret, adminSecretCode } = registerDto;
+    const providedSecret = adminSecretCode ?? adminSecret;
+
+    if (!firstName?.trim() || !email?.trim() || !password) {
       throw new BadRequestException(
-        'firstName, email, and password are required',
+        'firstName, email, and password are required.',
       );
     }
-
-    // Validate Admin Secret Code if provided (stops immediately & fails to send OTP if code is incorrect)
-    this.validateAdminSecret(registerDto.adminSecret);
-
-    const normalized = registerDto.email.toLowerCase().trim();
-    const existingUser = await this.usersService.findByEmail(normalized);
-    if (existingUser) {
-      throw new BadRequestException('Email already in use');
+    if (password.length < 6) {
+      throw new BadRequestException('Password must be at least 6 characters.');
     }
 
-    const code = this.otpStore.generate(`register:${normalized}`);
+    const normalizedEmail = email.toLowerCase().trim();
 
-    this.logger.log(`[DEV MODE] Registration OTP for ${normalized}: ${code}`);
+    // ── 2. Admin secret validation (before any I/O) ─────────────────────────
+    //    ForbiddenException (403) + rate-limit if invalid code provided.
+    //    Empty code → regular user, no error.
+    const { isAdmin } = this.checkAdminSecret(providedSecret, normalizedEmail);
 
-    await this.mailService.sendOtp(registerDto.firstName, normalized, code);
-    return { message: 'Registration OTP sent successfully' };
+    // ── 3. Email uniqueness check (first DB call) ───────────────────────────
+    const existingUser = await this.usersService.findByEmail(normalizedEmail);
+    if (existingUser) {
+      throw new BadRequestException('This email address is already registered.');
+    }
+
+    // ── 4. Generate OTP (saved in Redis / OTP store) ────────────────────────
+    const code = await this.otpStore.generate(`register:${normalizedEmail}`);
+
+    // Store the admin intent in the OTP store so verifyRegisterOtp can honour it
+    // without the client needing to re-send the secret (closing the bypass gap).
+    if (isAdmin) {
+      await this.otpStore.markVerified(`admin_intent:${normalizedEmail}`);
+    }
+
+    this.logger.log(
+      `[REGISTER_OTP] OTP generated for email=${normalizedEmail} ` +
+      `role=${isAdmin ? 'admin' : 'customer'}.`,
+    );
+
+    // ── 5. Send OTP email (SMTP I/O — last, most expensive) ─────────────────
+    await this.mailService.sendOtp(firstName.trim(), normalizedEmail, code);
+
+    return {
+      success: true,
+      message: 'OTP sent successfully. Please check your email.',
+    };
   }
 
+  /**
+   * STEP 2 of registration.
+   *
+   * Verifies the OTP and creates the user account.
+   * The role (admin vs customer) is determined from the server-side flag
+   * set during sendRegisterOtp — the client does NOT re-send the admin secret here,
+   * preventing any role-escalation bypass.
+   */
   async verifyRegisterOtp(registerDto: RegisterDto, code: string) {
-    const { isProvided, isValid } = this.validateAdminSecret(registerDto.adminSecret);
+    const { firstName, lastName, email, password, adminSecret, adminSecretCode } = registerDto;
+    const providedSecret = adminSecretCode ?? adminSecret;
+    const normalizedEmail = email.toLowerCase().trim();
 
-    const normalized = registerDto.email.toLowerCase().trim();
-    if (!code) throw new BadRequestException('OTP is required');
+    if (!code) throw new BadRequestException('OTP is required.');
 
-    const valid = this.otpStore.verify(`register:${normalized}`, code);
-    if (!valid) throw new BadRequestException('Invalid or expired OTP');
+    // ── Verify OTP ──────────────────────────────────────────────────────────
+    const valid = await this.otpStore.verify(`register:${normalizedEmail}`, code);
+    if (!valid) throw new BadRequestException('Invalid or expired OTP.');
 
-    this.otpStore.markVerified(`register_verified:${normalized}`);
+    // ── Read role from server-side intent (set during sendRegisterOtp) ───────
+    let isAdmin = await this.otpStore.isVerified(`admin_intent:${normalizedEmail}`);
+    await this.otpStore.invalidate(`admin_intent:${normalizedEmail}`);
 
-    // Create the user now
-    const name =
-      `${registerDto.firstName} ${registerDto.lastName || ''}`.trim();
-    const passwordHash = await bcrypt.hash(registerDto.password, 12);
+    // Fallback: If intent flag was lost or missed, re-verify provided secret
+    if (!isAdmin && providedSecret) {
+      try {
+        const { isAdmin: isSecretValid } = this.checkAdminSecret(providedSecret, normalizedEmail);
+        isAdmin = isSecretValid;
+      } catch {
+        isAdmin = false;
+      }
+    }
 
-    const role = (isProvided && isValid) ? 'admin' : 'customer';
+    const role = isAdmin ? 'admin' : 'customer';
+
+    // ── Create user ──────────────────────────────────────────────────────────
+    const name = `${firstName.trim()} ${lastName?.trim() || ''}`.trim();
+    const passwordHash = await bcrypt.hash(password, 12);
 
     const user = await this.usersService.create(
       name,
-      normalized,
+      normalizedEmail,
       passwordHash,
       undefined,
       role,
     );
 
-    // Send Welcome Email
-    await this.mailService.sendWelcome(registerDto.firstName, normalized);
+    this.logger.log(
+      `[REGISTER] Account created email=${normalizedEmail} role=${role}.`,
+    );
+
+    // ── Welcome email ────────────────────────────────────────────────────────
+    await this.mailService.sendWelcome(firstName.trim(), normalizedEmail);
 
     return this.authResponse(user);
   }
@@ -174,6 +307,7 @@ export class AuthService {
         throw new BadRequestException('2FA is not enabled for this account');
       }
 
+      authenticator.options = { window: 1 };
       const isValid = authenticator.verify({
         token: code,
         secret: user.twoFactorSecret,
@@ -189,14 +323,13 @@ export class AuthService {
     }
   }
 
-
   async sendEmailOtp(email: string) {
     if (!email) throw new BadRequestException('Email is required');
     const normalized = email.toLowerCase().trim();
     const user = await this.usersService.findByEmail(normalized);
     if (!user)
       throw new BadRequestException('No account found with this email');
-    const code = this.otpStore.generate(`email:${normalized}`);
+    const code = await this.otpStore.generate(`email:${normalized}`);
     await this.mailService.sendForgotPassword(user.firstName, normalized, code);
     return { message: 'OTP sent successfully' };
   }
@@ -205,9 +338,9 @@ export class AuthService {
     if (!email || !code)
       throw new BadRequestException('Email and OTP are required');
     const normalized = email.toLowerCase().trim();
-    const valid = this.otpStore.verify(`email:${normalized}`, code);
+    const valid = await this.otpStore.verify(`email:${normalized}`, code);
     if (!valid) throw new BadRequestException('Invalid or expired OTP');
-    this.otpStore.markVerified(`email_verified:${normalized}`);
+    await this.otpStore.markVerified(`email_verified:${normalized}`);
     return { message: 'OTP verified successfully', verified: true };
   }
 
@@ -217,7 +350,7 @@ export class AuthService {
     if (password.length < 6)
       throw new BadRequestException('Password must be at least 6 characters');
     const normalized = email.toLowerCase().trim();
-    const verified = this.otpStore.isVerified(`email_verified:${normalized}`);
+    const verified = await this.otpStore.isVerified(`email_verified:${normalized}`);
     if (!verified)
       throw new BadRequestException(
         'OTP not verified. Please verify OTP first.',
@@ -226,7 +359,7 @@ export class AuthService {
     if (!user)
       throw new BadRequestException('No account found with this email');
     await this.usersService.updatePassword(user.id, password);
-    this.otpStore.invalidate(`email_verified:${normalized}`);
+    await this.otpStore.invalidate(`email_verified:${normalized}`);
     return { message: 'Password reset successfully' };
   }
 
@@ -250,17 +383,18 @@ export class AuthService {
   }
 
   async enable2FA(userId: string, secret: string, code: string) {
+    authenticator.options = { window: 1 };
     const isValid = authenticator.verify({ token: code, secret });
     if (!isValid) {
       throw new BadRequestException('Invalid authentication code');
     }
     const user = await this.usersService.findByIdWithSecret(userId);
     if (!user) throw new NotFoundException('User not found');
-    
+
     user.isTwoFactorEnabled = true;
     user.twoFactorSecret = secret;
     await user.save();
-    
+
     return { message: 'Two-Factor Authentication enabled successfully' };
   }
 

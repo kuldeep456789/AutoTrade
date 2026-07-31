@@ -80,6 +80,16 @@ export const productApiSlice = apiSlice.injectEndpoints({
     }),
 
     /**
+     * Fetch warehouse catalog statistics (total products count, categories, sync status).
+     */
+    getCatalogStats: builder.query({
+      query: () => ({
+        url: `${PRODUCTS_URL}/stats`,
+      }),
+      keepUnusedDataFor: 600,
+    }),
+
+    /**
      * Fetch CJ sync status — for admin dashboard health widget.
      */
     getSyncStatus: builder.query({
@@ -97,5 +107,6 @@ export const {
   useGetRelatedProductsQuery,
   useCreateReviewMutation,
   useGetProductCountQuery,
+  useGetCatalogStatsQuery,
   useGetSyncStatusQuery,
 } = productApiSlice;

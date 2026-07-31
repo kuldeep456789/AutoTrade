@@ -1,4 +1,4 @@
-import { UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
 import * as bcrypt from 'bcrypt';
@@ -12,6 +12,7 @@ describe('AuthService', () => {
 
   const usersService = {
     create: jest.fn(),
+    findByEmail: jest.fn(),
     findByEmailWithPassword: jest.fn(),
     findById: jest.fn(),
     toSafeUser: jest.fn(),
@@ -22,8 +23,18 @@ describe('AuthService', () => {
     verifyAsync: jest.fn(),
   };
 
-  const mailService = {} as any;
-  const otpStore = {} as any;
+  const mailService = {
+    sendOtp: jest.fn(),
+    sendWelcome: jest.fn(),
+  };
+
+  const otpStore = {
+    generate: jest.fn(),
+    verify: jest.fn(),
+    isVerified: jest.fn(),
+    markVerified: jest.fn(),
+    invalidate: jest.fn(),
+  };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -41,44 +52,50 @@ describe('AuthService', () => {
     authService = module.get<AuthService>(AuthService);
   });
 
-  it('registers a user and returns a token', async () => {
-    usersService.create.mockResolvedValue({
-      id: 'user-id',
-      firstName: 'Kuldeep',
-      lastName: '',
-      name: 'Kuldeep',
-      email: 'kuldeep@example.com',
-      role: 'customer',
-    });
-    jwtService.sign.mockReturnValue('token');
+  describe('sendRegisterOtp', () => {
+    it('throws ForbiddenException (403) when invalid admin secret is provided, without generating OTP or sending email', async () => {
+      await expect(
+        authService.sendRegisterOtp({
+          firstName: 'John',
+          email: 'john@example.com',
+          password: 'password123',
+          adminSecret: 'wrong_secret',
+        }),
+      ).rejects.toThrow(ForbiddenException);
 
-    const response = await authService.register({
-      firstName: 'Kuldeep',
-      lastName: '',
-      email: 'Kuldeep@Example.com',
-      password: 'secret123',
+      expect(otpStore.generate).not.toHaveBeenCalled();
+      expect(mailService.sendOtp).not.toHaveBeenCalled();
     });
 
-    expect(usersService.create).toHaveBeenCalledWith(
-      'Kuldeep',
-      'kuldeep@example.com',
-      expect.any(String),
-      undefined,
-    );
-    expect(response.accessToken).toBe('token');
+    it('sends OTP for valid normal user registration', async () => {
+      usersService.findByEmail.mockResolvedValue(null);
+      otpStore.generate.mockResolvedValue('123456');
+
+      const result = await authService.sendRegisterOtp({
+        firstName: 'John',
+        email: 'john@example.com',
+        password: 'password123',
+      });
+
+      expect(result.success).toBe(true);
+      expect(otpStore.generate).toHaveBeenCalledWith('register:john@example.com');
+      expect(mailService.sendOtp).toHaveBeenCalledWith('John', 'john@example.com', '123456');
+    });
   });
 
-  it('rejects invalid login credentials', async () => {
-    usersService.findByEmailWithPassword.mockResolvedValue({
-      id: 'user-id',
-      password: await bcrypt.hash('correct-password', 12),
-    });
+  describe('login', () => {
+    it('rejects invalid login credentials', async () => {
+      usersService.findByEmailWithPassword.mockResolvedValue({
+        id: 'user-id',
+        password: await bcrypt.hash('correct-password', 12),
+      });
 
-    await expect(
-      authService.login({
-        email: 'kuldeep@example.com',
-        password: 'wrong-password',
-      }),
-    ).rejects.toThrow(UnauthorizedException);
+      await expect(
+        authService.login({
+          email: 'kuldeep@example.com',
+          password: 'wrong-password',
+        }),
+      ).rejects.toThrow(UnauthorizedException);
+    });
   });
 });

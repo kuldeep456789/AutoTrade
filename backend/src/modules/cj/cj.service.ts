@@ -670,7 +670,7 @@ export class CjService {
 
       if (catData && Array.isArray(catData) && catData.length > 0) {
         const total = catData.length;
-        const effectivePageSize = Math.min(pageSize, 250);
+        const effectivePageSize = Math.min(pageSize, 1000);
         const start = (pageNum - 1) * effectivePageSize;
         const products = catData.slice(start, start + effectivePageSize);
         this.logger.log(
@@ -700,7 +700,7 @@ export class CjService {
         legacyCatData.length > 0
       ) {
         const total = legacyCatData.length;
-        const effectivePageSize = Math.min(pageSize, 250);
+        const effectivePageSize = Math.min(pageSize, 1000);
         const start = (pageNum - 1) * effectivePageSize;
         const products = legacyCatData.slice(start, start + effectivePageSize);
         return { products, total, warehouseHit: true };
@@ -713,7 +713,7 @@ export class CjService {
       const catData = await this.redisService.getJson<any[]>(catKey);
       if (catData && Array.isArray(catData) && catData.length > 0) {
         const total = catData.length;
-        const effectivePageSize = Math.min(pageSize, 250);
+        const effectivePageSize = Math.min(pageSize, 1000);
         const start = (pageNum - 1) * effectivePageSize;
         const products = catData.slice(start, start + effectivePageSize);
         this.logger.log(
@@ -730,7 +730,7 @@ export class CjService {
       const collData = await this.redisService.getJson<any[]>(collKey);
       if (collData && Array.isArray(collData) && collData.length > 0) {
         const total = collData.length;
-        const effectivePageSize = Math.min(pageSize, 250);
+        const effectivePageSize = Math.min(pageSize, 1000);
         const start = (pageNum - 1) * effectivePageSize;
         const products = collData.slice(start, start + effectivePageSize);
         return { products, total, warehouseHit: true };
@@ -793,7 +793,7 @@ export class CjService {
     });
 
     const total = pool.length;
-    const effectivePageSize = Math.min(pageSize, 250);
+    const effectivePageSize = Math.min(pageSize, 500);
     const start = (pageNum - 1) * effectivePageSize;
     const products = pool.slice(start, start + effectivePageSize);
 

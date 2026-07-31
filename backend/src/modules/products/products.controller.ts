@@ -47,6 +47,11 @@ export class ProductsController {
     return await this.productsService.getProducts(finalQuery);
   }
 
+  @Get('stats')
+  async getCatalogStats() {
+    return await this.productsService.getCatalogStats();
+  }
+
   @Get('category/:categoryId')
   async getProductsByCategory(
     @Param('categoryId') categoryId: string,

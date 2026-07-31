@@ -139,12 +139,14 @@ const ForgotPasswordPage = () => {
                 <input
                   key={i}
                   ref={(el) => { otpRefs.current[i] = el; }}
-                  type="text" inputMode="numeric" maxLength={1} value={val}
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={1}
+                  value={val}
                   onChange={(e) => handleOtpChange(i, e.target.value)}
                   onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                  style={{ textAlign: 'center' }}
-                  className={`w-11 h-12 text-center text-lg font-bold rounded-xl border-2 bg-[hsl(var(--card))] outline-none transition-all duration-150 ${
-                    val ? 'border-[hsl(var(--foreground))]' : 'border-zinc-200 dark:border-zinc-700 focus:border-zinc-500'
+                  className={`w-11 h-12 p-0 px-0 min-w-0 text-center text-lg font-bold leading-none rounded-xl border-2 bg-[hsl(var(--card))] outline-none transition-all duration-150 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                    val ? 'border-[hsl(var(--foreground))] text-[hsl(var(--foreground))]' : 'border-zinc-200 dark:border-zinc-700 focus:border-zinc-500'
                   }`}
                 />
               ))}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { Navigate } from 'react-router-dom';
 import type { RootState } from '../../store/store';
@@ -15,6 +15,12 @@ export default function AdminRoute({ children }: { children: React.ReactNode }) 
   const [verified, setVerified] = useState(() =>
     sessionStorage.getItem(ADMIN_SESSION_KEY) === '1',
   );
+
+  useEffect(() => {
+    if (sessionStorage.getItem(ADMIN_SESSION_KEY) === '1') {
+      setVerified(true);
+    }
+  }, []);
 
   // Not logged in or not an admin role → redirect to home
   if (!userInfo || userInfo.role !== 'admin') {

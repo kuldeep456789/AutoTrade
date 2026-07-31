@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { SignOptions } from 'jsonwebtoken';
 import { UsersModule } from '../users/users.module';
+import { RedisModule } from '../redis/redis.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { OtpStoreService } from './services/otp-store.service';
@@ -9,6 +10,7 @@ import { OtpStoreService } from './services/otp-store.service';
 @Module({
   imports: [
     UsersModule,
+    RedisModule,
     JwtModule.registerAsync({
       useFactory: () => ({
         secret: process.env.JWT_SECRET ?? 'development-jwt-secret',

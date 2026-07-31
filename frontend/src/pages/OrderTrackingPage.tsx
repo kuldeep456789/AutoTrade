@@ -6,7 +6,7 @@ import { useGetProductDetailsQuery, useGetRelatedProductsQuery } from '../store/
 import { ChevronRight, ShoppingBag, Package, CheckCircle, Clock, Truck, AlertCircle, HelpCircle, ArrowRight, RotateCcw } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { formatINR } from '../lib/currency';
+import { useCurrency } from '../context/CurrencyContext';
 import ProductCard from '../components/product/ProductCard';
 import ReturnRequestModal from '../components/returns/ReturnRequestModal';
 import { useGetMyReturnsQuery } from '../store/slices/returnApiSlice';
@@ -51,7 +51,7 @@ const orderDate = (dateStr: string) => {
   return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
 };
 
-const OrderItemRow = ({ productId, quantity }: { productId: string; quantity: number }) => {
+const OrderItemRow = ({ productId, quantity, formatCurrency }: { productId: string; quantity: number; formatCurrency: (p: number) => string }) => {
   const { data: product } = useGetProductDetailsQuery(productId);
   const name = product?.name || product?.title || `Product`;
   const image = product?.images?.[0];
@@ -75,7 +75,7 @@ const OrderItemRow = ({ productId, quantity }: { productId: string; quantity: nu
           <span className="w-px h-3 bg-zinc-200 dark:bg-zinc-700" />
           <span>Qty: {quantity}</span>
         </div>
-        <p className="text-[15px] font-bold text-zinc-900 dark:text-white mt-2">{formatINR(price)}</p>
+        <p className="text-[15px] font-bold text-zinc-900 dark:text-white mt-2">{formatCurrency(price)}</p>
       </div>
     </div>
   );
@@ -110,6 +110,7 @@ const OrderTrackingPage = () => {
   const { data: myReturns } = useGetMyReturnsQuery(undefined, { skip: !userInfo || !id, pollingInterval: 3000 });
   const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const { formatCurrency } = useCurrency();
 
   useEffect(() => {
     const t = setTimeout(() => setLoaded(true), 100);
@@ -349,7 +350,7 @@ const OrderTrackingPage = () => {
               {/* Items */}
               <div className="px-6 divide-y divide-zinc-100 dark:divide-zinc-800">
                 {order.items?.map((item: any, i: number) => (
-                  <OrderItemRow key={i} productId={item.productId} quantity={item.quantity} />
+                  <OrderItemRow key={i} productId={item.productId} quantity={item.quantity} formatCurrency={formatCurrency} />
                 ))}
               </div>
 
@@ -357,11 +358,11 @@ const OrderTrackingPage = () => {
               <div className="px-6 py-5 border-t border-zinc-100 dark:border-zinc-800 space-y-3">
                 <div className="flex items-center justify-between text-[14px]">
                   <span className="text-zinc-500 dark:text-zinc-400">Subtotal</span>
-                  <span className="font-semibold text-zinc-900 dark:text-white">{formatINR(totalItemsPrice)}</span>
+                  <span className="font-semibold text-zinc-900 dark:text-white">{formatCurrency(totalItemsPrice)}</span>
                 </div>
                 <div className="border-t border-zinc-200 dark:border-zinc-700 pt-3 flex items-center justify-between">
                   <span className="text-[15px] font-bold text-zinc-900 dark:text-white">Total</span>
-                  <span className="text-[22px] font-bold text-zinc-900 dark:text-white tracking-tight">{formatINR(totalItemsPrice)}</span>
+                  <span className="text-[22px] font-bold text-zinc-900 dark:text-white tracking-tight">{formatCurrency(totalItemsPrice)}</span>
                 </div>
               </div>
             </motion.div>

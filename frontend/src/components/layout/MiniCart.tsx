@@ -5,7 +5,7 @@ import type { RootState } from '../../store/store';
 import { addToCart, removeFromCart } from '../../store/slices/cartSlice';
 import type { CartItem } from '../../store/slices/cartSlice';
 import { X, ShoppingBag, Trash2, ArrowRight, ShoppingCart, ShieldCheck } from 'lucide-react';
-import { formatINR } from '../../lib/currency';
+import { useCurrency } from '../../context/CurrencyContext';
 import QuantitySelector from '../QuantitySelector';
 import MinimumOrderModal from '../checkout/MinimumOrderModal';
 
@@ -27,6 +27,7 @@ const MiniCart = ({ isOpen, onClose }: MiniCartProps) => {
   const navigate = useNavigate();
   const { cartItems, totalPrice, itemsPrice } = useSelector((state: RootState) => state.cart);
   const [isMinOrderModalOpen, setIsMinOrderModalOpen] = useState(false);
+  const { formatCurrency } = useCurrency();
 
   const totalItemCount = cartItems.reduce((acc, item) => acc + item.qty, 0);
 
@@ -181,7 +182,7 @@ const MiniCart = ({ isOpen, onClose }: MiniCartProps) => {
                         {/* Price + Remove */}
                         <div className="flex items-center gap-2.5">
                           <span className="text-sm font-bold font-mono text-zinc-900 dark:text-white">
-                            {formatINR(totalItemPrice)}
+                            {formatCurrency(totalItemPrice)}
                           </span>
                           <button
                             onClick={() => removeItem(item)}
@@ -208,7 +209,7 @@ const MiniCart = ({ isOpen, onClose }: MiniCartProps) => {
               <div className="flex justify-between items-center text-sm font-bold">
                 <span className="text-zinc-500 dark:text-zinc-400">SUBTOTAL</span>
                 <span className="text-lg font-extrabold font-mono text-zinc-900 dark:text-white">
-                  {formatINR(calculatedSubtotal)}
+                  {formatCurrency(calculatedSubtotal)}
                 </span>
               </div>
               <div className="flex items-center justify-between text-[11px] text-zinc-400 dark:text-zinc-500">
@@ -223,7 +224,7 @@ const MiniCart = ({ isOpen, onClose }: MiniCartProps) => {
             {calculatedSubtotal < 50000 && (
               <div className="px-3 py-2 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 text-[11px] font-medium text-amber-700 dark:text-amber-400 flex items-center justify-between">
                 <span>Minimum order amount is ₹50,000</span>
-                <span className="font-bold">Add {formatINR(50000 - calculatedSubtotal)}</span>
+                <span className="font-bold">Add {formatCurrency(50000 - calculatedSubtotal)}</span>
               </div>
             )}
 

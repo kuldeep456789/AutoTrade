@@ -9,13 +9,14 @@ import { useGetRelatedProductsQuery } from '../store/slices/productApiSlice';
 import ProductCard from '../components/product/ProductCard';
 import { Trash2, ShoppingBag, Heart, Percent, Truck, X, ChevronRight, Star } from 'lucide-react';
 import QuantitySelector from '../components/QuantitySelector';
-import { formatINR } from '../lib/currency';
+import { useCurrency } from '../context/CurrencyContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import MinimumOrderModal from '../components/checkout/MinimumOrderModal';
 
 const CartPage = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const { formatCurrency } = useCurrency();
 
   const cart = useSelector((state: RootState) => state.cart);
   const { cartItems, itemsPrice, shippingPrice, totalPrice } = cart;
@@ -79,12 +80,12 @@ const CartPage = () => {
       return;
     }
     if (itemsPrice < couponDef.min) {
-      setCouponMsg({ text: `Min. cart value of ${formatINR(couponDef.min)} required for ${cleanCode}.`, isError: true });
+      setCouponMsg({ text: `Min. cart value of ${formatCurrency(couponDef.min)} required for ${cleanCode}.`, isError: true });
       return;
     }
     dispatch(applyCoupon(cleanCode));
     const savings = couponDef.discount(itemsPrice);
-    setCouponMsg({ text: `"${cleanCode}" applied! You save ${formatINR(savings)}.`, isError: false });
+    setCouponMsg({ text: `"${cleanCode}" applied! You save ${formatCurrency(savings)}.`, isError: false });
   };
 
   const handleRemoveCoupon = () => {
@@ -106,9 +107,9 @@ const CartPage = () => {
     const discounted = itemsPrice - cart.couponDiscount;
     if (discounted === 0) return { msg: '', pct: 0, free: false };
     if (discounted >= 5000) return { msg: 'FREE shipping unlocked!', pct: 100, free: true };
-    if (discounted >= 999) return { msg: `Add ${formatINR(5000 - discounted)} more for FREE shipping`, pct: (discounted / 5000) * 100, free: false };
-    if (discounted >= 499) return { msg: `Add ${formatINR(999 - discounted)} more to drop shipping to ${formatINR(49)}`, pct: (discounted / 999) * 100, free: false };
-    return { msg: `Add ${formatINR(499 - discounted)} more to drop shipping to ${formatINR(99)}`, pct: (discounted / 499) * 100, free: false };
+    if (discounted >= 999) return { msg: `Add ${formatCurrency(5000 - discounted)} more for FREE shipping`, pct: (discounted / 5000) * 100, free: false };
+    if (discounted >= 499) return { msg: `Add ${formatCurrency(999 - discounted)} more to drop shipping to ${formatCurrency(49)}`, pct: (discounted / 999) * 100, free: false };
+    return { msg: `Add ${formatCurrency(499 - discounted)} more to drop shipping to ${formatCurrency(99)}`, pct: (discounted / 499) * 100, free: false };
   };
 
   return (
@@ -190,7 +191,7 @@ const CartPage = () => {
                               </div>
                             )}
                           </div>
-                          <span className="text-[18px] sm:text-[20px] font-bold shrink-0">{formatINR(item.price)}</span>
+                          <span className="text-[18px] sm:text-[20px] font-bold shrink-0">{formatCurrency(item.price)}</span>
                         </div>
 
                         {/* Bottom row: qty + actions */}
@@ -292,13 +293,13 @@ const CartPage = () => {
                   <div className="space-y-3.5 text-[14px]">
                     <div className="flex justify-between">
                       <span className="text-zinc-500">Subtotal</span>
-                      <span className="font-semibold">{formatINR(itemsPrice)}</span>
+                      <span className="font-semibold">{formatCurrency(itemsPrice)}</span>
                     </div>
 
                     {cart.couponDiscount > 0 && (
                       <div className="flex justify-between text-green-600 dark:text-green-400">
                         <span>Discount ({cart.appliedCoupon})</span>
-                        <span className="font-bold">-{formatINR(cart.couponDiscount)}</span>
+                        <span className="font-bold">-{formatCurrency(cart.couponDiscount)}</span>
                       </div>
                     )}
 
@@ -308,7 +309,7 @@ const CartPage = () => {
 
                   <div className="flex justify-between items-center mt-5 pt-4 border-t border-zinc-200 dark:border-zinc-800">
                     <span className="text-[15px] font-bold">Total</span>
-                    <span className="text-[24px] font-bold tracking-tight">{formatINR(totalPrice)}</span>
+                    <span className="text-[24px] font-bold tracking-tight">{formatCurrency(totalPrice)}</span>
                   </div>
 
                   <button
@@ -328,7 +329,7 @@ const CartPage = () => {
           <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[hsl(var(--card))] border-t border-zinc-200 dark:border-zinc-700 p-4 backdrop-blur-md shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
             <div className="flex items-center justify-between mb-2">
               <span className="text-[13px] text-zinc-500">{cartItems.reduce((sum, i) => sum + i.qty, 0)} Items</span>
-              <span className="text-[20px] font-bold">{formatINR(totalPrice)}</span>
+              <span className="text-[20px] font-bold">{formatCurrency(totalPrice)}</span>
             </div>
             <button
               onClick={checkoutHandler}

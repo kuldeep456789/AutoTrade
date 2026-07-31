@@ -16,7 +16,7 @@ import {
 import { useSelector } from 'react-redux';
 import type { RootState } from '../store/store';
 
-import { useGetProductsQuery } from '../store/slices/productApiSlice';
+import { useGetProductsQuery, useGetCatalogStatsQuery } from '../store/slices/productApiSlice';
 import ProductCard from '../components/product/ProductCard';
 import { getProductId } from '../lib/product';
 import TrustBadgesBar from '../components/layout/TrustBadgesBar';
@@ -89,6 +89,10 @@ const HomePage = () => {
     pageNum: 1,
     pageSize: 200,
   });
+
+  const { data: statsData } = useGetCatalogStatsQuery(undefined);
+  const totalCatalogCount = statsData?.totalProducts || autoData?.total || 14593;
+  const formattedCatalogCount = totalCatalogCount.toLocaleString();
 
   const autoProducts = useMemo(() => {
     const raw = Array.isArray(autoData?.products) ? autoData.products : [];
@@ -247,12 +251,16 @@ const HomePage = () => {
         {/* Hero Content Overlay */}
         <div className="relative z-10 h-full max-w-[1920px] mx-auto px-6 sm:px-10 lg:px-16 flex items-center">
           <div className="max-w-2xl text-left space-y-6 sm:space-y-7">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-orange-500/20 border border-orange-500/30 text-orange-400 text-xs font-bold uppercase tracking-wider backdrop-blur-md">
+              <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
+              <span>{formattedCatalogCount} Live Automotive Items in Catalog</span>
+            </div>
             <h1 className="text-5xl sm:text-6xl lg:text-6xl font-semibold tracking-tight leading-[1.1] uppercase">
               Performance Starts <br className="hidden sm:inline" />
               With <span className="text-[#FF7A00]">The Right Part</span>
             </h1>
             <p className="text-sm sm:text-base text-zinc-300 font-medium normal-case max-w-lg leading-relaxed">
-              Explore 10,000+ genuine automotive parts and accessories for every make and model. Engineered for excellence.
+              Explore {formattedCatalogCount}+ genuine automotive parts and accessories for every make and model. Engineered for excellence.
             </p>
             <div className="pt-2 flex flex-wrap gap-4 items-center">
               <Link
@@ -626,7 +634,7 @@ const HomePage = () => {
                           </span>
                           <span className={`text-[10px] transition-colors block leading-tight mt-0.5 ${selectedCategory === part.label ? 'text-orange-500 dark:text-orange-400' : 'text-zinc-500 dark:text-zinc-500'
                             }`}>
-                            {part.val}
+                            Explore Collection
                           </span>
                         </div>
                       </Link>

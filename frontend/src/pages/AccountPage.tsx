@@ -9,7 +9,7 @@ import { apiSlice } from '../store/slices/apiSlice';
 import { useGetUserOrdersQuery } from '../store/slices/orderApiSlice';
 import { useGetMyReturnsQuery } from '../store/slices/returnApiSlice';
 import { Package, User, MapPin, Heart, Settings, LogOut, ChevronRight, ShoppingBag, Clock, CheckCircle, XCircle, Trash2, Plus, Pencil, Bell, Moon, Sun, Mail, Phone, Truck, RotateCcw, Camera, X, ShieldCheck } from 'lucide-react';
-import { formatINR } from '../lib/currency';
+import { useCurrency } from '../context/CurrencyContext';
 import { useTheme } from '../context/ThemeContext';
 import EditProfileModal from '../components/profile/EditProfileModal';
 import ChangePasswordModal from '../components/profile/ChangePasswordModal';
@@ -47,6 +47,7 @@ const AccountPage = () => {
   const userInfo = useSelector((state: RootState) => state.auth.userInfo);
   const wishlistItems = useSelector((state: RootState) => state.wishlist.wishlistItems);
   const { theme, toggleTheme } = useTheme();
+  const { formatCurrency } = useCurrency();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'orders';
   const [page, setPage] = useState(1);
@@ -432,7 +433,7 @@ const AccountPage = () => {
                                     </div>
                                     <div className="text-left sm:text-right shrink-0">
                                       <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
-                                        {formatINR(order.totalAmount || 0)}
+                                        {formatCurrency(order.totalAmount || 0)}
                                       </p>
                                     </div>
                                   </div>
@@ -740,7 +741,7 @@ const AccountPage = () => {
                                     <h3 className="text-[15px] font-semibold text-zinc-900 dark:text-white line-clamp-2 hover:underline">{item.name}</h3>
                                   </Link>
                                   <p className="text-base font-bold mt-1.5 text-zinc-900 dark:text-white">
-                                    {formatINR(item.discountPrice || item.price)}
+                                    {formatCurrency(item.discountPrice || item.price)}
                                   </p>
                                 </div>
                                 <div className="flex gap-2 mt-2">

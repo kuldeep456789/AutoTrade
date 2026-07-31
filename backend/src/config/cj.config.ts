@@ -1,6 +1,6 @@
 export const CJ_CONFIG = {
   PAGE_SIZE: 200,
-  REQUEST_DELAY_MS: 1000,
+  REQUEST_DELAY_MS: 200,
   MAX_RETRIES: 4,
   MAX_PAGES_PER_CATEGORY: 800,
   CURRENCY_EXCHANGE_RATE: 93.45,
@@ -15,3 +15,4 @@ export const CJ_CONFIG = {
     PRODUCT_COUNT: 60 * 60 * 24, // 24 hours
   },
 };
+

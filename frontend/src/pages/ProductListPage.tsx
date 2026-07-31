@@ -6,7 +6,7 @@ import { useGetCategoriesQuery } from '../store/slices/categoryApiSlice';
 import ProductCard from '../components/product/ProductCard';
 import Pagination from '../components/Pagination';
 
-const ITEMS_PER_PAGE = 20;
+const ITEMS_PER_PAGE = 40;
 
 const ProductListPage = () => {
   const location = useLocation();
@@ -59,10 +59,10 @@ const ProductListPage = () => {
     return 0;
   });
 
-  // For server-paginated search results, use server total; for client-sorted lists use length
-  const totalPages = Math.max(1, Math.ceil((keyword ? serverTotal : sortedProducts.length) / ITEMS_PER_PAGE));
-  // When searching, backend already paginates — render directly; otherwise slice client-side
-  const paginatedProducts = keyword ? sortedProducts : sortedProducts.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+  // For server-paginated results, calculate total pages based on serverTotal
+  const totalPages = Math.max(1, Math.ceil(serverTotal / ITEMS_PER_PAGE));
+  // Backend already returns the correct page slice — render directly
+  const paginatedProducts = sortedProducts;
 
   const pageTitle = isNewArrivals
     ? 'NEW ARRIVALS'
@@ -81,7 +81,7 @@ const ProductListPage = () => {
           <span className="text-[hsl(var(--foreground))]">{pageTitle}</span>
         </div>
         <span className="text-[hsl(var(--foreground))] font-black tracking-widest">
-          FOUND {isLoading ? '...' : sortedProducts.length} ITEMS
+          FOUND {isLoading ? '...' : serverTotal.toLocaleString()} ITEMS
         </span>
       </div>
 

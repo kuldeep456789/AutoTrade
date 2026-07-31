@@ -2,7 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { Heart, ShoppingBag, Trash2, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { formatINR } from '../lib/currency';
+import { useCurrency } from '../context/CurrencyContext';
 import type { RootState } from '../store/store';
 import { removeFromWishlist } from '../store/slices/wishlistSlice';
 import { addToCart } from '../store/slices/cartSlice';
@@ -10,6 +10,7 @@ import { useAddToCartMutation } from '../store/slices/cartApiSlice';
 import { useRemoveWishlistItemMutation } from '../store/slices/wishlistApiSlice';
 
 const WishlistPage = () => {
+  const { formatCurrency } = useCurrency();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const userInfo = useSelector((state: RootState) => state.auth.userInfo);
@@ -104,7 +105,7 @@ const WishlistPage = () => {
                       </h3>
                     </Link>
                     <p className="text-[17px] font-bold mt-1.5 text-zinc-900 dark:text-white">
-                      {formatINR(item.discountPrice || item.price)}
+                      {formatCurrency(item.discountPrice || item.price)}
                     </p>
                   </div>
                   <div className="flex items-center gap-2 mt-3">

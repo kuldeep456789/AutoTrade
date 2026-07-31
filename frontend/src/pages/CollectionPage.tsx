@@ -44,25 +44,27 @@ const CollectionPage = () => {
   const targetCollectionType = categoryInfo?.collectionType;
 
   // Determine query parameters based on current category selection
+  const ITEMS_PER_PAGE = 40;
   const queryParams = useMemo(() => {
     if (!normalizedSubcategory || normalizedSubcategory === 'all') {
-      return { pageNum: 1, pageSize: 500 };
+      return { pageNum: page, pageSize: ITEMS_PER_PAGE };
     }
     if (targetSubcategoryName) {
-      return { subcategoryName: targetSubcategoryName, pageNum: 1, pageSize: 500 };
+      return { subcategoryName: targetSubcategoryName, pageNum: page, pageSize: ITEMS_PER_PAGE };
     }
     if (targetCollectionType) {
-      return { collectionType: targetCollectionType, pageNum: 1, pageSize: 500 };
+      return { collectionType: targetCollectionType, pageNum: page, pageSize: ITEMS_PER_PAGE };
     }
     // Fallback for custom slug
-    return { subcategoryName: fromSlug(normalizedSubcategory), pageNum: 1, pageSize: 500 };
-  }, [normalizedSubcategory, targetSubcategoryName, targetCollectionType]);
+    return { subcategoryName: fromSlug(normalizedSubcategory), pageNum: page, pageSize: ITEMS_PER_PAGE };
+  }, [normalizedSubcategory, targetSubcategoryName, targetCollectionType, page]);
 
   const { data: apiResponse, isLoading, error } = useGetProductsQuery(queryParams);
 
   const rawProducts = Array.isArray(apiResponse?.products) ? apiResponse.products : [];
 
   // Query full collection pool to derive category navigation tabs for the current section
+  // Use pageSize:500 without page param so we get a broad pool for tab counts
   const collectionPoolQuery = useMemo(() => {
     if (targetCollectionType) {
       return { collectionType: targetCollectionType, pageNum: 1, pageSize: 500 };
@@ -123,13 +125,12 @@ const CollectionPage = () => {
     });
   }, [rawProducts]);
 
-  // Pagination
-  const ITEMS_PER_PAGE = 20;
-  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / ITEMS_PER_PAGE));
-  const startIndex = (page - 1) * ITEMS_PER_PAGE;
-  const paginatedProducts = filteredProducts.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  // Server-side pagination — backend returns the correct page slice + total
+  const serverTotal = apiResponse?.total ?? filteredProducts.length;
+  const totalPages = Math.max(1, Math.ceil(serverTotal / ITEMS_PER_PAGE));
+  const paginatedProducts = filteredProducts; // already paginated by backend
 
-  const headerCount = filteredProducts.length;
+  const headerCount = serverTotal;
 
   return (
     <div className="bg-[hsl(var(--background))] min-h-screen text-[hsl(var(--foreground))]">
@@ -150,7 +151,7 @@ const CollectionPage = () => {
             </div>
             <div className="flex items-center gap-3 shrink-0 self-start sm:self-auto">
               <span className="inline-flex items-center px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-bold bg-orange-500/10 text-orange-500 border border-orange-500/20">
-                {isLoading ? 'Loading...' : `${headerCount} AVL`}
+                {isLoading ? 'Loading...' : `${headerCount.toLocaleString()} Products Available`}
               </span>
             </div>
           </div>

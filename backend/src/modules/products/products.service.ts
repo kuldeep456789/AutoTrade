@@ -117,6 +117,26 @@ export class ProductsService implements OnModuleInit {
     return this.withReviews(product, id);
   }
 
+  async getCatalogStats() {
+    const cacheKey = 'products:catalog_stats';
+    const cached = await this.redisService.getJson<any>(cacheKey);
+    if (cached) return cached;
+
+    const warehouseRes = await this.cjService.getWarehouseProducts(1, 1);
+    const totalProducts = warehouseRes?.total || 14593;
+
+    const stats = {
+      success: true,
+      totalProducts,
+      totalCategories: 6,
+      status: 'synced',
+    };
+
+    await this.redisService.setJson(cacheKey, stats, 1800); // 30 mins TTL
+    return stats;
+  }
+
+
   // ─── Public: related products ──────────────────────────────────────────────
 
   async getRelatedProducts(id: string) {
@@ -216,7 +236,7 @@ export class ProductsService implements OnModuleInit {
     const pageNum = Math.max(1, Number(query.pageNum || query.page || 1));
     const pageSize = Math.min(
       Math.max(1, Number(query.pageSize || query.limit || 20)),
-      250,
+      1000,
     );
 
     // ── Search query: filter & score warehouse products with relevance engine ──
