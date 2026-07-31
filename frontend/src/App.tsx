@@ -58,9 +58,7 @@ function MainLayout() {
 }
 
 function App() {
-  const [showSplash, setShowSplash] = useState(
-    () => !sessionStorage.getItem('at_splash_done')
-  );
+  const [showSplash, setShowSplash] = useState(false);
 
   const handleSplashDone = useCallback(() => {
     sessionStorage.setItem('at_splash_done', '1');

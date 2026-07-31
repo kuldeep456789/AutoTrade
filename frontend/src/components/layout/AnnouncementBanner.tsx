@@ -92,13 +92,13 @@ const AnnouncementBanner = () => {
                       onMouseLeave={handleDropdownLeave}
                     >
                       {/* Left panel – category list */}
-                      <div className="w-[230px] border-r border-zinc-800/80 py-1">
+                      <div className="w-[230px] border-r border-zinc-800/80 py-3 min-h-[340px]">
                         {navCategories.map((c) => {
                           const isHighlighted = c.label === (hoveredSub?.split('__')[0] ?? cat.label);
                           return (
                             <div
                               key={c.label}
-                              className={`flex items-center justify-between px-4 py-2.5 cursor-pointer rounded-lg transition-colors duration-100 group/item ${isHighlighted ? 'bg-zinc-900 text-white' : 'hover:bg-zinc-900/50 text-zinc-400 hover:text-white'
+                              className={`flex items-center justify-between px-4 py-3 cursor-pointer rounded-lg transition-colors duration-100 group/item ${isHighlighted ? 'bg-zinc-900 text-white' : 'hover:bg-zinc-900/50 text-zinc-400 hover:text-white'
                                 }`}
                               onMouseEnter={() => setHoveredSub(c.label + '__')}
                               onClick={() => {
@@ -125,7 +125,7 @@ const AnnouncementBanner = () => {
                         const highlightedCat = navCategories.find((c) => c.label === activeCatLabel);
                         if (!highlightedCat || highlightedCat.subs.length === 0) return null;
                         return (
-                          <div className="w-[210px] py-1 bg-zinc-950">
+                          <div className="w-[210px] py-3 bg-zinc-950 min-h-[340px]">
                             {highlightedCat.subs.map((sub) => (
                               <Link
                                 key={sub.to}
@@ -134,7 +134,7 @@ const AnnouncementBanner = () => {
                                   setOpenDropdown(null);
                                   setHoveredSub(null);
                                 }}
-                                className="block px-4 py-2.5 rounded-lg text-[12.5px] text-zinc-400 hover:text-orange-500 hover:bg-zinc-900 transition-colors duration-100 font-semibold"
+                                className="block px-4 py-3 rounded-lg text-[12.5px] text-zinc-400 hover:text-orange-500 hover:bg-zinc-900 transition-colors duration-100 font-semibold"
                               >
                                 {sub.label}
                               </Link>

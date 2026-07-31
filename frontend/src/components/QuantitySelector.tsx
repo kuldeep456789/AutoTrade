@@ -97,12 +97,12 @@ export default function QuantitySelector({
             onChange={handleChange}
             onBlur={commitEdit}
             onKeyDown={handleKeyDown}
-            className="w-full h-full text-center text-xs font-semibold bg-transparent outline-none border-none text-zinc-900 dark:text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            className="w-full h-full p-0 text-center text-xs font-semibold bg-transparent outline-none border-none text-zinc-900 dark:text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
           />
         ) : (
           <button
             onClick={startEditing}
-            className="w-full h-full text-center text-xs font-semibold select-none cursor-text text-zinc-900 dark:text-white"
+            className="w-full h-full p-0 text-center text-xs font-semibold select-none cursor-text text-zinc-900 dark:text-white"
             title="Click to edit quantity"
           >
             {value}

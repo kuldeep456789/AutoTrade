@@ -77,7 +77,7 @@ const TwoFactorModal = ({ isOpen, onClose }: TwoFactorModalProps) => {
     <AnimatePresence>
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-        
+
         <motion.div initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 10 }} className="relative w-full max-w-md rounded-2xl bg-white dark:bg-[#18181B] border border-zinc-200 dark:border-[#2A2A2A] shadow-2xl overflow-hidden">
           <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100 dark:border-zinc-800">
             <h3 className="text-lg font-bold text-zinc-900 dark:text-white">Two-Factor Authentication</h3>
@@ -116,18 +116,14 @@ const TwoFactorModal = ({ isOpen, onClose }: TwoFactorModalProps) => {
             ) : (
               <form onSubmit={handleEnable}>
                 <p className="text-sm font-semibold text-zinc-900 dark:text-white mb-4">
-                  1. Scan this QR code with your authenticator app (like Google Authenticator or Authy).
+                  Scan this QR code with your authenticator app.
                 </p>
                 <div className="flex justify-center mb-4 bg-white p-4 rounded-xl mx-auto border border-zinc-200 w-max">
                   {qrCodeUrl ? <img src={qrCodeUrl} alt="QR Code" className="w-48 h-48" /> : <div className="w-48 h-48 bg-zinc-100 animate-pulse rounded"></div>}
                 </div>
-                <div className="text-center mb-6">
-                  <p className="text-xs text-zinc-500 mb-1">Or enter this code manually:</p>
-                  <code className="bg-zinc-100 dark:bg-zinc-800 px-3 py-1 rounded text-sm font-bold tracking-widest">{secret}</code>
-                </div>
 
                 <p className="text-sm font-semibold text-zinc-900 dark:text-white mb-2">
-                  2. Enter the 6-digit code from your app.
+                  Enter the 6-digit code from your app.
                 </p>
                 <input
                   type="text"
@@ -135,10 +131,10 @@ const TwoFactorModal = ({ isOpen, onClose }: TwoFactorModalProps) => {
                   placeholder="123456"
                   value={code}
                   onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  className="w-full text-center text-2xl tracking-[0.5em] font-bold py-3 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-transparent outline-none focus:border-zinc-500 mb-6"
+                  className="w-full text-center text-2xl tracking-[0.5em] pl-[0.5em] font-bold py-3 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-transparent outline-none focus:border-zinc-500 mb-6"
                 />
 
-                <button type="submit" disabled={enabling || code.length !== 6} className="w-full py-3 rounded-xl font-bold text-white bg-teal-600 hover:bg-teal-700 transition disabled:opacity-50">
+                <button type="submit" disabled={enabling || code.length !== 6} className="w-full py-3 rounded-xl font-bold text-white bg-orange-700 hover:bg-orange-800 transition disabled:opacity-50">
                   {enabling ? 'Verifying...' : 'Verify & Enable'}
                 </button>
               </form>

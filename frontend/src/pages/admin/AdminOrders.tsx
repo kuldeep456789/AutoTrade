@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import { adminApi, type AdminOrder } from '../../services/adminApi';
 import Pagination from '../../components/Pagination';
 
-const statusFilters = ['All', 'Pending', 'Confirmed', 'Processing', 'Shipped', 'Out For Delivery', 'Delivered', 'Unpaid'];
+const statusFilters = ['All', 'Confirmed', 'Processing', 'Shipped', 'Out For Delivery', 'Delivered'];
 const statusColors: Record<string, string> = {
   pending: 'bg-orange-500/10 text-orange-500 border border-orange-500/20',
   confirmed: 'bg-teal-500/10 text-teal-500 border border-teal-500/20',
@@ -117,7 +117,9 @@ export default function AdminOrders() {
       : '';
     const matchSearch = !search ||
       (o._id || '').toLowerCase().includes(search.toLowerCase()) ||
-      customerName.toLowerCase().includes(search.toLowerCase());
+      customerName.toLowerCase().includes(search.toLowerCase()) ||
+      (o.paymentStatus || 'unpaid').toLowerCase().includes(search.toLowerCase()) ||
+      (o.status || 'pending').toLowerCase().includes(search.toLowerCase());
     return matchTab && matchSearch;
   });
 
@@ -137,13 +139,9 @@ export default function AdminOrders() {
           </p>
         </div>
         <div className="flex gap-3">
-          <button onClick={fetchOrders} className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 shadow-sm cursor-pointer transition-colors">
-            <RefreshCw className="h-4 w-4 text-orange-500" />
-            Refresh
-          </button>
-          <button onClick={handleExportOrders} className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 shadow-sm cursor-pointer transition-colors">
-            <Download className="h-4 w-4 text-orange-500" />
-            Export
+          <button onClick={handleExportOrders} className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-sm font-semibold shadow-sm shadow-orange-500/20 transition-all">
+            <Download size={16} />
+            <span className="hidden sm:inline">Export</span>
           </button>
         </div>
       </div>

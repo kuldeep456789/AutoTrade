@@ -16,7 +16,7 @@ const SplashScreen = ({ onDone }: { onDone: () => void }) => {
       } else {
         clearInterval(interval);
         setLeaving(true);
-        setTimeout(() => onDone(), 600);
+        setTimeout(() => onDone(), 0);
       }
     }, 220);
     return () => clearInterval(interval);

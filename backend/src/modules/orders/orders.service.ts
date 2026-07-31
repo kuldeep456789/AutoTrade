@@ -23,7 +23,24 @@ export class OrdersService {
     const orders = await this.orderModel
       .find({ userId: new Types.ObjectId(user.id) })
       .sort({ createdAt: -1 })
+      .lean()
       .exec();
+
+    try {
+      const ProductModel = this.orderModel.db.model('Product');
+      for (const order of orders) {
+        for (const item of order.items) {
+          if (item.productId) {
+            const product: any = await ProductModel.findOne({ pid: item.productId }).select('images').lean().exec();
+            if (product && product.images && product.images.length > 0) {
+              (item as any).image = product.images[0];
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error('[OrdersService] Error attaching images to orders', e);
+    }
 
     return { orders };
   }
@@ -64,6 +81,18 @@ export class OrdersService {
         'You do not have permission to access this order',
       );
     }
+
+    try {
+      const ProductModel = this.orderModel.db.model('Product');
+      for (const item of order.items) {
+        if (item.productId) {
+          const product: any = await ProductModel.findOne({ pid: item.productId }).select('images').lean().exec();
+          if (product && product.images && product.images.length > 0) {
+            (item as any).image = product.images[0];
+          }
+        }
+      }
+    } catch (e) {}
 
     return { order };
   }

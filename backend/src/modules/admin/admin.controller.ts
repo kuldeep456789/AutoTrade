@@ -81,7 +81,7 @@ export class AdminController {
           ])
           .exec(),
         this.orderModel
-          .find()
+          .find({ paymentStatus: 'paid' })
           .sort({ createdAt: -1 })
           .limit(5)
           .populate('userId', 'name email firstName lastName')
@@ -203,11 +203,11 @@ export class AdminController {
 
     // Search orders by ID or status
     // Mongoose ObjectIds can be queried if it's a valid hex string
-    let orderQuery: any = {};
+    let orderQuery: any = { paymentStatus: 'paid' };
     if (query.match(/^[0-9a-fA-F]{24}$/)) {
-      orderQuery = { _id: query };
+      orderQuery._id = query;
     } else {
-      orderQuery = { status: searchRegex };
+      orderQuery.status = searchRegex;
     }
 
     const orders = await this.orderModel
@@ -252,7 +252,7 @@ export class AdminController {
   async getOrders(@Headers('authorization') authorization?: string) {
     await this.requireAdmin(authorization);
     const orders = await this.orderModel
-      .find()
+      .find({ paymentStatus: 'paid' })
       .sort({ createdAt: -1 })
       .populate('userId', 'name email firstName lastName')
       .lean()
