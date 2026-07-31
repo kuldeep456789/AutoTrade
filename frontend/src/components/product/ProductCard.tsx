@@ -157,8 +157,8 @@ const ProductCard = ({ product }: ProductCardProps) => {
         <button
           onClick={handleWishlistClick}
           className={`absolute top-3 right-3 z-10 flex items-center justify-center w-8 h-8 rounded-full border border-zinc-200 bg-white shadow-sm transition-colors duration-300 cursor-pointer ${isWishlisted
-              ? 'text-red-500 border-red-500'
-              : 'text-zinc-500 hover:text-red-500 hover:border-red-500'
+            ? 'text-red-500 border-red-500'
+            : 'text-zinc-500 hover:text-red-500 hover:border-red-500'
             }`}
           aria-label="Wishlist"
         >
@@ -195,8 +195,8 @@ const ProductCard = ({ product }: ProductCardProps) => {
           <button
             onClick={handleQuickAdd}
             className={`px-3.5 h-8.5 rounded-full flex items-center justify-center gap-1.5 transition-all duration-300 active:scale-95 cursor-pointer shrink-0 border text-[11px] font-bold uppercase tracking-wider ${isAdded
-                ? 'bg-zinc-950 dark:bg-white border-transparent text-white dark:text-zinc-950'
-                : 'bg-zinc-950 border-zinc-800 text-white hover:bg-zinc-850'
+              ? 'bg-zinc-950 dark:bg-white border-transparent text-white dark:text-zinc-950'
+              : 'bg-zinc-950 border-zinc-800 text-white hover:bg-zinc-850'
               }`}
             aria-label="Add to cart"
           >

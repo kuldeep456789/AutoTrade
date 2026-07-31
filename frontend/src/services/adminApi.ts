@@ -38,6 +38,7 @@ export interface DashboardStats {
   totalOrders: number;
   pendingReturns: number;
   totalRevenue: number;
+  unpaidOrders: number;
 }
 
 export interface AdminOrder {

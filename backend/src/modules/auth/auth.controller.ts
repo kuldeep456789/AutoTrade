@@ -5,6 +5,7 @@ import {
   Headers,
   Post,
   UnauthorizedException,
+  BadRequestException,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
@@ -65,5 +66,38 @@ export class AuthController {
     const token = authorization?.replace(/^Bearer\s+/i, '');
     if (!token) throw new UnauthorizedException('Bearer token is required');
     return this.authService.me(token);
+  }
+
+  @Post('login/2fa')
+  verify2FALogin(@Body() body: { tempToken: string; code: string }) {
+    return this.authService.verify2FALogin(body.tempToken, body.code);
+  }
+
+  @Post('2fa/generate')
+  async generate2FA(@Headers('authorization') authorization?: string) {
+    const token = authorization?.replace(/^Bearer\s+/i, '');
+    if (!token) throw new UnauthorizedException('Bearer token is required');
+    const { user } = await this.authService.me(token);
+    return this.authService.generate2FA(user._id, user.email);
+  }
+
+  @Post('2fa/enable')
+  async enable2FA(
+    @Headers('authorization') authorization?: string,
+    @Body() body?: { secret: string; code: string },
+  ) {
+    const token = authorization?.replace(/^Bearer\s+/i, '');
+    if (!token) throw new UnauthorizedException('Bearer token is required');
+    if (!body?.secret || !body?.code) throw new BadRequestException('Secret and code are required');
+    const { user } = await this.authService.me(token);
+    return this.authService.enable2FA(user._id, body.secret, body.code);
+  }
+
+  @Post('2fa/disable')
+  async disable2FA(@Headers('authorization') authorization?: string) {
+    const token = authorization?.replace(/^Bearer\s+/i, '');
+    if (!token) throw new UnauthorizedException('Bearer token is required');
+    const { user } = await this.authService.me(token);
+    return this.authService.disable2FA(user._id);
   }
 }

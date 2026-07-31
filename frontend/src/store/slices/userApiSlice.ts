@@ -39,6 +39,20 @@ export const userApiSlice = apiSlice.injectEndpoints({
     changePassword: builder.mutation({
       query: (data) => ({ url: `/api/users/change-password`, method: 'PUT', body: data }),
     }),
+    verify2FALogin: builder.mutation({
+      query: (data) => ({ url: `${AUTH_URL}/login/2fa`, method: 'POST', body: data }),
+    }),
+    generate2FA: builder.mutation({
+      query: () => ({ url: `${AUTH_URL}/2fa/generate`, method: 'POST' }),
+    }),
+    enable2FA: builder.mutation({
+      query: (data) => ({ url: `${AUTH_URL}/2fa/enable`, method: 'POST', body: data }),
+      invalidatesTags: ['User'],
+    }),
+    disable2FA: builder.mutation({
+      query: () => ({ url: `${AUTH_URL}/2fa/disable`, method: 'POST' }),
+      invalidatesTags: ['User'],
+    }),
   }),
 });
 
@@ -54,4 +68,8 @@ export const {
   useGetMeQuery,
   useUpdateProfileMutation,
   useChangePasswordMutation,
+  useVerify2FALoginMutation,
+  useGenerate2FAMutation,
+  useEnable2FAMutation,
+  useDisable2FAMutation,
 } = userApiSlice;

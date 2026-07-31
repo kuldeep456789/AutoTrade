@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import { adminApi, type AdminOrder } from '../../services/adminApi';
 import Pagination from '../../components/Pagination';
 
-const statusFilters = ['All', 'Pending', 'Confirmed', 'Processing', 'Shipped', 'Out For Delivery', 'Delivered'];
+const statusFilters = ['All', 'Pending', 'Confirmed', 'Processing', 'Shipped', 'Out For Delivery', 'Delivered', 'Unpaid'];
 const statusColors: Record<string, string> = {
   pending: 'bg-orange-500/10 text-orange-500 border border-orange-500/20',
   confirmed: 'bg-teal-500/10 text-teal-500 border border-teal-500/20',
@@ -103,7 +103,15 @@ export default function AdminOrders() {
 
   const filtered = orders.filter((o) => {
     const status = o.status || 'Pending';
-    const matchTab = activeTab === 'All' || status.toLowerCase() === activeTab.toLowerCase();
+    const isUnpaid = (o.paymentStatus || 'unpaid') !== 'paid';
+    let matchTab: boolean;
+    if (activeTab === 'All') {
+      matchTab = true;
+    } else if (activeTab === 'Unpaid') {
+      matchTab = isUnpaid;
+    } else {
+      matchTab = status.toLowerCase() === activeTab.toLowerCase();
+    }
     const customerName = o.userId
       ? (o.userId.name || `${o.userId.firstName ?? ''} ${o.userId.lastName ?? ''}`.trim() || (o.userId.email ?? ''))
       : '';

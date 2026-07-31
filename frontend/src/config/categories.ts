@@ -147,6 +147,16 @@ export const CATEGORY_SLUG_MAP: Record<string, { subcategoryName?: string; colle
   'other-replacement-parts': { subcategoryName: 'Other Replacement Parts', collectionType: 'Auto Replacement Parts', title: 'Other Replacement Parts' },
   'car-lights': { subcategoryName: 'Car Lights', collectionType: 'Auto Replacement Parts', title: 'Car Lights' },
   'windscreen-wipers-windows': { subcategoryName: 'Windscreen Wipers & Windows', collectionType: 'Auto Replacement Parts', title: 'Windscreen Wipers & Windows' },
+
+  // Aliases for database-normalized slugs to fix tab navigation on collection pages
+  'dvr-and-dash-camera': { subcategoryName: 'DVR & Dash Camera', collectionType: 'Car Electronics', title: 'DVR & Dash Camera' },
+  'alarm-systems-and-security': { subcategoryName: 'Alarm Systems & Security', collectionType: 'Car Electronics', title: 'Alarm Systems & Security' },
+  'exhaust-and-exhaust-systems': { subcategoryName: 'Exhaust & Exhaust Systems', collectionType: 'Motorcycle Accessories & Parts', title: 'Exhaust Systems' },
+  'motorcycle-accessories-and-parts': { collectionType: 'Motorcycle Accessories & Parts', title: 'Motorcycle Accessories & Parts' },
+  'tools-maintenance-and-care': { collectionType: 'Tools, Maintenance & Care', title: 'Tools, Maintenance & Care' },
+  'spark-plugs-and-ignition-system': { subcategoryName: 'Spark Plugs & Ignition System', collectionType: 'Auto Replacement Parts', title: 'Spark Plugs & Ignition System' },
+  'windscreen-wipers-and-windows': { subcategoryName: 'Windscreen Wipers & Windows', collectionType: 'Auto Replacement Parts', title: 'Windscreen Wipers & Windows' },
+  'lighting': { subcategoryName: 'Lighting', collectionType: 'Motorcycle Accessories & Parts', title: 'Motorcycle Lighting' },
 };
 
 export const normalizeSlug = (value: string) =>

@@ -8,12 +8,13 @@ import { addToCart, saveShippingAddress, clearCartItems } from '../store/slices/
 import { apiSlice } from '../store/slices/apiSlice';
 import { useGetUserOrdersQuery } from '../store/slices/orderApiSlice';
 import { useGetMyReturnsQuery } from '../store/slices/returnApiSlice';
-import { Package, User, MapPin, Heart, Settings, LogOut, ChevronRight, ShoppingBag, Clock, CheckCircle, XCircle, Trash2, Plus, Pencil, Bell, Moon, Sun, Mail, Phone, Truck, RotateCcw, Camera, X } from 'lucide-react';
+import { Package, User, MapPin, Heart, Settings, LogOut, ChevronRight, ShoppingBag, Clock, CheckCircle, XCircle, Trash2, Plus, Pencil, Bell, Moon, Sun, Mail, Phone, Truck, RotateCcw, Camera, X, ShieldCheck } from 'lucide-react';
 import { formatINR } from '../lib/currency';
 import { useTheme } from '../context/ThemeContext';
 import EditProfileModal from '../components/profile/EditProfileModal';
 import ChangePasswordModal from '../components/profile/ChangePasswordModal';
 import EditAddressModal, { type AddressData } from '../components/profile/EditAddressModal';
+import TwoFactorModal from '../components/profile/TwoFactorModal';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 
@@ -23,7 +24,7 @@ const tabs = [
   { id: 'profile', label: 'Profile', icon: User },
   { id: 'addresses', label: 'Addresses', icon: MapPin },
   { id: 'wishlist', label: 'Wishlist', icon: Heart },
-  { id: 'settings', label: 'Settings', icon: Settings },
+  { id: 'security', label: 'Security & 2FA', icon: Settings },
 ] as const;
 
 const statusConfig: Record<string, { label: string; color: string; bg: string; icon: typeof Clock }> = {
@@ -53,6 +54,7 @@ const AccountPage = () => {
   const prevTabRef = useRef(activeTab);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showTwoFactorModal, setShowTwoFactorModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showEditAddressModal, setShowEditAddressModal] = useState(false);
   const [addressModalTitle, setAddressModalTitle] = useState('Edit Address');
@@ -556,6 +558,51 @@ const AccountPage = () => {
                 </section>
               )}
 
+              {activeTab === 'security' && (
+                <section className="space-y-6">
+                  <h2 className="text-[26px] sm:text-[30px] font-bold text-zinc-900 dark:text-white tracking-tight">Security & 2FA</h2>
+
+                  <div className="rounded-2xl border border-zinc-200 dark:border-[#2A2A2A] bg-white dark:bg-[#18181B] overflow-hidden">
+                    <div className="px-6 sm:px-8 pt-6 sm:pt-8 pb-2">
+                      <h3 className="text-[18px] sm:text-[20px] font-bold text-zinc-900 dark:text-white">Two-Factor Authentication (2FA)</h3>
+                      <p className="text-[15px] text-zinc-500 dark:text-zinc-400 mt-1">Add an extra layer of security to your account.</p>
+                    </div>
+                    <div className="px-6 sm:px-8 pb-6 sm:pb-8 pt-4">
+                      <div className="flex items-center justify-between p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50">
+                        <div className="flex items-center gap-4">
+                          <div className={`w-12 h-12 rounded-full flex items-center justify-center ${userInfo?.isTwoFactorEnabled ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}`}>
+                            <ShieldCheck size={24} />
+                          </div>
+                          <div>
+                            <p className="font-bold text-zinc-900 dark:text-white">
+                              {userInfo?.isTwoFactorEnabled ? '2FA is Enabled' : '2FA is Disabled'}
+                            </p>
+                            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                              {userInfo?.isTwoFactorEnabled ? 'Your account is secured.' : 'Protect your account now.'}
+                            </p>
+                          </div>
+                        </div>
+                        <button onClick={() => setShowTwoFactorModal(true)} className="px-5 py-2 rounded-lg font-bold bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 transition">
+                          {userInfo?.isTwoFactorEnabled ? 'Manage 2FA' : 'Enable 2FA'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-zinc-200 dark:border-[#2A2A2A] bg-white dark:bg-[#18181B] overflow-hidden">
+                    <div className="px-6 sm:px-8 pt-6 sm:pt-8 pb-2">
+                      <h3 className="text-[18px] sm:text-[20px] font-bold text-zinc-900 dark:text-white">Change Password</h3>
+                      <p className="text-[15px] text-zinc-500 dark:text-zinc-400 mt-1">Update your password to keep your account safe.</p>
+                    </div>
+                    <div className="px-6 sm:px-8 pb-6 sm:pb-8 pt-4">
+                      <button onClick={() => setShowPasswordModal(true)} className="inline-flex items-center gap-2.5 h-[50px] px-6 rounded-xl border-2 border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 text-[15px] font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all duration-200 active:scale-[0.98]">
+                        Change Password
+                      </button>
+                    </div>
+                  </div>
+                </section>
+              )}
+
               {activeTab === 'addresses' && (
                 <section className="space-y-6">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -863,18 +910,11 @@ const AccountPage = () => {
 
       {/* Modals */}
       {userInfo && (
-        <EditProfileModal
-          isOpen={showEditModal}
-          onClose={() => setShowEditModal(false)}
-          user={userInfo}
-        />
-      )}
-
-      {userInfo && (
-        <ChangePasswordModal
-          isOpen={showPasswordModal}
-          onClose={() => setShowPasswordModal(false)}
-        />
+        <>
+          {showEditModal && <EditProfileModal isOpen={showEditModal} onClose={() => setShowEditModal(false)} user={userInfo as any} />}
+          {showPasswordModal && <ChangePasswordModal isOpen={showPasswordModal} onClose={() => setShowPasswordModal(false)} />}
+          {showTwoFactorModal && <TwoFactorModal isOpen={showTwoFactorModal} onClose={() => setShowTwoFactorModal(false)} />}
+        </>
       )}
 
       <EditAddressModal

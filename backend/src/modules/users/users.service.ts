@@ -23,6 +23,7 @@ export type SafeUser = {
   role: string;
   avatar?: string;
   dateOfBirth?: Date;
+  isTwoFactorEnabled: boolean;
 };
 
 @Injectable()
@@ -81,9 +82,8 @@ export class UsersService implements OnModuleInit {
     return this.toSafeUser(user);
   }
 
-  /** Retrieves user document including sensitive password hash for authentication. */
   async findByEmailWithPassword(email: string): Promise<UserDocument | null> {
-    return this.userModel.findOne({ email }).select('+password').exec();
+    return this.userModel.findOne({ email }).select('+password +twoFactorSecret').exec();
   }
 
   /** Finds a user by mobile phone number. */
@@ -139,6 +139,7 @@ export class UsersService implements OnModuleInit {
       role: user.role || 'customer',
       avatar: user.avatar,
       dateOfBirth: user.dateOfBirth,
+      isTwoFactorEnabled: !!user.isTwoFactorEnabled,
     };
   }
 
@@ -205,5 +206,9 @@ export class UsersService implements OnModuleInit {
     const hash = await bcrypt.hash(dto.newPassword, 12);
     user.password = hash;
     await user.save();
+  }
+
+  async findByIdWithSecret(id: string): Promise<UserDocument | null> {
+    return this.userModel.findById(id).select('+twoFactorSecret').exec();
   }
 }

@@ -3,6 +3,7 @@ import {
   Injectable,
   Logger,
   UnauthorizedException,
+  NotFoundException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -11,6 +12,8 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { MailService } from '../mail/mail.service';
 import { OtpStoreService } from './services/otp-store.service';
+import { authenticator } from 'otplib';
+import * as qrcode from 'qrcode';
 
 @Injectable()
 export class AuthService {
@@ -128,7 +131,49 @@ export class AuthService {
     if (!passwordMatches) {
       throw new UnauthorizedException('Invalid email or password');
     }
+    if (user.isTwoFactorEnabled) {
+      return {
+        requires2FA: true,
+        tempToken: this.jwtService.sign(
+          { sub: user.id, email: user.email, requires2FA: true },
+          { expiresIn: '15m' },
+        ),
+      };
+    }
+
     return this.authResponse(this.usersService.toSafeUser(user));
+  }
+
+  async verify2FALogin(tempToken: string, code: string) {
+    try {
+      const payload = await this.jwtService.verifyAsync<{
+        sub: string;
+        email: string;
+        requires2FA: boolean;
+      }>(tempToken);
+
+      if (!payload.requires2FA) {
+        throw new BadRequestException('Invalid token for 2FA verification');
+      }
+
+      const user = await this.usersService.findByIdWithSecret(payload.sub);
+      if (!user || !user.isTwoFactorEnabled || !user.twoFactorSecret) {
+        throw new BadRequestException('2FA is not enabled for this account');
+      }
+
+      const isValid = authenticator.verify({
+        token: code,
+        secret: user.twoFactorSecret,
+      });
+
+      if (!isValid) {
+        throw new BadRequestException('Invalid authentication code');
+      }
+
+      return this.authResponse(this.usersService.toSafeUser(user));
+    } catch (error) {
+      throw new UnauthorizedException('Session expired or invalid. Please login again.');
+    }
   }
 
   async adminSecretLogin(
@@ -236,6 +281,39 @@ export class AuthService {
       if (error instanceof UnauthorizedException) throw error;
       throw new UnauthorizedException('Invalid or expired token');
     }
+  }
+
+  async generate2FA(userId: string, email: string) {
+    const secret = authenticator.generateSecret();
+    const otpauthUrl = authenticator.keyuri(email, 'AutoTrade', secret);
+    const qrCodeUrl = await qrcode.toDataURL(otpauthUrl);
+    return { secret, qrCodeUrl };
+  }
+
+  async enable2FA(userId: string, secret: string, code: string) {
+    const isValid = authenticator.verify({ token: code, secret });
+    if (!isValid) {
+      throw new BadRequestException('Invalid authentication code');
+    }
+    const user = await this.usersService.findByIdWithSecret(userId);
+    if (!user) throw new NotFoundException('User not found');
+    
+    user.isTwoFactorEnabled = true;
+    user.twoFactorSecret = secret;
+    await user.save();
+    
+    return { message: 'Two-Factor Authentication enabled successfully' };
+  }
+
+  async disable2FA(userId: string) {
+    const user = await this.usersService.findByIdWithSecret(userId);
+    if (!user) throw new NotFoundException('User not found');
+
+    user.isTwoFactorEnabled = false;
+    user.twoFactorSecret = undefined;
+    await user.save();
+
+    return { message: 'Two-Factor Authentication disabled successfully' };
   }
 
   private authResponse(user: SafeUser) {

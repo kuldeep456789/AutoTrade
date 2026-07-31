@@ -116,13 +116,14 @@ export default function AdminDashboard() {
       <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
         <StatCard
           icon={Banknote}
-          title="Total Revenue" value={`₹${((stats?.totalRevenue ?? 0) / 100000).toFixed(1)}L`}
-          subtitle={`₹${(stats?.totalRevenue ?? 0).toLocaleString()} lifetime`}
+          title="Collected Revenue" value={`₹${((stats?.totalRevenue ?? 0) / 100000).toFixed(1)}L`}
+          subtitle={`₹${(stats?.totalRevenue ?? 0).toLocaleString()} from paid orders`}
+          accent="emerald"
         />
         <StatCard
           icon={Calendar}
           title="Total Orders" value={String(stats?.totalOrders ?? 0)}
-          subtitle="All time fulfilled orders"
+          subtitle={`${stats?.unpaidOrders ?? 0} unpaid · ${(stats?.totalOrders ?? 0) - (stats?.unpaidOrders ?? 0)} paid`}
         />
         <StatCard
           icon={ShoppingBag}
@@ -182,7 +183,7 @@ export default function AdminDashboard() {
               <h4 className="text-lg font-bold text-zinc-900 dark:text-white">Catalog Quick Stats</h4>
             </div>
             <div className="space-y-5">
-              <QuickStat icon={Banknote} label="Lifetime Revenue" value={`₹${(stats?.totalRevenue ?? 0).toLocaleString()}`} />
+              <QuickStat icon={Banknote} label="Collected Revenue (Paid)" value={`₹${(stats?.totalRevenue ?? 0).toLocaleString()}`} />
               <QuickStat icon={ShoppingBag} label="Total Orders" value={String(stats?.totalOrders ?? 0)} />
               <QuickStat icon={UserPlus} label="Total Customers" value={String(stats?.totalUsers ?? 0)} />
               <QuickStat icon={Truck} label="Pending Returns" value={String(stats?.pendingReturns ?? 0)} />
@@ -250,12 +251,15 @@ export default function AdminDashboard() {
   );
 }
 
-function StatCard({ icon: Icon, title, value, subtitle }: any) {
+function StatCard({ icon: Icon, title, value, subtitle, accent }: any) {
+  const accentClass = accent === 'emerald'
+    ? 'p-3 rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 group-hover:scale-110 transition-transform duration-200'
+    : 'p-3 rounded-xl bg-orange-500/10 text-orange-500 border border-orange-500/20 group-hover:scale-110 transition-transform duration-200';
   return (
     <div className="bg-white dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl shadow-xl hover:border-orange-500/50 transition-all duration-200 group flex flex-col justify-between backdrop-blur-md">
       <div>
         <div className="flex justify-between items-start mb-4">
-          <div className="p-3 rounded-xl bg-orange-500/10 text-orange-500 border border-orange-500/20 group-hover:scale-110 transition-transform duration-200">
+          <div className={accentClass}>
             <Icon size={20} strokeWidth={1.75} />
           </div>
         </div>

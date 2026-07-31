@@ -481,6 +481,15 @@ export class CjService {
         );
       }
 
+      if (query.collectionType) {
+        const cType = query.collectionType.toLowerCase();
+        filtered = filtered.filter((p: any) =>
+          (p._parentCategory || p._collectionType || p.collectionType || p.parentCategory || '')
+            .toLowerCase()
+            .includes(cType),
+        );
+      }
+
       const page = Number(query.pageNum || 1);
       const limit = Number(query.pageSize || CJ_CONFIG.PAGE_SIZE);
       const start = (page - 1) * limit;

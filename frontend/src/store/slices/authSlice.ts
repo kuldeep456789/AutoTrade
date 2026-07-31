@@ -15,6 +15,7 @@ export interface UserInfo {
   provider?: string;
   isVerified?: boolean;
   dateOfBirth?: string;
+  isTwoFactorEnabled?: boolean;
   accessToken?: string;
 }
 

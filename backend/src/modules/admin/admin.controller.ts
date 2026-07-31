@@ -69,7 +69,7 @@ export class AdminController {
   async getDashboard(@Headers('authorization') authorization?: string) {
     await this.requireAdmin(authorization);
 
-    const [totalUsers, totalOrders, pendingReturns, revenueAgg, recentOrders] =
+    const [totalUsers, totalOrders, pendingReturns, revenueAgg, recentOrders, unpaidOrders] =
       await Promise.all([
         this.userModel.countDocuments().exec(),
         this.orderModel.countDocuments().exec(),
@@ -87,11 +87,14 @@ export class AdminController {
           .populate('userId', 'name email firstName lastName')
           .lean()
           .exec(),
+        this.orderModel
+          .countDocuments({ paymentStatus: { $ne: 'paid' } })
+          .exec(),
       ]);
 
     const revenue = revenueAgg[0]?.total ?? 0;
     return {
-      stats: { totalUsers, totalOrders, pendingReturns, totalRevenue: revenue },
+      stats: { totalUsers, totalOrders, pendingReturns, totalRevenue: revenue, unpaidOrders },
       recentOrders,
     };
   }

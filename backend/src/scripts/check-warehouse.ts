@@ -32,9 +32,12 @@ async function checkWarehouse() {
   };
 
   // ── Warehouse Counts ──────────────────────────────────────────────────────
-  const [allVal] = await Promise.all([client.get<any>('products:all')]);
+  const [allVal, legacyVal] = await Promise.all([
+    client.get<any>('warehouse:all'),
+    client.get<any>('products:all'),
+  ]);
 
-  const allCount = getLength(allVal);
+  const allCount = getLength(allVal) || getLength(legacyVal);
 
   console.log('\n📦 WAREHOUSE TOTALS');
   console.log(`  All:     ${allCount} products`);

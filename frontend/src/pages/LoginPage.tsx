@@ -11,6 +11,7 @@ import {
   useLoginMutation,
   useSendRegisterOtpMutation,
   useVerifyRegisterOtpMutation,
+  useVerify2FALoginMutation,
 } from '../store/slices/userApiSlice';
 import toast from 'react-hot-toast';
 
@@ -44,10 +45,15 @@ const LoginPage = () => {
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const [errorMessage, setErrorMessage] = useState('');
+  const [requires2FA, setRequires2FA] = useState(false);
+  const [tempToken, setTempToken] = useState('');
+  const [twoFactorCode, setTwoFactorCode] = useState('');
+
   const [login, { isLoading: loginLoading }] = useLoginMutation();
+  const [verify2FALogin, { isLoading: verifying2FA }] = useVerify2FALoginMutation();
   const [sendRegisterOtp, { isLoading: sendingRegisterOtp }] = useSendRegisterOtpMutation();
   const [verifyRegisterOtp, { isLoading: verifyingRegisterOtp }] = useVerifyRegisterOtpMutation();
-  const isLoading = loginLoading || sendingRegisterOtp || verifyingRegisterOtp;
+  const isLoading = loginLoading || sendingRegisterOtp || verifyingRegisterOtp || verifying2FA;
 
   useEffect(() => {
     if (countdown <= 0) return;
@@ -83,11 +89,32 @@ const LoginPage = () => {
     if (!loginEmail.trim() || !loginPassword.trim()) { setErrorMessage('Email and password are required.'); return; }
     try {
       const payload = await login({ email: loginEmail.trim(), password: loginPassword }).unwrap();
+      if (payload.requires2FA) {
+        setTempToken(payload.tempToken);
+        setRequires2FA(true);
+      } else {
+        resetToFreshSession();
+        dispatch(setCredentials({ ...payload.user, accessToken: payload.token || payload.accessToken }));
+        toast.success('Login successful');
+      }
+    } catch (err: any) {
+      const msg = err?.data?.message || 'Login failed. Please check your credentials.';
+      setErrorMessage(msg);
+      toast.error(msg);
+    }
+  };
+
+  const handleVerify2FA = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage('');
+    if (twoFactorCode.length !== 6) { setErrorMessage('Enter the 6-digit code'); return; }
+    try {
+      const payload = await verify2FALogin({ tempToken, code: twoFactorCode }).unwrap();
       resetToFreshSession();
       dispatch(setCredentials({ ...payload.user, accessToken: payload.token || payload.accessToken }));
       toast.success('Login successful');
     } catch (err: any) {
-      const msg = err?.data?.message || 'Login failed. Please check your credentials.';
+      const msg = err?.data?.message || 'Invalid authentication code';
       setErrorMessage(msg);
       toast.error(msg);
     }
@@ -218,7 +245,7 @@ const LoginPage = () => {
             </div>
 
             {/* LOGIN FORM */}
-            {!isRegister && (
+            {!isRegister && !requires2FA && (
               <>
                 <form onSubmit={handleLogin} className="space-y-4" noValidate>
                   <div>
@@ -261,6 +288,36 @@ const LoginPage = () => {
                   </p>
                 </div>
               </>
+            )}
+
+            {/* 2FA FORM */}
+            {!isRegister && requires2FA && (
+              <form onSubmit={handleVerify2FA} className="space-y-4" noValidate>
+                <div className="mb-6">
+                  <h2 className="text-3xl font-black tracking-tight">Enter Authentication Code</h2>
+                  <p className="mt-3 text-sm leading-6 text-zinc-500 dark:text-zinc-400 normal-case tracking-normal">
+                    Open your authenticator app and enter the 6-digit code for your AutoTrade account.
+                  </p>
+                </div>
+                <div>
+                  <label className="mb-2 block text-[11px] font-semibold uppercase tracking-widest text-zinc-500">6-Digit Code</label>
+                  <div className="flex items-center gap-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-[hsl(var(--card))] px-4 py-3.5 transition focus-within:border-zinc-500">
+                    <input type="text" inputMode="numeric" placeholder="1 2 3 4 5 6" value={twoFactorCode} onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, '').slice(0, 6))} className="min-w-0 flex-1 bg-transparent text-center text-xl tracking-[0.5em] font-semibold outline-none placeholder:text-zinc-400 normal-case" />
+                  </div>
+                </div>
+                
+                {errorMessage && (
+                  <div className="rounded-xl border border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-950/30 px-4 py-3 text-sm font-semibold text-red-700 dark:text-red-300">{errorMessage}</div>
+                )}
+
+                <button type="submit" disabled={verifying2FA || twoFactorCode.length !== 6} className="mt-6 w-full rounded-xl bg-teal-700 hover:bg-teal-800 text-white h-14 text-sm font-semibold tracking-wider transition shadow-md disabled:opacity-60 cursor-pointer flex items-center justify-center gap-2">
+                  {verifying2FA ? 'Verifying...' : 'Verify & Sign In →'}
+                </button>
+
+                <p className="text-center text-xs text-zinc-500 normal-case tracking-normal mt-6">
+                  <button type="button" onClick={() => { setRequires2FA(false); setTempToken(''); setTwoFactorCode(''); setErrorMessage(''); }} className="font-semibold text-zinc-500 hover:text-[hsl(var(--foreground))] transition cursor-pointer">← Back to login</button>
+                </p>
+              </form>
             )}
 
             {/* REGISTER FORM */}

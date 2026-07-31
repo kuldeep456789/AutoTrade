@@ -1,54 +1,63 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Refund Processed</title>
 </head>
-<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
+
+<body
+  style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
   <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; padding: 40px 20px;">
     <tr>
       <td align="center">
-        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);">
+        <table border="0" cellpadding="0" cellspacing="0" width="100%"
+          style="max-width: 600px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);">
           <tr>
             <td height="6" style="background: linear-gradient(90deg, #FF7A00 0%, #FFB800 100%);"></td>
           </tr>
           <tr>
             <td align="center" style="padding: 32px 40px 24px 40px; border-bottom: 1px solid #f1f5f9;">
-              <h1 style="margin: 0; font-size: 28px; font-weight: 900; letter-spacing: -0.5px; color: #FF7A00;">AutoTrade</h1>
-              <p style="margin: 4px 0 0 0; font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 1px; text-transform: uppercase;">Genuine Parts & Premium Care</p>
+              <h1 style="margin: 0; font-size: 28px; font-weight: 900; letter-spacing: -0.5px; color: #FF7A00;">
+                AutoTrade</h1>
+              <p
+                style="margin: 4px 0 0 0; font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 1px; text-transform: uppercase;">
+                Genuine Parts & Premium Care</p>
             </td>
           </tr>
           <tr>
             <td style="padding: 40px; color: #334155; font-size: 16px; line-height: 26px;">
               <h2 style="margin: 0 0 16px 0; font-size: 20px; font-weight: 700; color: #0f172a;">Refund Processed</h2>
               <p style="margin: 0 0 20px 0;">Hello {{name}},</p>
-              <p style="margin: 0 0 24px 0;">Your refund request for order <strong>#{{orderId}}</strong> has been successfully processed by our finance desk. The refund amount has been released to your original method of payment.</p>
-              
-              <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin: 24px 0; color: #334155;">
+              <p style="margin: 0 0 24px 0;">Your refund request for order <strong>#{{orderId}}</strong> has been
+                successfully processed by our finance desk. The refund amount has been released to your original method
+                of payment.</p>
+
+              <div
+                style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin: 24px 0; color: #334155;">
                 <table border="0" cellpadding="0" cellspacing="0" width="100%">
                   <tr>
-                    <td style="font-weight: 600; padding-bottom: 8px; font-size: 14px; color: #64748b;">Order Reference</td>
-                    <td style="text-align: right; font-weight: 700; padding-bottom: 8px; font-size: 14px; color: #0f172a;">#{{orderId}}</td>
+                    <td style="font-weight: 600; padding-bottom: 8px; font-size: 14px; color: #64748b;">Order Reference
+                    </td>
+                    <td
+                      style="text-align: right; font-weight: 700; padding-bottom: 8px; font-size: 14px; color: #0f172a;">
+                      #{{orderId}}</td>
                   </tr>
                   <tr>
-                    <td style="font-weight: 600; font-size: 14px; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 8px;">Refunded Amount</td>
-                    <td style="text-align: right; font-weight: 700; font-size: 16px; color: #16a34a; border-top: 1px solid #e2e8f0; padding-top: 8px;">{{amount}}</td>
+                    <td
+                      style="font-weight: 600; font-size: 14px; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 8px;">
+                      Refunded Amount</td>
+                    <td
+                      style="text-align: right; font-weight: 700; font-size: 16px; color: #16a34a; border-top: 1px solid #e2e8f0; padding-top: 8px;">
+                      {{amount}}</td>
                   </tr>
                 </table>
               </div>
 
-              <p style="margin: 16px 0 0 0; font-size: 14px; color: #64748b;">Please note that it usually takes 5-7 business days for the funds to reflect in your bank account or credit statement, depending on your banking institution.</p>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding: 32px 40px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; text-align: center;">
-              <p style="margin: 0 0 8px 0; font-size: 12px; font-weight: 600; color: #64748b;">Need assistance? We're here to help.</p>
-              <p style="margin: 0 0 24px 0; font-size: 12px; color: #94a3b8;">Contact support at <a href="mailto:support@autotrade.in" style="color: #FF7A00; text-decoration: none; font-weight: 600;">support@autotrade.in</a></p>
-              <p style="margin: 0; font-size: 11px; color: #94a3b8; line-height: 18px;">
-                © 2026 AutoTrade. All rights reserved.<br>
-                This is an automated refund notification email. Please do not reply directly to this message.
-              </p>
+              <p style="margin: 16px 0 0 0; font-size: 14px; color: #64748b;">Please note that it usually takes 5-7
+                business days for the funds to reflect in your bank account or credit statement, depending on your
+                banking institution.</p>
             </td>
           </tr>
         </table>
@@ -56,4 +65,5 @@
     </tr>
   </table>
 </body>
+
 </html>

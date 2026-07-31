@@ -25,6 +25,12 @@ export class User {
 
   @Prop()
   dateOfBirth?: Date;
+
+  @Prop({ select: false })
+  twoFactorSecret?: string;
+
+  @Prop({ default: false })
+  isTwoFactorEnabled: boolean;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
