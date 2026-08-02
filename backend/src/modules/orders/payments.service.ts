@@ -58,13 +58,23 @@ export class PaymentsService {
       throw new BadRequestException('Unsupported payment method');
     }
 
-    const amountPaise = Math.round(Number(order.totalAmount) * 100);
-    if (
-      !Number.isFinite(amountPaise) ||
-      amountPaise < this.minGatewayAmountPaise
-    ) {
+    const targetCurrency = (dto.currency || 'INR').toUpperCase();
+    const rates: Record<string, number> = {
+      INR: 1.0,
+      USD: 0.01198,
+      EUR: 0.01105,
+    };
+    const rate = rates[targetCurrency] ?? 1.0;
+    const isBaseInr = targetCurrency === 'INR';
+
+    const convertedAmount = isBaseInr
+      ? Number(order.totalAmount)
+      : Number(order.totalAmount) * rate;
+
+    const amountSubunits = Math.round(convertedAmount * 100);
+    if (!Number.isFinite(amountSubunits) || amountSubunits < 1) {
       throw new BadRequestException(
-        'Order total must be at least $0.01 before online payment can be created',
+        'Order total must be greater than zero before online payment can be created',
       );
     }
 
@@ -74,12 +84,29 @@ export class PaymentsService {
       );
     }
 
-    const gatewayOrder = (await this.razorpay.orders.create({
-      amount: amountPaise,
-      currency: 'INR',
-      receipt: order.id,
-      payment_capture: true,
-    })) as { id: string };
+    let gatewayOrder: { id: string; amount: number; currency: string };
+    try {
+      gatewayOrder = (await this.razorpay.orders.create({
+        amount: amountSubunits,
+        currency: targetCurrency,
+        receipt: order.id,
+        payment_capture: true,
+      })) as { id: string; amount: number; currency: string };
+    } catch (err: any) {
+      if (targetCurrency !== 'INR') {
+        this.logger.warn(
+          `Razorpay order creation in ${targetCurrency} failed (${err?.message}), falling back to INR`,
+        );
+        gatewayOrder = (await this.razorpay.orders.create({
+          amount: Math.round(Number(order.totalAmount) * 100),
+          currency: 'INR',
+          receipt: order.id,
+          payment_capture: true,
+        })) as { id: string; amount: number; currency: string };
+      } else {
+        throw err;
+      }
+    }
 
     order.razorpayOrderId = gatewayOrder.id;
     order.paymentReference = gatewayOrder.id;

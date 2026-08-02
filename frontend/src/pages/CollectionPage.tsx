@@ -44,7 +44,7 @@ const CollectionPage = () => {
   const targetCollectionType = categoryInfo?.collectionType;
 
   // Determine query parameters based on current category selection
-  const ITEMS_PER_PAGE = 40;
+  const ITEMS_PER_PAGE = 20;
   const queryParams = useMemo(() => {
     if (!normalizedSubcategory || normalizedSubcategory === 'all') {
       return { pageNum: page, pageSize: ITEMS_PER_PAGE };

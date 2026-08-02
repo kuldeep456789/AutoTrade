@@ -74,3 +74,10 @@ ProductSchema.index(
     unique: true,
   },
 );
+
+// Indexes for brand, subcategory, and updatedAt query optimization
+ProductSchema.index({ subcategoryName: 1 });
+ProductSchema.index({ categoryName: 1 });
+ProductSchema.index({ brand: 1 });
+ProductSchema.index({ updatedAt: -1 });
+

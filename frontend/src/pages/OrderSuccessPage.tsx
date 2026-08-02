@@ -109,11 +109,10 @@ const OrderSuccessPage = () => {
             </div>
             <p className="text-[13px] text-zinc-500 dark:text-zinc-400 mb-1">Payment Method</p>
             <p className="text-[15px] font-semibold text-zinc-900 dark:text-white mb-2">{paymentMethodLabel}</p>
-            <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold tracking-wider px-3.5 py-1.5 rounded-full border ${
-              isPaid
+            <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold tracking-wider px-3.5 py-1.5 rounded-full border ${isPaid
                 ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
                 : 'bg-yellow-50 dark:bg-yellow-950/20 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800'
-            }`}>
+              }`}>
               {isPaid ? <><CheckCircle size={12} strokeWidth={2.5} /> {paymentStatusLabel}</> : paymentStatusLabel}
             </span>
           </div>
@@ -141,7 +140,8 @@ const OrderSuccessPage = () => {
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
           <Link
-            to={`/orders/${order._id}`}
+            // to={`/orders/${order._id}`}
+            to="/"
             className="inline-flex items-center gap-2.5 h-[52px] px-8 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-[15px] font-bold hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-all duration-200 shadow-md hover:shadow-lg active:scale-[0.98]"
           >
             <FileText size={18} strokeWidth={2} />
@@ -160,8 +160,8 @@ const OrderSuccessPage = () => {
         {/* Feature Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-10">
           {[
-            { icon: <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>, label: 'Secure', sub: '256-bit SSL' },
-            { icon: <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>, label: 'Returns', sub: '30-day policy' },
+            { icon: <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>, label: 'Secure', sub: '256-bit SSL' },
+            { icon: <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" /><line x1="4" y1="22" x2="4" y2="15" /></svg>, label: 'Returns', sub: '30-day policy' },
             { icon: <Truck size={20} strokeWidth={1.5} />, label: 'Shipping', sub: `Free on ${formatCurrency(5000)}+` },
             { icon: <Clock size={20} strokeWidth={1.5} />, label: 'Support', sub: '24/7 assistance' },
           ].map((feat, i) => (

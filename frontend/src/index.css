@@ -354,3 +354,9 @@ iframe.razorpay-checkout-frame {
   max-width: 100vw !important;
   max-height: 100vh !important;
 }
+
+/* Typewriter cursor blink */
+@keyframes blink-cursor {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}

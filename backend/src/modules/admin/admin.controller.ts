@@ -45,7 +45,7 @@ export class AdminController {
     private readonly customerIssueModel: Model<CustomerIssue>,
     private readonly jwtService: JwtService,
     private readonly usersService: UsersService,
-  ) {}
+  ) { }
 
   // ─── Seed admin ───────────────────────────────────────────────────────────
   @Post('seed')
@@ -247,16 +247,80 @@ export class AdminController {
     return { message: 'User deleted successfully' };
   }
 
-  // ─── Orders ───────────────────────────────────────────────────────────────
   @Get('orders')
   async getOrders(@Headers('authorization') authorization?: string) {
     await this.requireAdmin(authorization);
-    const orders = await this.orderModel
+
+    const orders: any[] = await this.orderModel
       .find({ paymentStatus: 'paid' })
       .sort({ createdAt: -1 })
-      .populate('userId', 'name email firstName lastName')
+      .populate('userId', 'name email firstName lastName phone')
       .lean()
       .exec();
+
+    // Collect all unique product IDs referenced across all orders
+    const productIds = [
+      ...new Set(
+        orders.flatMap(order =>
+          (order.items || [])
+            .map((item: any) => item.productId)
+            .filter(Boolean),
+        ),
+      ),
+    ];
+
+    console.log('Order productIds:', productIds);
+
+    // Fetch all matching products in one query
+    const products = await this.productModel
+      .find({ pid: { $in: productIds } })
+      .select(`
+        pid
+        title
+        productName
+        name
+        images
+        price
+        discountPrice
+        colors
+        sizes
+        sku
+      `)
+      .lean()
+      .exec();
+
+    console.log(
+      'Mongo products:',
+      products.map((p: any) => ({
+        pid: p.pid,
+        title: p.title,
+        productName: p.productName,
+      })),
+    );
+
+    const productMap = new Map(products.map((p: any) => [p.pid, p]));
+
+    for (const order of orders) {
+      for (const item of order.items || []) {
+        console.log('Lookup:', item.productId, '=>', productMap.has(item.productId));
+      }
+    }
+
+    // Attach product details to every order item
+    for (const order of orders) {
+      for (const item of order.items || []) {
+        const product: any = productMap.get(item.productId);
+        if (!product) continue;
+
+        item.image = product.images?.[0] || 'https://placehold.co/80x80?text=No+Image';
+        item.productName = product.title || product.productName || product.name || 'Unknown Product';
+        item.price = product.discountPrice || product.price || 0;
+        item.sku = product.sku || '';
+        item.color = item.variant?.color || product.colors?.[0] || '';
+        item.size = item.variant?.size || product.sizes?.[0] || '';
+      }
+    }
+
     return { orders };
   }
 
@@ -460,14 +524,41 @@ export class AdminController {
 
   // ─── Products ─────────────────────────────────────────────────────────────
   @Get('products')
-  async getProducts(@Headers('authorization') authorization?: string) {
+  async getProducts(
+    @Headers('authorization') authorization?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('search') search?: string,
+  ) {
     await this.requireAdmin(authorization);
-    const products = await this.productModel
-      .find()
-      .sort({ createdAt: -1 })
-      .lean()
-      .exec();
-    return { products };
+
+    const pageNum = Math.max(1, parseInt(page || '1', 10));
+    const pageSize = Math.min(100, Math.max(1, parseInt(limit || '20', 10)));
+    const skip = (pageNum - 1) * pageSize;
+
+    const filter: any = {};
+    if (search && search.trim()) {
+      filter.name = { $regex: search.trim(), $options: 'i' };
+    }
+
+    const [products, total] = await Promise.all([
+      this.productModel
+        .find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(pageSize)
+        .lean()
+        .exec(),
+      this.productModel.countDocuments(filter).exec(),
+    ]);
+
+    return {
+      products,
+      total,
+      page: pageNum,
+      limit: pageSize,
+      totalPages: Math.ceil(total / pageSize),
+    };
   }
 
   @Delete('products/:id')
@@ -586,7 +677,7 @@ export class AdminController {
               if (user && user.role === 'admin') return user;
             }
           }
-        } catch {}
+        } catch { }
       }
     }
 

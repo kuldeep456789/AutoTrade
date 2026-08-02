@@ -13,11 +13,14 @@ import { ProductsService } from './products.service';
 import { Review, ReviewSchema } from './schemas/review.schema';
 import { Order, OrderSchema } from '../orders/schemas/order.schema';
 
+import { SearchModule } from '../search/search.module';
+
 @Module({
   imports: [
     CjModule,
     RedisModule,
     UsersModule,
+    SearchModule,
 
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'development-jwt-secret',

@@ -30,11 +30,14 @@ export const orderApiSlice = apiSlice.injectEndpoints({
       keepUnusedDataFor: 5,
     }),
     createRazorpayOrder: builder.mutation({
-      query: (orderId: string) => ({
-        url: `${PAYMENTS_URL}/razorpay/order`,
-        method: 'POST',
-        body: { orderId },
-      }),
+      query: (arg: string | { orderId: string; currency?: string }) => {
+        const body = typeof arg === 'string' ? { orderId: arg } : arg;
+        return {
+          url: `${PAYMENTS_URL}/razorpay/order`,
+          method: 'POST',
+          body,
+        };
+      },
     }),
     verifyRazorpayPayment: builder.mutation({
       query: (payload: {
@@ -49,6 +52,13 @@ export const orderApiSlice = apiSlice.injectEndpoints({
       }),
       invalidatesTags: (_, __, { orderId }) => [{ type: 'Order' as const, id: orderId }, 'Order'],
     }),
+    cancelOrder: builder.mutation({
+      query: (orderId: string) => ({
+        url: `${ORDERS_URL}/${orderId}/cancel`,
+        method: 'POST',
+      }),
+      invalidatesTags: ['Order'],
+    }),
   }),
 });
 
@@ -58,4 +68,5 @@ export const {
   useGetUserOrdersQuery,
   useCreateRazorpayOrderMutation,
   useVerifyRazorpayPaymentMutation,
+  useCancelOrderMutation,
 } = orderApiSlice;

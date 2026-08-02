@@ -43,13 +43,41 @@ export interface DashboardStats {
 
 export interface AdminOrder {
   _id: string;
-  userId: { _id: string; name?: string; email?: string; firstName?: string; lastName?: string } | null;
-  items: { productId: string; quantity: number }[];
+  userId: { _id: string; name?: string; email?: string; firstName?: string; lastName?: string; phone?: string } | null;
+  items: {
+    productId: string;
+    vid?: string;
+    quantity: number;
+
+    // Product Details
+    image?: string;
+    productName?: string;
+    price?: number;
+    sku?: string;
+
+    // Variant Details
+    color?: string;
+    size?: string;
+
+    // Optional
+    discountPrice?: number;
+  }[];
   totalAmount: number;
   status: string;
   paymentStatus: string;
   paymentProvider: string;
   paymentReference?: string;
+  razorpayOrderId?: string;
+  razorpayPaymentId?: string;
+  shippingDetails?: {
+    customerName?: string;
+    address?: string;
+    city?: string;
+    province?: string;
+    countryCode?: string;
+    zip?: string;
+    phone?: string;
+  };
   createdAt: string;
   updatedAt: string;
 }
@@ -240,7 +268,13 @@ export const adminApi = {
 
   // Products
   products: {
-    list: () => request<{ products: AdminProduct[] }>('GET', '/products'),
+    list: (page = 1, limit = 20, search = '') => {
+      const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+      if (search) params.set('search', search);
+      return request<{ products: AdminProduct[]; total: number; page: number; limit: number; totalPages: number }>(
+        'GET', `/products?${params.toString()}`
+      );
+    },
     delete: (id: string) => request<{ message: string }>('DELETE', `/products/${id}`),
   },
 

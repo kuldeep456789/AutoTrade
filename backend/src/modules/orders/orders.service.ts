@@ -16,12 +16,15 @@ export class OrdersService {
     @InjectModel(Order.name) private readonly orderModel: Model<Order>,
     private readonly jwtService: JwtService,
     private readonly usersService: UsersService,
-  ) {}
+  ) { }
 
   async getOrders(token: string) {
     const user = await this.resolveUser(token);
     const orders = await this.orderModel
-      .find({ userId: new Types.ObjectId(user.id) })
+      .find({
+        userId: new Types.ObjectId(user.id),
+        status: { $ne: 'cancelled' },
+      })
       .sort({ createdAt: -1 })
       .lean()
       .exec();
@@ -30,11 +33,9 @@ export class OrdersService {
       const ProductModel = this.orderModel.db.model('Product');
       for (const order of orders) {
         for (const item of order.items) {
-          if (item.productId) {
-            const product: any = await ProductModel.findOne({ pid: item.productId }).select('images').lean().exec();
-            if (product && product.images && product.images.length > 0) {
-              (item as any).image = product.images[0];
-            }
+          const product: any = await ProductModel.findOne({ pid: item.productId }).select('images').lean().exec();
+          if (product && product.images && product.images.length > 0) {
+            (item as any).image = product.images[0];
           }
         }
       }
@@ -86,13 +87,59 @@ export class OrdersService {
       const ProductModel = this.orderModel.db.model('Product');
       for (const item of order.items) {
         if (item.productId) {
-          const product: any = await ProductModel.findOne({ pid: item.productId }).select('images').lean().exec();
-          if (product && product.images && product.images.length > 0) {
-            (item as any).image = product.images[0];
+          // const product: any = await ProductModel.findOne({ pid: item.productId }).select('images').lean().exec();
+          // if (product && product.images && product.images.length > 0) {
+          //   (item as any).image = product.images[0];
+          // }
+          const product: any = await ProductModel.findOne({
+            pid: item.productId,
+          })
+            .select(`
+    pid
+    images
+    title
+    productName
+    name
+    price
+    discountPrice
+    colors
+    sizes
+    sku
+  `)
+            .lean()
+            .exec();
+
+          if (product) {
+            (item as any).image =
+              product.images?.[0] ?? null;
+
+            (item as any).productName =
+              product.title ||
+              product.productName ||
+              product.name ||
+              'Unknown Product';
+
+            (item as any).price =
+              product.discountPrice ||
+              product.price ||
+              0;
+
+            (item as any).sku =
+              product.sku || '';
+
+            (item as any).color =
+              item.variant?.color ||
+              product.colors?.[0] ||
+              '';
+
+            (item as any).size =
+              item.variant?.size ||
+              product.sizes?.[0] ||
+              '';
           }
         }
       }
-    } catch (e) {}
+    } catch (e) { }
 
     return { order };
   }
@@ -131,6 +178,27 @@ export class OrdersService {
         status: paymentStatus,
       },
     };
+  }
+
+  async cancelOrder(token: string, id: string) {
+    const user = await this.resolveUser(token);
+    const order = await this.orderModel.findById(id).exec();
+    if (!order) throw new BadRequestException('Order not found');
+
+    const orderUserId = order.userId ? order.userId.toString() : '';
+    const userId = user.id || (user as any)._id?.toString() || '';
+
+    if (user.role !== 'admin' && orderUserId !== userId) {
+      throw new UnauthorizedException('You do not have permission to cancel this order');
+    }
+
+    if (order.paymentStatus === 'paid') {
+      throw new BadRequestException('Cannot cancel paid order directly, please request a return');
+    }
+
+    order.status = 'cancelled';
+    await order.save();
+    return { message: 'Order cancelled successfully', order };
   }
 
   private async resolveUser(token: string) {

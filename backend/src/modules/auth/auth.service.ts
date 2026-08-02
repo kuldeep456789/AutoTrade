@@ -307,11 +307,9 @@ export class AuthService {
         throw new BadRequestException('2FA is not enabled for this account');
       }
 
-      authenticator.options = { window: 1 };
-      const isValid = authenticator.verify({
-        token: code,
-        secret: user.twoFactorSecret,
-      });
+      authenticator.options = { window: 2 };
+      const cleanCode = (code || '').trim().replace(/\s+/g, '');
+      const isValid = authenticator.check(cleanCode, user.twoFactorSecret);
 
       if (!isValid) {
         throw new BadRequestException('Invalid authentication code');
@@ -319,6 +317,7 @@ export class AuthService {
 
       return this.authResponse(this.usersService.toSafeUser(user));
     } catch (error) {
+      if (error instanceof BadRequestException) throw error;
       throw new UnauthorizedException('Session expired or invalid. Please login again.');
     }
   }
@@ -377,16 +376,18 @@ export class AuthService {
 
   async generate2FA(userId: string, email: string) {
     const secret = authenticator.generateSecret();
-    const otpauthUrl = authenticator.keyuri(email, 'AutoTrade', secret);
+    const cleanEmail = (email || 'user@autotrade.com').trim();
+    const otpauthUrl = `otpauth://totp/AutoTrade:${encodeURIComponent(cleanEmail)}?secret=${secret}&issuer=AutoTrade`;
     const qrCodeUrl = await qrcode.toDataURL(otpauthUrl);
     return { secret, qrCodeUrl };
   }
 
   async enable2FA(userId: string, secret: string, code: string) {
-    authenticator.options = { window: 1 };
-    const isValid = authenticator.verify({ token: code, secret });
+    authenticator.options = { window: 2 };
+    const cleanCode = (code || '').trim().replace(/\s+/g, '');
+    const isValid = authenticator.check(cleanCode, secret);
     if (!isValid) {
-      throw new BadRequestException('Invalid authentication code');
+      throw new BadRequestException('Invalid 2FA code. Make sure your phone device time is synchronized and try again.');
     }
     const user = await this.usersService.findByIdWithSecret(userId);
     if (!user) throw new NotFoundException('User not found');

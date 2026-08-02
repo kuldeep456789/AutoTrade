@@ -131,16 +131,17 @@ const ProductCard = ({ product }: ProductCardProps) => {
 
   return (
     <div
-      className="group relative flex flex-col min-h-[430px] sm:min-h-[450px] w-full bg-white dark:bg-[#111111] border border-zinc-200 dark:border-[#262626] rounded-[20px] overflow-hidden transition-colors duration-300 ease-in-out hover:border-[#FF7A00]"
+      className="group relative flex flex-col h-full w-full bg-white dark:bg-[#111111] border border-zinc-200 dark:border-[#262626] rounded-[20px] overflow-hidden transition-all duration-300 hover:border-[#FF7A00] hover:shadow-xl hover:shadow-orange-500/10"
+
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
       {/* Product Image Area (Tall 1:1 Aspect Ratio) */}
-      <Link to={`/product/${productId}`} className="relative block aspect-square w-full bg-zinc-50 dark:bg-[#161616] overflow-hidden">
+      <Link to={`/product/${productId}`} className="relative block aspect-[4/3] w-full bg-zinc-50 dark:bg-[#161616] overflow-hidden">
         {/* Top Badges */}
         <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5">
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-100 dark:bg-emerald-950/90 text-emerald-800 dark:text-emerald-300 text-[10px] sm:text-[11px] font-bold border border-emerald-300/60 dark:border-emerald-800 shadow-sm backdrop-blur-sm">
-            {/* <span className="text-[10px]">💵</span> */}
+            <span className="text-[10px]">💵</span>
             18% GST
           </span>
         </div>
@@ -166,43 +167,50 @@ const ProductCard = ({ product }: ProductCardProps) => {
         </button>
       </Link>
 
+
+
+
+
       {/* Product Content Details */}
-      <div className="flex flex-col flex-1 p-4 sm:p-5 justify-between bg-white dark:bg-[#111111]">
-        <Link to={`/product/${productId}`} className="block mb-2">
-          {/* Product Title */}
-          <h3 className="text-[13px] sm:text-[14px] font-inter font-semibold text-zinc-900 dark:text-white group-hover:text-[#FF7A00] transition-colors line-clamp-1 leading-snug tracking-tight normal-case">
+      <div className="flex flex-col p-4 bg-white dark:bg-[#111111]">
+        <Link to={`/product/${productId}`} className="block mb-1">
+          <h3 className="text-[13px] sm:text-[14px] font-inter font-semibold text-zinc-900 dark:text-white group-hover:text-[#FF7A00] transition-colors line-clamp-1 leading-snug tracking-tight">
             {productName}
           </h3>
         </Link>
 
-        {/* Price, Rating & Quick Add Row */}
-        <div className="mt-3.5 flex items-center justify-between gap-2">
-          <div className="space-y-1">
-            {/* Price */}
+        <div className="mt-3 flex items-end justify-between gap-3">
+          <div className="flex flex-col gap-1.5">
+
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[17px] sm:text-[19px] font-inter font-bold text-zinc-950 dark:text-white">
+
+              <span className="text-[17px] sm:text-[19px] font-bold text-zinc-950 dark:text-white">
                 {formatCurrency(currentPrice)}
               </span>
-              <span className="text-[12px] font-inter font-medium text-zinc-400 dark:text-zinc-500 line-through">
+
+              <span className="text-[12px] text-zinc-400 line-through">
                 {formatCurrency(displayOriginalPrice)}
               </span>
-              <span className="px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40 text-[10px] font-bold">
-                Bulk Rate
-              </span>
+
             </div>
+
+            <span className="w-fit px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40 text-[10px] font-bold">
+              Bulk Rate
+            </span>
+
           </div>
 
           <button
             onClick={handleQuickAdd}
-            className={`px-3.5 h-8.5 rounded-full flex items-center justify-center gap-1.5 transition-all duration-300 active:scale-95 cursor-pointer shrink-0 border text-[11px] font-bold uppercase tracking-wider ${isAdded
+            className={`px-4 h-10 rounded-full flex items-center justify-center gap-2 transition-all duration-300 active:scale-95 cursor-pointer shrink-0 border text-[11px] font-bold uppercase tracking-wider ${isAdded
               ? 'bg-zinc-950 dark:bg-white border-transparent text-white dark:text-zinc-950'
-              : 'bg-zinc-950 border-zinc-800 text-white hover:bg-zinc-850'
+              : 'bg-zinc-950 border-zinc-800 text-white hover:bg-[#FF7A00] hover:border-[#FF7A00]'
               }`}
-            aria-label="Add to cart"
           >
+
             {isAdded ? (
               <>
-                <Check size={13} strokeWidth={3} className="text-white dark:text-zinc-950" />
+                <Check size={13} strokeWidth={3} />
                 <span>Added</span>
               </>
             ) : (
@@ -212,7 +220,9 @@ const ProductCard = ({ product }: ProductCardProps) => {
               </>
             )}
           </button>
+
         </div>
+
       </div>
 
       {showWishlistPopup && (

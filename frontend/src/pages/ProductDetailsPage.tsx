@@ -469,7 +469,7 @@ const ProductDetailsPage = () => {
                   {/* Badges */}
                   <div className="absolute top-3 left-3 flex flex-col gap-2 z-10">
                     <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-950/90 text-emerald-800 dark:text-emerald-300 text-xs font-bold border border-emerald-300/60 dark:border-emerald-800 shadow-sm backdrop-blur-sm">
-                      {/* <span className="text-xs">💵</span> */}
+                      <span className="text-xs">💵</span>
                       18% GST
                     </span>
                   </div>
@@ -602,8 +602,8 @@ const ProductDetailsPage = () => {
               <button
                 onClick={handleWishlistToggle}
                 className={`w-12 h-12 rounded-xl border-2 flex items-center justify-center transition-all duration-200 cursor-pointer active:scale-95 shadow-sm shrink-0 ${isWishlisted
-                    ? 'border-red-500 bg-red-500/10 text-red-500'
-                    : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:border-zinc-400 dark:hover:border-zinc-600'
+                  ? 'border-red-500 bg-red-500/10 text-red-500'
+                  : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:border-zinc-400 dark:hover:border-zinc-600'
                   }`}
                 aria-label="Wishlist"
               >

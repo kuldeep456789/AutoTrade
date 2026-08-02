@@ -6,7 +6,12 @@ import { logout } from '../store/slices/authSlice';
 import { toggleWishlist, clearWishlist } from '../store/slices/wishlistSlice';
 import { addToCart, saveShippingAddress, clearCartItems } from '../store/slices/cartSlice';
 import { apiSlice } from '../store/slices/apiSlice';
-import { useGetUserOrdersQuery } from '../store/slices/orderApiSlice';
+import {
+  useGetUserOrdersQuery,
+  useCreateRazorpayOrderMutation,
+  useVerifyRazorpayPaymentMutation,
+  useCancelOrderMutation,
+} from '../store/slices/orderApiSlice';
 import { useGetMyReturnsQuery } from '../store/slices/returnApiSlice';
 import { Package, User, MapPin, Heart, Settings, LogOut, ChevronRight, ShoppingBag, Clock, CheckCircle, XCircle, Trash2, Plus, Pencil, Bell, Moon, Sun, Mail, Phone, Truck, RotateCcw, Camera, X, ShieldCheck } from 'lucide-react';
 import { useCurrency } from '../context/CurrencyContext';
@@ -28,7 +33,8 @@ const tabs = [
 ] as const;
 
 const statusConfig: Record<string, { label: string; color: string; bg: string; icon: typeof Clock }> = {
-  pending: { label: 'Order Placed', color: 'text-amber-700 dark:text-amber-300', bg: 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800', icon: Clock },
+  payment_pending: { label: 'Payment Pending', color: 'text-amber-700 dark:text-amber-300', bg: 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800', icon: Clock },
+  pending: { label: 'Payment Pending', color: 'text-amber-700 dark:text-amber-300', bg: 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800', icon: Clock },
   processing: { label: 'Processing', color: 'text-blue-700 dark:text-blue-300', bg: 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800', icon: Package },
   packed: { label: 'Packed', color: 'text-indigo-700 dark:text-indigo-300', bg: 'bg-indigo-50 dark:bg-indigo-950/30 border-indigo-200 dark:border-indigo-800', icon: Package },
   shipped: { label: 'Shipped', color: 'text-purple-700 dark:text-purple-300', bg: 'bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-800', icon: Truck },
@@ -47,7 +53,67 @@ const AccountPage = () => {
   const userInfo = useSelector((state: RootState) => state.auth.userInfo);
   const wishlistItems = useSelector((state: RootState) => state.wishlist.wishlistItems);
   const { theme, toggleTheme } = useTheme();
-  const { formatCurrency } = useCurrency();
+  const { formatCurrency, currency } = useCurrency();
+  const [createRazorpayOrder] = useCreateRazorpayOrderMutation();
+  const [verifyRazorpayPayment] = useVerifyRazorpayPaymentMutation();
+  const [cancelOrder] = useCancelOrderMutation();
+
+  const handlePayNow = async (e: React.MouseEvent, orderId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      const razorpayRes = await createRazorpayOrder({ orderId, currency }).unwrap();
+      const loadRazorpayScript = () => new Promise((resolve) => {
+        const script = document.createElement('script');
+        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+        script.onload = () => resolve(true);
+        script.onerror = () => resolve(false);
+        document.body.appendChild(script);
+      });
+      const loaded = await loadRazorpayScript();
+      if (!loaded) {
+        toast.error('Failed to load Razorpay checkout script');
+        return;
+      }
+      const options = {
+        key: razorpayRes.keyId,
+        amount: razorpayRes.gatewayOrder.amount,
+        currency: razorpayRes.gatewayOrder.currency || currency || 'INR',
+        name: 'AutoTrade',
+        description: `Order #${orderId}`,
+        order_id: razorpayRes.gatewayOrder.id,
+        handler: async (response: any) => {
+          try {
+            await verifyRazorpayPayment({
+              orderId,
+              razorpayOrderId: response.razorpay_order_id,
+              razorpayPaymentId: response.razorpay_payment_id,
+              razorpaySignature: response.razorpay_signature,
+            }).unwrap();
+            toast.success('Payment completed successfully!');
+          } catch (err: any) {
+            toast.error(err?.data?.message || 'Payment verification failed');
+          }
+        },
+      };
+      const rzp = new (window as any).Razorpay(options);
+      rzp.open();
+    } catch (err: any) {
+      toast.error(err?.data?.message || 'Failed to initiate payment');
+    }
+  };
+
+  const handleCancelOrder = async (e: React.MouseEvent, orderId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!window.confirm('Are you sure you want to cancel this order?')) return;
+    try {
+      await cancelOrder(orderId).unwrap();
+      toast.success('Order cancelled successfully');
+    } catch (err: any) {
+      toast.error(err?.data?.message || 'Failed to cancel order');
+    }
+  };
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'orders';
   const [page, setPage] = useState(1);
@@ -379,8 +445,12 @@ const AccountPage = () => {
                       {ordersData.orders.map((order: any) => {
                         const orderReturn = myReturns.find((r: any) => r.orderId === order._id);
                         let displayStatusStr = (order.status || 'pending').toLowerCase().replace(/\s+/g, '_');
-                        if (displayStatusStr === 'pending' && order.paymentStatus === 'paid') {
-                          displayStatusStr = 'confirmed';
+                        if (displayStatusStr === 'pending') {
+                          if (order.paymentStatus === 'paid') {
+                            displayStatusStr = 'confirmed';
+                          } else {
+                            displayStatusStr = 'payment_pending';
+                          }
                         }
                         if (orderReturn && ['refunded', 'refund_completed', 'completed'].includes(String(orderReturn.status).toLowerCase())) {
                           displayStatusStr = 'refunded';
@@ -389,6 +459,7 @@ const AccountPage = () => {
                         const StatusIcon = status.icon;
                         const firstItem = order.items?.[0];
                         const itemCount = order.items?.reduce((a: number, i: any) => a + i.quantity, 0) || 0;
+                        const isUnpaid = order.paymentStatus !== 'paid' && order.status !== 'cancelled';
 
                         return (
                           <Link
@@ -440,11 +511,31 @@ const AccountPage = () => {
 
                                   {/* Status + action */}
                                   <div className="mt-4 flex flex-wrap items-center gap-3">
-                                    <span className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[11px] font-semibold border ${status.bg} ${status.color}`}>
+                                    <span className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[11px] font-bold border ${status.bg} ${status.color}`}>
                                       <StatusIcon size={13} strokeWidth={2} />
                                       {status.label.toUpperCase()}
                                     </span>
-                                    <span className="text-[13px] text-zinc-400 dark:text-zinc-500 flex items-center gap-1 group-hover:text-zinc-600 dark:group-hover:text-zinc-300 transition-colors font-medium">
+
+                                    {isUnpaid && (
+                                      <div className="flex items-center gap-2">
+                                        <button
+                                          type="button"
+                                          onClick={(e) => handlePayNow(e, order._id)}
+                                          className="px-3.5 py-1.5 rounded-xl text-xs font-extrabold bg-orange-600 hover:bg-orange-700 text-white transition shadow-sm cursor-pointer"
+                                        >
+                                          Pay Now
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={(e) => handleCancelOrder(e, order._id)}
+                                          className="px-3 py-1.5 rounded-xl text-xs font-semibold text-zinc-500 dark:text-zinc-400 hover:text-red-600 dark:hover:text-red-400 transition cursor-pointer"
+                                        >
+                                          Cancel
+                                        </button>
+                                      </div>
+                                    )}
+
+                                    <span className="text-[13px] text-zinc-400 dark:text-zinc-500 flex items-center gap-1 group-hover:text-zinc-600 dark:group-hover:text-zinc-300 transition-colors font-medium ml-auto">
                                       View details
                                       <ChevronRight size={15} className="transition-transform duration-200 group-hover:translate-x-0.5" />
                                     </span>
@@ -507,7 +598,7 @@ const AccountPage = () => {
                           Continue Shopping
                         </Link>
                         <Link
-                          to="/cart"
+                          to="/"
                           className="inline-flex items-center gap-2.5 h-[52px] px-8 rounded-xl border-2 border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 text-[15px] font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all duration-200 active:scale-[0.98]"
                         >
                           View Cart

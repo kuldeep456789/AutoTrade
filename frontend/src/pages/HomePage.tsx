@@ -26,49 +26,98 @@ const heroCategories = [
     title: 'Exterior Accessories',
     description: 'Enhance style and protection with premium exterior accessories.',
     to: '/collections/exterior-accessories',
-    bgImage: 'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?auto=format&fit=crop&w=800&q=80',
+    bgImage: '/img/categories/exterior_accessories.png',
     icon: Car,
   },
   {
     title: 'Interior Accessories',
     description: 'Upgrade comfort and luxury with high-quality interior accessories.',
     to: '/collections/interior-accessories',
-    bgImage: 'https://images.unsplash.com/photo-1563720223185-11003d516935?auto=format&fit=crop&w=800&q=80',
+    bgImage: '/img/categories/interior_accessories.png',
     icon: Armchair,
   },
   {
     title: 'Tools & Maintenance',
     description: 'Professional tools and care products for every maintenance need.',
     to: '/collections/tools-maintenance-care',
-    bgImage: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80',
+    bgImage: '/img/categories/tools_maintenance.png',
     icon: Wrench,
   },
   {
     title: 'Car Electronics',
     description: 'Smart electronics for entertainment, safety and convenience.',
     to: '/collections/car-electronics',
-    bgImage: 'https://images.unsplash.com/photo-1508974239320-0a029497e820?auto=format&fit=crop&w=800&q=80',
+    bgImage: '/img/categories/car_electronics.png',
     icon: Cpu,
   },
   {
     title: 'Motorcycle Accessories',
     description: 'Premium accessories and parts for ultimate ride performance.',
     to: '/collections/motorcycle-accessories',
-    bgImage: 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&w=800&q=80',
+    bgImage: '/img/categories/motorcycle_accessories.png',
     icon: Bike,
   },
   {
     title: 'Auto Replacement Parts',
     description: 'High-quality replacement parts for long-lasting performance.',
     to: '/collections/auto-replacement-parts',
-    bgImage: 'https://images.unsplash.com/photo-1486006920555-c77dce18193b?auto=format&fit=crop&w=800&q=80',
+    bgImage: '/img/categories/replacement_parts.png',
     icon: Cog,
   },
 ];
 
+// ───────── TYPEWRITER HOOK ─────────
+const TYPED_PHRASES = ['The Right Part', 'Premium Quality', 'Your Ride Upgrade', 'Performance Boost'];
+const TYPING_SPEED = 80;
+const DELETING_SPEED = 40;
+const PAUSE_AFTER_TYPING = 2000;
+const PAUSE_AFTER_DELETING = 400;
+
+function useTypewriter(phrases: string[]) {
+  const [displayText, setDisplayText] = useState('');
+  const [phraseIdx, setPhraseIdx] = useState(0);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    const current = phrases[phraseIdx];
+
+    const timeout = setTimeout(() => {
+      if (!isDeleting) {
+        // Typing
+        if (displayText.length < current.length) {
+          setDisplayText(current.slice(0, displayText.length + 1));
+        } else {
+          // Pause, then start deleting
+          setTimeout(() => setIsDeleting(true), PAUSE_AFTER_TYPING);
+        }
+      } else {
+        // Deleting
+        if (displayText.length > 0) {
+          setDisplayText(current.slice(0, displayText.length - 1));
+        } else {
+          setIsDeleting(false);
+          setPhraseIdx((prev) => (prev + 1) % phrases.length);
+        }
+      }
+    }, isDeleting ? DELETING_SPEED : (displayText.length === current.length ? PAUSE_AFTER_TYPING : TYPING_SPEED));
+
+    return () => clearTimeout(timeout);
+  }, [displayText, phraseIdx, isDeleting, phrases]);
+
+  return displayText;
+}
+
 const HomePage = () => {
   const location = useLocation();
   const userInfo = useSelector((state: RootState) => state.auth.userInfo);
+  const typedText = useTypewriter(TYPED_PHRASES);
+
+  // Hero slideshow
+  const [heroSlide, setHeroSlide] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => setHeroSlide((prev) => (prev + 1) % 2), 5000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     if (location.state?.scrollTo) {
@@ -239,25 +288,39 @@ const HomePage = () => {
     <div className="w-full bg-[hsl(var(--background))] text-[hsl(var(--foreground))] font-sans">
       {/* ───────── HERO VIDEO BANNER ───────── */}
       <section className="relative h-[550px] sm:h-[650px] lg:h-[720px] overflow-hidden bg-black text-white">
-        <img
-          src="/img/car2.png"
-          alt="AutoTrade Hero"
-          className="absolute inset-0 w-full h-full object-cover"
-        />
+        {/* Slideshow images with crossfade */}
+        {['/img/car2.png', '/img/car1.png'].map((src, idx) => (
+          <img
+            key={src}
+            src={src}
+            alt={`AutoTrade Hero ${idx + 1}`}
+            className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out"
+            style={{ opacity: heroSlide === idx ? 1 : 0 }}
+          />
+        ))}
         {/* Soft vignette overlay */}
         <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/45 to-transparent" />
         <div className="absolute inset-0 bg-black/25" />
 
+        {/* Slide indicators */}
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex gap-2">
+          {[0, 1].map((idx) => (
+            <button
+              key={idx}
+              onClick={() => setHeroSlide(idx)}
+              className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${heroSlide === idx ? 'w-8 bg-[#FF7A00]' : 'w-4 bg-white/30 hover:bg-white/50'
+                }`}
+            />
+          ))}
+        </div>
+
         {/* Hero Content Overlay */}
         <div className="relative z-10 h-full max-w-[1920px] mx-auto px-6 sm:px-10 lg:px-16 flex items-center">
           <div className="max-w-2xl text-left space-y-6 sm:space-y-7">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-orange-500/20 border border-orange-500/30 text-orange-400 text-xs font-bold uppercase tracking-wider backdrop-blur-md">
-              <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
-              <span>{formattedCatalogCount} Live Automotive Items in Catalog</span>
-            </div>
-            <h1 className="text-5xl sm:text-6xl lg:text-6xl font-semibold tracking-tight leading-[1.1] uppercase">
+
+            <h1 className="text-5xl sm:text-7xl lg:text-7xl font-semibold tracking-tight leading-[1.1] uppercase">
               Performance Starts <br className="hidden sm:inline" />
-              With <span className="text-[#FF7A00]">The Right Part</span>
+              With <span className="text-[#FF7A00]">{typedText}<span className="inline-block w-[3px] h-[0.85em] bg-[#FF7A00] ml-1 align-middle" style={{ animation: 'blink-cursor 0.8s steps(1) infinite' }} /></span>
             </h1>
             <p className="text-sm sm:text-base text-zinc-300 font-medium normal-case max-w-lg leading-relaxed">
               Explore {formattedCatalogCount}+ genuine automotive parts and accessories for every make and model. Engineered for excellence.
@@ -299,40 +362,51 @@ const HomePage = () => {
 
           </div>
 
-          {/* Centered flex-wrap — cards stay centered regardless of count */}
-          <div className="flex flex-wrap justify-center gap-4 sm:gap-5">
-            {heroCategories.map((cat, idx) => (
-              <Link
-                key={idx}
-                to={cat.to}
-                className="group relative rounded-2xl bg-white dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 hover:border-orange-500/50 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col items-center justify-between text-center p-6 sm:p-7 w-[calc(50%-8px)] sm:w-[215px] lg:w-[235px] min-h-[280px] sm:min-h-[320px]"
-              >
-                {/* Top: Icon Badge (Enlarged) */}
-                <div className="relative z-10 my-2">
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border border-zinc-200 dark:border-zinc-700 flex items-center justify-center text-orange-500 bg-orange-500/10 group-hover:scale-110 group-hover:border-orange-500 transition-all duration-300">
-                    <cat.icon className="w-8 h-8 sm:w-10 sm:h-10 stroke-[1.8]" />
+          {/* 6 Category Cards Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-5">
+            {heroCategories.map((cat, idx) => {
+              const Icon = cat.icon;
+              return (
+                <Link
+                  key={idx}
+                  to={cat.to}
+                  className="group relative rounded-2xl bg-white dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 hover:border-orange-500/50 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden text-left p-3.5 sm:p-4"
+                >
+                  {/* Top Image Box */}
+                  <div className="relative w-full h-32 sm:h-36 rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/60 dark:border-zinc-800/80 shrink-0">
+                    <img
+                      src={cat.bgImage}
+                      alt={cat.title}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 ease-out"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity" />
+                    <div className="absolute top-2.5 right-2.5 w-8 h-8 rounded-lg bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md text-orange-500 border border-white/30 dark:border-zinc-700/50 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                      <Icon size={16} strokeWidth={2} />
+                    </div>
                   </div>
-                </div>
 
-                {/* Center: Title & Description */}
-                <div className="relative z-10 flex-1 flex flex-col items-center justify-center my-3.5">
-                  <h3 className="text-xs sm:text-sm font-extrabold tracking-tight text-zinc-900 dark:text-white uppercase group-hover:text-orange-500 transition-colors leading-snug mb-1.5">
-                    {cat.title}
-                  </h3>
-                  <p className="text-[11px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-normal normal-case leading-relaxed line-clamp-2">
-                    {cat.description}
-                  </p>
-                </div>
+                  {/* Body Content */}
+                  <div className="flex-1 flex flex-col justify-between pt-3.5">
+                    <div>
+                      <h3 className="text-xs sm:text-[13px] font-extrabold tracking-tight text-zinc-900 dark:text-white uppercase group-hover:text-orange-500 transition-colors leading-tight line-clamp-1">
+                        {cat.title}
+                      </h3>
+                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400 font-normal leading-relaxed line-clamp-2 mt-1">
+                        {cat.description}
+                      </p>
+                    </div>
 
-                {/* Bottom: Pill Button */}
-                <div className="relative z-10 mt-2">
-                  <div className="px-4 py-2 rounded-full border border-orange-500/30 bg-orange-500/10 text-[10px] font-bold text-orange-600 dark:text-orange-400 group-hover:bg-orange-500 group-hover:text-white transition-all inline-flex items-center gap-1 uppercase tracking-wider shadow-sm">
-                    <span>Explore</span>
-                    <ArrowRight className="w-3 h-3 text-orange-500 group-hover:text-white transform group-hover:translate-x-0.5 transition-transform" />
+                    {/* Explore Button */}
+                    <div className="mt-3 pt-2">
+                      <span className="w-full py-1.5 px-3 rounded-full border border-orange-500/30 bg-orange-500/10 text-[10px] font-extrabold text-orange-600 dark:text-orange-400 group-hover:bg-orange-500 group-hover:text-white transition-all flex items-center justify-center gap-1 uppercase tracking-wider shadow-2xs">
+                        <span>Explore</span>
+                        <ArrowRight size={12} className="transform group-hover:translate-x-0.5 transition-transform" />
+                      </span>
+                    </div>
                   </div>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -519,8 +593,7 @@ const HomePage = () => {
                     to="/collections/exterior-accessories"
                     className="text-xs font-bold text-[#FF7A00] hover:underline flex items-center gap-1 shrink-0 uppercase tracking-wider"
                   >
-                    <span>View All Parts</span>
-                    <ArrowRight size={14} strokeWidth={2.5} />
+
                   </Link>
                 </div>
 

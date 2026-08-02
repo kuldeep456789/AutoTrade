@@ -3,7 +3,7 @@ import { CjService } from './cj.service';
 
 @Controller('cj')
 export class CjController {
-  constructor(private readonly cjService: CjService) {}
+  constructor(private readonly cjService: CjService) { }
 
   @Post('sync-order/:orderId')
   syncOrder(@Param('orderId') orderId: string) {
@@ -25,11 +25,13 @@ export class CjController {
     const count = await this.cjService.getProductCount();
     return { count };
   }
+
   @Get('sync-status')
   async syncStatus() {
     const count = await this.cjService.getProductCount();
     return { status: 'active', productCount: count };
   }
+
   @Post('clear-cache')
   clearCache() {
     return this.cjService.clearApiCache();
@@ -47,8 +49,8 @@ export class CjController {
   }
 
   @Get('products')
-  getProducts() {
-    return this.cjService.getProducts();
+  getProducts(@Query() query: Record<string, string | undefined>) {
+    return this.cjService.getProducts(query);
   }
 
   @Get('products/by-category')

@@ -85,11 +85,11 @@ const Navbar = () => {
             setUnreadNotifications(count);
           }
         })
-        .catch(() => {});
+        .catch(() => { });
     };
 
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 5000);
+    const interval = setInterval(fetchNotifications, 2000);
     return () => clearInterval(interval);
   }, [userInfo]);
 
@@ -153,17 +153,26 @@ const Navbar = () => {
 
   // Debounced live search
   const [debouncedQuery, setDebouncedQuery] = useState('');
+  // useEffect(() => {
+  //   debounceRef.current = setTimeout(() => setDebouncedQuery(searchQuery), 200);
+  //   return () => clearTimeout(debounceRef.current);
+  // }, [searchQuery]);
+
   useEffect(() => {
-    debounceRef.current = setTimeout(() => setDebouncedQuery(searchQuery), 200);
+    debounceRef.current = setTimeout(() => {
+      setDebouncedQuery(searchQuery.trim());
+    }, 350);
+
     return () => clearTimeout(debounceRef.current);
   }, [searchQuery]);
 
   const { data: searchResults, isFetching: isSearchFetching } = useGetProductsQuery(
     { q: debouncedQuery, pageNum: 1, pageSize: 6 },
-    { skip: debouncedQuery.trim().length < 2 }
+    { skip: debouncedQuery.trim().length < 3 }
   );
 
-  const products = searchResults?.products || [];
+  // const products = searchResults?.products || [];
+  const products = searchResults?.products?.slice(0, 5) ?? [];
 
   // Build suggestion list
   const suggestionList: { type: string; label: string; to?: string; productId?: string; image?: string; price?: string; category?: string }[] = [];
@@ -461,41 +470,51 @@ const Navbar = () => {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -12, scale: 0.95 }}
                     transition={{ duration: 0.2, ease: 'easeOut' }}
-                    className="absolute right-0 top-full mt-2 w-72 bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-700 overflow-hidden z-50 text-left"
+                    className="absolute right-0 top-full mt-2 w-96 bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-700 overflow-hidden z-50 text-left"
                     style={{ transformOrigin: 'top right' }}
                   >
                     {/* Account Info Header */}
                     {userInfo ? (
-                      <div className="px-5 py-4 bg-gradient-to-br from-zinc-50 to-white dark:from-zinc-800 dark:to-zinc-900 border-b border-zinc-100 dark:border-zinc-800">
-                        <div className="flex items-center gap-2">
-                          <UserRound className="h-4 w-4 text-orange-500" strokeWidth={2} />
-                          <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-100 truncate">
-                            {userInfo.firstName || userDisplayName}
-                          </p>
-                          <span className={`shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${userInfo.role === 'admin' ? 'bg-[#0050cb] text-white' : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300'}`}>
-                            {userInfo.role === 'admin' ? 'Admin' : 'User'}
-                          </span>
+                      <div className="px-6 py-5 bg-gradient-to-br from-zinc-50 to-white dark:from-zinc-800 dark:to-zinc-900 border-b border-zinc-100 dark:border-zinc-800">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-white font-bold text-sm shrink-0">
+                            {(userInfo.firstName?.[0] || userInfo.email?.[0] || 'U').toUpperCase()}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="text-[15px] font-bold text-zinc-800 dark:text-zinc-100 truncate">
+                                {userInfo.firstName || userDisplayName}
+                              </p>
+                              <span className={`shrink-0 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${userInfo.role === 'admin' ? 'bg-[#0050cb] text-white' : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300'}`}>
+                                {userInfo.role === 'admin' ? 'Admin' : 'User'}
+                              </span>
+                            </div>
+                            <p className="text-[13px] text-zinc-500 mt-0.5 truncate">{userInfo.email}</p>
+                          </div>
                         </div>
-                        <p className="text-xs text-zinc-500 mt-1 truncate">{userInfo.email}</p>
                       </div>
                     ) : (
-                      <div className="px-5 py-4 bg-gradient-to-br from-zinc-50 to-white dark:from-zinc-800 dark:to-zinc-900 border-b border-zinc-100 dark:border-zinc-800">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <UserRound className="h-4 w-4 text-orange-500" strokeWidth={2} />
-                          <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">Settings & Account</p>
+                      <div className="px-6 py-5 bg-gradient-to-br from-zinc-50 to-white dark:from-zinc-800 dark:to-zinc-900 border-b border-zinc-100 dark:border-zinc-800">
+                        <div className="flex items-center gap-3 mb-0.5">
+                          <div className="w-10 h-10 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center shrink-0">
+                            <UserRound className="h-5 w-5 text-zinc-500" strokeWidth={1.5} />
+                          </div>
+                          <div>
+                            <p className="text-[15px] font-bold text-zinc-800 dark:text-zinc-100">Settings & Account</p>
+                            <p className="text-[13px] text-zinc-500 mt-0.5">Manage preferences and profile access.</p>
+                          </div>
                         </div>
-                        <p className="text-xs text-zinc-500">Manage preferences and profile access.</p>
                       </div>
                     )}
 
                     {/* Appearance / Dark Mode Section */}
-                    <div className="p-3 border-b border-zinc-100 dark:border-zinc-800">
-                      <p className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider px-3 mb-2">Appearance</p>
-                      <div 
+                    <div className="px-4 py-4 border-b border-zinc-100 dark:border-zinc-800">
+                      <p className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider px-1 mb-3">Appearance</p>
+                      <div
                         onClick={toggleTheme}
-                        className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800/80 hover:bg-zinc-200 dark:hover:bg-zinc-700/80 transition-colors cursor-pointer"
+                        className="flex items-center justify-between px-4 py-3 rounded-xl bg-zinc-100 dark:bg-zinc-800/80 hover:bg-zinc-200 dark:hover:bg-zinc-700/80 transition-colors cursor-pointer"
                       >
-                        <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-100">
+                        <span className="text-[14px] font-semibold text-zinc-800 dark:text-zinc-100">
                           {theme === 'dark' ? 'Dark Mode' : 'Light Mode'}
                         </span>
                         <ThemeToggle />
@@ -504,8 +523,8 @@ const Navbar = () => {
 
                     {/* User Account Actions */}
                     {userInfo ? (
-                      <div className="py-2">
-                        <p className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider px-4 mb-1">Account Options</p>
+                      <div className="py-3">
+                        <p className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider px-5 mb-2">Account Options</p>
                         {[
                           { to: '/account?tab=profile', label: 'My Profile', icon: UserRound },
                           { to: '/account', label: 'My Orders', icon: Package },
@@ -517,9 +536,9 @@ const Navbar = () => {
                             key={to}
                             to={to}
                             onClick={() => setProfileOpen(false)}
-                            className="flex items-center gap-3 px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-black dark:hover:text-white rounded-xl mx-1 transition-colors"
+                            className="flex items-center gap-3.5 px-5 py-3 text-[14px] font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-black dark:hover:text-white transition-colors"
                           >
-                            <Icon className="h-4 w-4 text-zinc-400" strokeWidth={1.5} />
+                            <Icon className="h-[18px] w-[18px] text-zinc-400" strokeWidth={1.5} />
                             {label}
                           </Link>
                         ))}
@@ -528,40 +547,40 @@ const Navbar = () => {
                           <Link
                             to="/admin"
                             onClick={() => setProfileOpen(false)}
-                            className="flex items-center gap-3 px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-black dark:hover:text-white rounded-xl mx-1 transition-colors"
+                            className="flex items-center gap-3.5 px-5 py-3 text-[14px] font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-black dark:hover:text-white transition-colors"
                           >
-                            <Shield className="h-4 w-4 text-zinc-400" strokeWidth={1.5} />
+                            <Shield className="h-[18px] w-[18px] text-zinc-400" strokeWidth={1.5} />
                             Admin Panel
                           </Link>
                         )}
 
-                        <div className="border-t border-zinc-100 dark:border-zinc-800 mt-2 pt-2">
+                        <div className="border-t border-zinc-100 dark:border-zinc-800 mt-2 pt-2 px-2">
                           <button
                             onClick={() => {
                               setProfileOpen(false);
                               setShowLogoutModal(true);
                             }}
-                            className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl cursor-pointer transition-colors"
+                            className="w-full flex items-center gap-3.5 px-4 py-3 text-[14px] font-semibold text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl cursor-pointer transition-colors"
                           >
-                            <LogOut className="h-4 w-4" strokeWidth={1.5} />
+                            <LogOut className="h-[18px] w-[18px]" strokeWidth={1.5} />
                             Logout
                           </button>
                         </div>
                       </div>
                     ) : (
-                      <div className="p-4 space-y-2">
-                        <p className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider mb-2">Account Access</p>
+                      <div className="p-5 space-y-3">
+                        <p className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider mb-3">Account Access</p>
                         <Link
                           to="/login"
                           onClick={() => setProfileOpen(false)}
-                          className="block w-full text-center bg-[#111111] dark:bg-white text-white dark:text-zinc-900 rounded-xl py-2.5 text-xs font-semibold tracking-wide hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-all"
+                          className="block w-full text-center bg-[#111111] dark:bg-white text-white dark:text-zinc-900 rounded-xl py-3.5 text-[14px] font-bold tracking-wide hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-all"
                         >
                           Login
                         </Link>
                         <Link
                           to="/register"
                           onClick={() => setProfileOpen(false)}
-                          className="block w-full text-center bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700 rounded-xl py-2 text-xs font-semibold tracking-wide hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-all"
+                          className="block w-full text-center bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700 rounded-xl py-3 text-[14px] font-semibold tracking-wide hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-all"
                         >
                           Sign Up
                         </Link>

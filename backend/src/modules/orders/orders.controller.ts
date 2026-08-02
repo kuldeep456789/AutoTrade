@@ -39,6 +39,17 @@ export class OrdersController {
     );
   }
 
+  @Post(':id/cancel')
+  cancelOrder(
+    @Headers('authorization') authorization: string | undefined,
+    @Param('id') id: string,
+  ) {
+    return this.ordersService.cancelOrder(
+      this.requireToken(authorization),
+      id,
+    );
+  }
+
   private requireToken(authorization?: string) {
     const token = authorization?.replace(/^Bearer\s+/i, '');
 

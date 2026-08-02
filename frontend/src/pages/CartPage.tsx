@@ -125,7 +125,7 @@ const CartPage = () => {
               Looks like you haven't added anything yet. Browse our latest arrivals to find something you love.
             </p>
             <div className="flex items-center justify-center">
-              <Link to="/collections/all" className="h-[50px] px-8 rounded-full bg-[#f5a623] hover:bg-[#e0951a] text-black text-xs font-bold uppercase tracking-wider flex items-center justify-center transition-all duration-200 w-full sm:w-auto shadow-md">
+              <Link to="/" className="h-[50px] px-8 rounded-full bg-[#f5a623] hover:bg-[#e0951a] text-black text-xs font-bold uppercase tracking-wider flex items-center justify-center transition-all duration-200 w-full sm:w-auto shadow-md">
                 CONTINUE SHOPPING
               </Link>
             </div>
@@ -140,7 +140,7 @@ const CartPage = () => {
                   {cartItems.reduce((sum, i) => sum + i.qty, 0)} {cartItems.reduce((sum, i) => sum + i.qty, 0) === 1 ? 'Item' : 'Items'}
                 </p>
               </div>
-              <Link to="/collections/exterior-accessories" className="flex items-center gap-1 text-[13px] font-semibold text-zinc-500 hover:text-[hsl(var(--foreground))] cursor-pointer transition-colors">
+              <Link to="/" className="flex items-center gap-1 text-[13px] font-semibold text-zinc-500 hover:text-[hsl(var(--foreground))] cursor-pointer transition-colors">
                 Continue Shopping <ChevronRight size={14} strokeWidth={2} />
               </Link>
             </div>
@@ -212,8 +212,8 @@ const CartPage = () => {
                             <button
                               onClick={() => moveToWishlistHandler(item)}
                               className={`flex items-center gap-1.5 h-9 px-3 rounded-full border transition-all duration-200 cursor-pointer text-[12px] font-semibold ${isItemWishlisted(item._id)
-                                  ? 'border-red-200 dark:border-red-900 text-red-500 bg-red-50 dark:bg-red-950/20'
-                                  : 'border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:border-zinc-400 dark:hover:border-zinc-500 hover:text-[hsl(var(--foreground))]'
+                                ? 'border-red-200 dark:border-red-900 text-red-500 bg-red-50 dark:bg-red-950/20'
+                                : 'border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:border-zinc-400 dark:hover:border-zinc-500 hover:text-[hsl(var(--foreground))]'
                                 }`}
                             >
                               <Heart size={14} strokeWidth={2} fill={isItemWishlisted(item._id) ? 'currentColor' : 'none'} />

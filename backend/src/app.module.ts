@@ -11,6 +11,7 @@ import { MailModule } from './modules/mail/mail.module';
 import { CjModule } from './modules/cj/cj.module';
 import { CategoriesModule } from './modules/categories/categories.module';
 import { ProductsModule } from './modules/products/products.module';
+import { SearchModule } from './modules/search/search.module';
 
 import { AdminModule } from './modules/admin/admin.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -31,6 +32,7 @@ import { ContactModule } from './modules/contact/contact.module';
     CjModule,
     CategoriesModule,
     ProductsModule,
+    SearchModule,
 
     AdminModule,
     AuthModule,

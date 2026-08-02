@@ -11,7 +11,9 @@ import {
   useCreateOrderMutation,
   useCreateRazorpayOrderMutation,
   useVerifyRazorpayPaymentMutation,
+  useCancelOrderMutation,
 } from '../store/slices/orderApiSlice';
+import toast from 'react-hot-toast';
 
 const loadRazorpayScript = () => {
   return new Promise((resolve) => {
@@ -31,8 +33,9 @@ const PlaceOrderPage = () => {
   const [createOrder, { isLoading }] = useCreateOrderMutation();
   const [createRazorpayOrder, { isLoading: isRazorpayLoading }] = useCreateRazorpayOrderMutation();
   const [verifyRazorpayPayment, { isLoading: isPaymentLoading }] = useVerifyRazorpayPaymentMutation();
+  const [cancelOrder] = useCancelOrderMutation();
   const [localError, setLocalError] = useState('');
-  const { formatCurrency } = useCurrency();
+  const { formatCurrency, currency } = useCurrency();
 
   useEffect(() => {
     if (cart.itemsPrice < 50000) {
@@ -70,7 +73,7 @@ const PlaceOrderPage = () => {
 
       const orderId = res.order._id;
 
-      const razorpayRes = await createRazorpayOrder(orderId).unwrap();
+      const razorpayRes = await createRazorpayOrder({ orderId, currency }).unwrap();
 
       const isScriptLoaded = await loadRazorpayScript();
       if (!isScriptLoaded) {
@@ -78,14 +81,32 @@ const PlaceOrderPage = () => {
         return;
       }
 
+      let hasHandledClose = false;
+
+      const handleFailureOrCancel = async (msg: string) => {
+        if (hasHandledClose) return;
+        hasHandledClose = true;
+        try {
+          await cancelOrder(orderId).unwrap();
+        } catch (e) {}
+        try {
+          rzp.close();
+        } catch (e) {}
+        toast.error(msg || 'Payment failed. Returning to main page...', { duration: 2000 });
+        setTimeout(() => {
+          navigate('/');
+        }, 2000);
+      };
+
       const options = {
         key: razorpayRes.keyId,
         amount: razorpayRes.gatewayOrder.amount,
-        currency: razorpayRes.gatewayOrder.currency || 'INR',
+        currency: razorpayRes.gatewayOrder.currency || currency || 'INR',
         name: 'AutoTrade',
         description: `Order #${orderId}`,
         order_id: razorpayRes.gatewayOrder.id,
         handler: async (response: any) => {
+          hasHandledClose = true;
           try {
             await verifyRazorpayPayment({
               orderId,
@@ -114,8 +135,7 @@ const PlaceOrderPage = () => {
           confirm_close: true,
           handleback: true,
           ondismiss: () => {
-            setLocalError('Payment was cancelled. Your order has been saved — you can complete payment from the order page.');
-            navigate(`/order/${orderId}`);
+            handleFailureOrCancel('Payment cancelled. Returning to main page...');
           },
         },
       };
@@ -123,7 +143,7 @@ const PlaceOrderPage = () => {
       const rzp = new (window as any).Razorpay(options);
       rzp.on('payment.failed', (response: any) => {
         console.error('[Razorpay] Payment failed:', response.error);
-        setLocalError(response.error?.description || 'Payment failed. Please try a different card or payment method.');
+        handleFailureOrCancel(response.error?.description || 'Payment failed. Returning to main page...');
       });
       rzp.open();
     } catch (err: any) {

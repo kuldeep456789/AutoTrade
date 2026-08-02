@@ -44,15 +44,23 @@ const categoryKey = (parentCat: string, subCat: string) =>
 const legacyCategoryKey = (parentCat: string, subCat: string) =>
   `products:${slugify(parentCat)}:${slugify(subCat)}`;
 
+import { SearchIndexService } from '../search/search-index.service';
+
 @Injectable()
 export class CjService {
   private readonly logger = new Logger(CjService.name);
 
+  // ── In-memory warehouse cache: avoids repeated Upstash HTTP requests ──
+  private warehouseCache: any[] = [];
+  private warehouseLoadedAt = 0;
+  private static readonly WAREHOUSE_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
   constructor(
     private readonly redisService: RedisService,
     private readonly cjClient: CjClient,
+    private readonly searchIndexService?: SearchIndexService,
     @InjectModel(Order.name) private readonly orderModel?: Model<Order>,
-  ) {}
+  ) { }
 
   /**
    * Resolve and get CJ Dropping Access Token.
@@ -262,10 +270,10 @@ export class CjService {
     product = await this.redisService.getJson<any>(legacyCacheKey);
     if (product) return product;
 
-    // 3. Fast Warehouse Catalog Search (avoids 3-5s CJ API remote latency)
-    const warehouse =
-      (await this.redisService.getJson<any[]>(WAREHOUSE_KEY_ALL)) ||
-      (await this.redisService.getJson<any[]>(WAREHOUSE_LEGACY_ALL));
+    // 3. Fast Warehouse Catalog Search — uses the in-memory 5-minute cache
+    // instead of re-fetching the full 14k+ product array from Upstash on
+    // every miss (that direct Redis fetch was adding 30-45s of latency).
+    const warehouse = await this.getWarehouseCache();
 
     if (warehouse && Array.isArray(warehouse) && warehouse.length > 0) {
       const cleanPid = decodeURIComponent(pid).trim();
@@ -348,10 +356,6 @@ export class CjService {
 
   /**
    * Retrieve products list with optional keyword, category filters.
-   * Leverages the Redis search index to return results under 500ms without scanning arrays.
-   */
-  /**
-   * Retrieve products list with optional keyword, category filters.
    * Leverages the Redis search index & local warehouse catalog to return results under 20ms without remote API calls.
    */
   async getProducts(query: Record<string, string | undefined> = {}) {
@@ -382,9 +386,8 @@ export class CjService {
       }
 
       // Fast Memory Substring & Prefix Search on Redis Warehouse Catalog
-      const warehouse =
-        (await this.redisService.getJson<any[]>(WAREHOUSE_KEY_ALL)) ||
-        (await this.redisService.getJson<any[]>(WAREHOUSE_LEGACY_ALL));
+      // — uses the in-memory 5-minute cache instead of a raw Upstash fetch.
+      const warehouse = await this.getWarehouseCache();
 
       if (warehouse && Array.isArray(warehouse) && warehouse.length > 0) {
         /**
@@ -475,10 +478,9 @@ export class CjService {
       };
     }
 
-    // 2. Serving Category & Catalog listings directly from Redis warehouse cache
-    const warehouse =
-      (await this.redisService.getJson<any[]>(WAREHOUSE_KEY_ALL)) ||
-      (await this.redisService.getJson<any[]>(WAREHOUSE_LEGACY_ALL));
+    // 2. Serving Category & Catalog listings directly from the in-memory
+    // warehouse cache instead of a raw Upstash fetch.
+    const warehouse = await this.getWarehouseCache();
 
     if (warehouse && Array.isArray(warehouse) && warehouse.length > 0) {
       let filtered = warehouse;
@@ -600,8 +602,8 @@ export class CjService {
     const categories = categoryId
       ? [categoryId]
       : ((await this.getCategories())?.categories
-          ?.map((c: any) => c.id)
-          .filter(Boolean) ?? []);
+        ?.map((c: any) => c.id)
+        .filter(Boolean) ?? []);
     const allProducts: any[] = [];
 
     for (const catId of categories) {
@@ -654,100 +656,31 @@ export class CjService {
   }
 
   /**
-   * Optimize warehouse retrieval: fetches indexed records from Redis (sub-500ms).
+   * Get warehouse products — always reads from warehouse:all (single Redis GET),
+   * filters in memory, and paginates. Uses a 5-minute in-memory cache so
+   * Upstash is only contacted once per TTL window instead of on every request.
    */
   async getWarehouseProducts(
     pageNum = 1,
-    pageSize = 160,
+    pageSize = 20,
     categoryId?: string,
     subcategoryName?: string,
     collectionType?: string,
   ): Promise<{ products: any[]; total: number; warehouseHit: true } | null> {
-    // 1. Direct Subcategory Key Lookup
-    if (subcategoryName) {
-      const catKey = `warehouse:subcategory:${slugify(subcategoryName)}`;
-      const catData = await this.redisService.getJson<any[]>(catKey);
-
-      if (catData && Array.isArray(catData) && catData.length > 0) {
-        const total = catData.length;
-        const effectivePageSize = Math.min(pageSize, 1000);
-        const start = (pageNum - 1) * effectivePageSize;
-        const products = catData.slice(start, start + effectivePageSize);
-        this.logger.log(
-          `[CJ] Warehouse subcategory HIT ${catKey} → ${products.length}/${total}`,
-        );
-        return { products, total, warehouseHit: true };
-      }
-
-      // Legacy fallback
-      let parentCat = 'auto';
-      for (const [parent, items] of Object.entries(Automobiles)) {
-        if (
-          items.some(
-            (i) => i.name.toLowerCase() === subcategoryName.toLowerCase(),
-          )
-        ) {
-          parentCat = parent;
-          break;
-        }
-      }
-      const legacyCatKey = legacyCategoryKey(parentCat, subcategoryName);
-      const legacyCatData =
-        await this.redisService.getJson<any[]>(legacyCatKey);
-      if (
-        legacyCatData &&
-        Array.isArray(legacyCatData) &&
-        legacyCatData.length > 0
-      ) {
-        const total = legacyCatData.length;
-        const effectivePageSize = Math.min(pageSize, 1000);
-        const start = (pageNum - 1) * effectivePageSize;
-        const products = legacyCatData.slice(start, start + effectivePageSize);
-        return { products, total, warehouseHit: true };
-      }
-    }
-
-    // 2. Direct Category Lookup
-    if (categoryId) {
-      const catKey = `warehouse:category:${categoryId}`;
-      const catData = await this.redisService.getJson<any[]>(catKey);
-      if (catData && Array.isArray(catData) && catData.length > 0) {
-        const total = catData.length;
-        const effectivePageSize = Math.min(pageSize, 1000);
-        const start = (pageNum - 1) * effectivePageSize;
-        const products = catData.slice(start, start + effectivePageSize);
-        this.logger.log(
-          `[CJ] Warehouse category HIT ${catKey} → ${products.length}/${total}`,
-        );
-        return { products, total, warehouseHit: true };
-      }
-    }
-
-    // 3. Direct Collection Type Lookup
-    if (collectionType) {
-      const collSlug = slugify(collectionType);
-      const collKey = `warehouse:brand:${collSlug}`; // Reuse brand segment for collection matching
-      const collData = await this.redisService.getJson<any[]>(collKey);
-      if (collData && Array.isArray(collData) && collData.length > 0) {
-        const total = collData.length;
-        const effectivePageSize = Math.min(pageSize, 1000);
-        const start = (pageNum - 1) * effectivePageSize;
-        const products = collData.slice(start, start + effectivePageSize);
-        return { products, total, warehouseHit: true };
-      }
-    }
-
-    // 4. Main Global Warehouse Key
-    let warehouse = await this.redisService.getJson<any[]>(WAREHOUSE_KEY_ALL);
-    if (!warehouse || !Array.isArray(warehouse) || warehouse.length === 0) {
-      warehouse = await this.redisService.getJson<any[]>(WAREHOUSE_LEGACY_ALL);
-    }
-
-    if (!warehouse || !Array.isArray(warehouse) || warehouse.length === 0) {
-      return null;
-    }
+    const warehouse = await this.getWarehouseCache();
+    if (!warehouse.length) return null;
 
     let pool = warehouse;
+
+    if (subcategoryName) {
+      const norm = normalizeKey(subcategoryName);
+      pool = pool.filter((p) => {
+        const val = normalizeKey(
+          p.subcategoryName ?? p._category ?? p.category ?? p.categoryName ?? '',
+        );
+        return val === norm || val.includes(norm) || norm.includes(val);
+      });
+    }
 
     if (categoryId) {
       pool = pool.filter(
@@ -755,45 +688,26 @@ export class CjService {
       );
     }
 
-    if (subcategoryName) {
-      const norm = normalizeKey(subcategoryName);
-      pool = pool.filter((p) => {
-        const val = normalizeKey(
-          p.subcategoryName ??
-            p._category ??
-            p.category ??
-            p.categoryName ??
-            '',
-        );
-        return val === norm || val.includes(norm) || norm.includes(val);
-      });
-    }
-
     if (collectionType) {
       const normColl = normalizeKey(collectionType);
       pool = pool.filter((p) => {
         const val = normalizeKey(
           p._parentCategory ??
-            p._collectionType ??
-            p.collectionType ??
-            p.parentCategory ??
-            p.categoryName ??
-            '',
+          p._collectionType ??
+          p.collectionType ??
+          p.parentCategory ??
+          p.categoryName ??
+          '',
         );
-        return (
-          val === normColl || val.includes(normColl) || normColl.includes(val)
-        );
+        return val === normColl || val.includes(normColl) || normColl.includes(val);
       });
     }
 
-    // Strip zero/sub-1-rupee priced products
-    pool = pool.filter((p) => {
-      const inrPrice = Number(p.price ?? 0);
-      return inrPrice > 1;
-    });
+    // Strip sub-₹1 priced products
+    pool = pool.filter((p) => Number(p.price ?? 0) > 1);
 
     const total = pool.length;
-    const effectivePageSize = Math.min(pageSize, 500);
+    const effectivePageSize = Math.min(pageSize, 20);
     const start = (pageNum - 1) * effectivePageSize;
     const products = pool.slice(start, start + effectivePageSize);
 
@@ -804,14 +718,47 @@ export class CjService {
   }
 
   /**
+   * In-memory warehouse cache — returns the full warehouse:all array,
+   * hitting Redis only when cache is empty or older than 5 minutes.
+   */
+  private async getWarehouseCache(): Promise<any[]> {
+    const now = Date.now();
+    if (
+      this.warehouseCache.length > 0 &&
+      now - this.warehouseLoadedAt < CjService.WAREHOUSE_CACHE_TTL_MS
+    ) {
+      return this.warehouseCache;
+    }
+
+    const warehouse =
+      (await this.redisService.getJson<any[]>(WAREHOUSE_KEY_ALL)) ??
+      (await this.redisService.getJson<any[]>(WAREHOUSE_LEGACY_ALL)) ??
+      [];
+
+    if (Array.isArray(warehouse) && warehouse.length > 0) {
+      this.warehouseCache = warehouse;
+      this.warehouseLoadedAt = now;
+      this.logger.log(
+        `[CJ] In-memory warehouse cache refreshed: ${warehouse.length} products`,
+      );
+    }
+
+    return this.warehouseCache;
+  }
+
+  /**
    * Run full catalog sync with automated retry sequence, pipeline/batch writes, index updates, and API cache flushing.
    */
-  async runCatalogSync(): Promise<{ success: boolean; count: number }> {
+  async runCatalogSync(): Promise<{
+    success: boolean;
+    count: number;
+    skipped?: boolean;
+  }> {
     const lockKey = 'cj:sync:lock';
     const locked = await this.redisService.setnx(lockKey, '1', 3600);
     if (!locked) {
       this.logger.warn('[Cron] Sync is already running (locked). Skipping.');
-      return { success: false, count: 0 };
+      return { success: false, count: 0, skipped: true };
     }
 
     try {
@@ -1025,12 +972,16 @@ export class CjService {
 
       let pageNum = 1;
       const pageSize = CJ_CONFIG.PAGE_SIZE;
+
+      // CJ API hard limit: pageNum * pageSize cannot exceed offset 6000
+      const maxPage = Math.floor(6000 / pageSize) + 1;
+
       let newProductsCount = 0;
       let updatedProductsCount = 0;
       let duplicatesRemovedCount = 0;
       let catApiCalls = 0;
 
-      while (pageNum <= CJ_CONFIG.MAX_PAGES_PER_CATEGORY) {
+      while (pageNum <= Math.min(CJ_CONFIG.MAX_PAGES_PER_CATEGORY, maxPage)) {
         const url = `/v1/product/list?categoryId=${categoryId}&pageNum=${pageNum}&pageSize=${pageSize}`;
         let response: any = null;
 
@@ -1042,8 +993,28 @@ export class CjService {
           this.cjClient.apiCallsThisSync++;
           catApiCalls++;
         } catch (err: any) {
+          const msg = err?.response?.response?.message || err?.message || '';
+
+          if (msg.includes('max offset')) {
+            this.logger.warn(
+              `[CJ] Maximum offset reached for "${categoryName}". Pagination stopped.`,
+            );
+            break;
+          }
+
           this.logger.warn(
-            `[CJ] Failed to fetch page ${pageNum} for category "${categoryName}" (${categoryId}): ${err?.message ?? err}`,
+            `[CJ] Failed to fetch page ${pageNum} for category "${categoryName}" (${categoryId}): ${msg}`,
+          );
+          break;
+        }
+
+        // Handle case where API returns an error object instead of throwing
+        if (
+          response?.code === 1600300 ||
+          response?.message?.includes('max offset')
+        ) {
+          this.logger.warn(
+            `[CJ] Maximum offset reached for ${categoryName}. Stopping pagination.`,
           );
           break;
         }
@@ -1068,8 +1039,8 @@ export class CjService {
             productPrice > 1
               ? productPrice
               : Number(
-                  (productPrice * CJ_CONFIG.CURRENCY_EXCHANGE_RATE).toFixed(2),
-                );
+                (productPrice * CJ_CONFIG.CURRENCY_EXCHANGE_RATE).toFixed(2),
+              );
           if (inrPrice <= 1) continue;
 
           if (productMap.has(pid)) {
@@ -1080,7 +1051,7 @@ export class CjService {
               existing.name !== product.name ||
               existing.title !== product.title ||
               JSON.stringify(existing.productImageSet ?? []) !==
-                JSON.stringify(product.productImageSet ?? []);
+              JSON.stringify(product.productImageSet ?? []);
 
             if (isChanged) {
               productMap.set(pid, {
@@ -1232,10 +1203,10 @@ export class CjService {
 
       const catName = normalizeKey(
         item.categoryName ||
-          item.categoryThirdName ||
-          item.categorySecondName ||
-          item.categoryFirstName ||
-          '',
+        item.categoryThirdName ||
+        item.categorySecondName ||
+        item.categoryFirstName ||
+        '',
       );
 
       const childArrayKey = Object.keys(item).find(
@@ -1312,12 +1283,12 @@ export class CjService {
     const categoryId = String(product?.categoryId ?? product?.category ?? '');
     const pid = String(
       product?.pid ??
-        product?.id ??
-        product?.productId ??
-        product?.productPid ??
-        product?.product_id ??
-        product?.productCode ??
-        '',
+      product?.id ??
+      product?.productId ??
+      product?.productPid ??
+      product?.product_id ??
+      product?.productCode ??
+      '',
     );
 
     const subcategoryName = product._category || query?._category;
@@ -1429,10 +1400,10 @@ export class CjService {
         image: v.variantImage || '',
         price: v.variantSellPrice
           ? Number(
-              (
-                Number(v.variantSellPrice) * CJ_CONFIG.CURRENCY_EXCHANGE_RATE
-              ).toFixed(2),
-            )
+            (
+              Number(v.variantSellPrice) * CJ_CONFIG.CURRENCY_EXCHANGE_RATE
+            ).toFixed(2),
+          )
           : product.price,
         vid: v.vid || '',
         variantKey: v.variantKey || '',
@@ -1508,3 +1479,4 @@ export class CjService {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }
+

@@ -1,7 +1,13 @@
 import { Link, useParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../store/store';
-import { useGetOrderDetailsQuery } from '../store/slices/orderApiSlice';
+import {
+  useGetOrderDetailsQuery,
+  useCreateRazorpayOrderMutation,
+  useVerifyRazorpayPaymentMutation,
+  useCancelOrderMutation,
+} from '../store/slices/orderApiSlice';
+import toast from 'react-hot-toast';
 import { useGetProductDetailsQuery, useGetRelatedProductsQuery } from '../store/slices/productApiSlice';
 import { ChevronRight, ShoppingBag, Package, CheckCircle, Clock, Truck, AlertCircle, HelpCircle, ArrowRight, RotateCcw } from 'lucide-react';
 import { useState, useEffect } from 'react';
@@ -30,7 +36,8 @@ const STEP_INDEX: Record<string, number> = {
 };
 
 const statusConfig: Record<string, { label: string; className: string }> = {
-  pending: { label: 'In Transit', className: 'bg-yellow-50 dark:bg-yellow-950/20 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800' },
+  payment_pending: { label: 'Payment Pending', className: 'bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800' },
+  pending: { label: 'Payment Pending', className: 'bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800' },
   confirmed: { label: 'Confirmed', className: 'bg-blue-50 dark:bg-blue-950/20 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800' },
   packed: { label: 'Packed', className: 'bg-indigo-50 dark:bg-indigo-950/20 text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800' },
   shipped: { label: 'Shipped', className: 'bg-purple-50 dark:bg-purple-950/20 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800' },
@@ -110,7 +117,65 @@ const OrderTrackingPage = () => {
   const { data: myReturns } = useGetMyReturnsQuery(undefined, { skip: !userInfo || !id, pollingInterval: 3000 });
   const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
   const [loaded, setLoaded] = useState(false);
-  const { formatCurrency } = useCurrency();
+  const { formatCurrency, currency } = useCurrency();
+  const [createRazorpayOrder] = useCreateRazorpayOrderMutation();
+  const [verifyRazorpayPayment] = useVerifyRazorpayPaymentMutation();
+  const [cancelOrder] = useCancelOrderMutation();
+
+  const handlePayNow = async () => {
+    if (!order?._id) return;
+    try {
+      const razorpayRes = await createRazorpayOrder({ orderId: order._id, currency }).unwrap();
+      const loadRazorpayScript = () => new Promise((resolve) => {
+        const script = document.createElement('script');
+        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+        script.onload = () => resolve(true);
+        script.onerror = () => resolve(false);
+        document.body.appendChild(script);
+      });
+      const loadedScript = await loadRazorpayScript();
+      if (!loadedScript) {
+        toast.error('Failed to load Razorpay checkout script');
+        return;
+      }
+      const options = {
+        key: razorpayRes.keyId,
+        amount: razorpayRes.gatewayOrder.amount,
+        currency: razorpayRes.gatewayOrder.currency || currency || 'INR',
+        name: 'AutoTrade',
+        description: `Order #${order._id}`,
+        order_id: razorpayRes.gatewayOrder.id,
+        handler: async (response: any) => {
+          try {
+            await verifyRazorpayPayment({
+              orderId: order._id,
+              razorpayOrderId: response.razorpay_order_id,
+              razorpayPaymentId: response.razorpay_payment_id,
+              razorpaySignature: response.razorpay_signature,
+            }).unwrap();
+            toast.success('Payment completed successfully!');
+          } catch (err: any) {
+            toast.error(err?.data?.message || 'Payment verification failed');
+          }
+        },
+      };
+      const rzp = new (window as any).Razorpay(options);
+      rzp.open();
+    } catch (err: any) {
+      toast.error(err?.data?.message || 'Failed to initiate payment');
+    }
+  };
+
+  const handleCancelOrder = async () => {
+    if (!order?._id) return;
+    if (!window.confirm('Are you sure you want to cancel this order?')) return;
+    try {
+      await cancelOrder(order._id).unwrap();
+      toast.success('Order cancelled successfully');
+    } catch (err: any) {
+      toast.error(err?.data?.message || 'Failed to cancel order');
+    }
+  };
 
   useEffect(() => {
     const t = setTimeout(() => setLoaded(true), 100);
@@ -217,6 +282,39 @@ const OrderTrackingPage = () => {
             </span>
           </div>
         </div>
+
+        {/* Payment Pending Alert Banner */}
+        {order.paymentStatus !== 'paid' && order.status !== 'cancelled' && (
+          <div className="mb-8 p-5 sm:p-6 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+            <div className="flex items-center gap-3.5">
+              <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center shrink-0">
+                <Clock className="text-amber-600 dark:text-amber-400" size={20} strokeWidth={2} />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-amber-900 dark:text-amber-200">Payment Pending</h3>
+                <p className="text-xs sm:text-sm text-amber-700 dark:text-amber-400 mt-0.5">
+                  You exited checkout before completing payment. Complete your payment now to confirm this order.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2.5 shrink-0 self-end sm:self-auto">
+              <button
+                type="button"
+                onClick={handlePayNow}
+                className="px-5 py-2.5 rounded-xl text-xs font-extrabold bg-amber-600 hover:bg-amber-700 text-white transition shadow-sm cursor-pointer"
+              >
+                Pay Now
+              </button>
+              <button
+                type="button"
+                onClick={handleCancelOrder}
+                className="px-4 py-2.5 rounded-xl text-xs font-semibold text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50 transition cursor-pointer"
+              >
+                Cancel Order
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Main 2-Column Layout */}
         <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">

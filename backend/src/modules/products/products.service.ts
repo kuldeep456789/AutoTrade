@@ -48,7 +48,7 @@ export class ProductsService implements OnModuleInit {
     private readonly jwtService: JwtService,
     @InjectModel(Review.name) private readonly reviewModel: Model<Review>,
     @InjectModel(Order.name) private readonly orderModel: Model<Order>,
-  ) {}
+  ) { }
 
   async onModuleInit() {
     this.logger.log(
@@ -94,6 +94,7 @@ export class ProductsService implements OnModuleInit {
 
     return result;
   }
+
   async getProduct(id: string) {
     const cacheKey = `product:${id}`;
     const cached =
@@ -235,8 +236,8 @@ export class ProductsService implements OnModuleInit {
   private async fetchFromWarehouse(query: ProductQuery) {
     const pageNum = Math.max(1, Number(query.pageNum || query.page || 1));
     const pageSize = Math.min(
-      Math.max(1, Number(query.pageSize || query.limit || 20)),
-      1000,
+      Math.max(1, Number(query.pageSize || query.limit || 6)),
+      20,
     );
 
     // ── Search query: filter & score warehouse products with relevance engine ──
@@ -259,24 +260,16 @@ export class ProductsService implements OnModuleInit {
         .split(/\s+/)
         .filter(Boolean);
 
-      // Scoped Candidate Pool: Fetch candidate products matching the keyword from the Redis index
-      const searchResult = await this.cjService.getProducts({
-        keyword: cleanQuery,
-        pageNum: '1',
-        pageSize: '500',
-        categoryId: query.categoryId,
-        subcategoryName: query.subcategoryName,
-        collectionType: query.collectionType,
-      });
+      // ── Pure Redis search: read warehouse directly, zero CJ API calls ──
+      const MAX_MATCHES = 10;
+      const rawWarehouse =
+        (await this.redisService.getJson<any[]>('warehouse:all')) ??
+        (await this.redisService.getJson<any[]>('products:all')) ??
+        [];
 
-      let candidateProducts =
-        searchResult?.products ?? searchResult?.data?.list ?? [];
-
-      // Fallback: If catalog index candidate lookup returns empty, query full warehouse catalog
-      if (!candidateProducts || candidateProducts.length === 0) {
-        const warehouseAll = await this.cjService.getWarehouseProducts(1, 500);
-        candidateProducts = warehouseAll?.products || [];
-      }
+      const candidateProducts: any[] = Array.isArray(rawWarehouse)
+        ? rawWarehouse
+        : (rawWarehouse as any)?.products ?? [];
 
       if (candidateProducts.length > 0) {
         const scoredProducts: { product: any; score: number }[] = [];
@@ -294,10 +287,12 @@ export class ProductsService implements OnModuleInit {
             if (query.maxPrice && price > Number(query.maxPrice)) continue;
 
             scoredProducts.push({ product: p, score });
+
+            if (scoredProducts.length >= MAX_MATCHES) break;
           }
         }
 
-        // Sorting
+        // Sort by relevance (or price/rating if specified)
         const sortMode = (query.sort || 'relevance').toLowerCase();
         scoredProducts.sort((a, b) => {
           if (sortMode === 'price-asc' || sortMode === 'price-low-to-high') {
@@ -311,7 +306,6 @@ export class ProductsService implements OnModuleInit {
               (b.product.averageRating || 0) - (a.product.averageRating || 0)
             );
           }
-          // Default: relevance score descending
           return b.score - a.score;
         });
 
@@ -417,10 +411,10 @@ export class ProductsService implements OnModuleInit {
     const sku = String(product.sku || product.variantSku || '').trim();
     const category = String(
       product.collectionType ||
-        product.categoryName ||
-        product._category ||
-        product.subcategoryName ||
-        '',
+      product.categoryName ||
+      product._category ||
+      product.subcategoryName ||
+      '',
     ).trim();
     const tags = Array.isArray(product.tags)
       ? product.tags.join(' ')
@@ -445,38 +439,24 @@ export class ProductsService implements OnModuleInit {
         .split(/[^a-z0-9]+/)
         .filter((t) => t.length > 0);
 
-    /**
-     * Check whether a single query keyword matches a token in the product field.
-     * Supports prefix matching (incremental search: "wom" matches "women")
-     * but rejects plain substring collisions ("men" must NOT match from "women").
-     *
-     * Rule:
-     *  - A query keyword `kw` matches a product token `tok` if:
-     *      tok === kw          (exact token match)
-     *    OR tok.startsWith(kw) (prefix match — for incremental typing)
-     *  - "men".startsWith("men") => true — matches "men" tokens only
-     *  - "women" token does NOT .startsWith("men"), so "men" never matches "women" ✓
-     */
+
     const kwMatchesField = (kw: string, text: string): boolean => {
       const tokens = tokenize(text);
       return tokens.some((tok) => tok === kw || tok.startsWith(kw));
     };
 
-    /**
-     * ALL query keywords must match somewhere in the combined product fields.
-     * If even one keyword has zero matches → score = 0 (product excluded).
-     */
+
     const allFields = [titleLower, brandLower, categoryLower, tagsLower, descLower];
 
-    // AND gate: every keyword must match at least one field
+
     for (const kw of queryKeywords) {
       const matchedAnyField = allFields.some((field) => kwMatchesField(kw, field));
       if (!matchedAnyField) {
-        return 0; // Missing a required keyword → exclude product
+        return 0;
       }
     }
 
-    // All keywords matched — now score by quality
+
     let score = 0;
 
     // 1. Exact full-phrase match in title
@@ -492,7 +472,7 @@ export class ProductsService implements OnModuleInit {
       score += 35;
     }
 
-    // 4. Count how many keywords match in title specifically (higher = more relevant)
+    // 4. Count how many keywords match in title specifically (higher = more relevaSnt)
     const titleTokens = tokenize(titleLower);
     const titleMatchCount = queryKeywords.filter((kw) =>
       titleTokens.some((tok) => tok === kw || tok.startsWith(kw)),

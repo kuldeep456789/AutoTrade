@@ -15,7 +15,7 @@ export class CjCronService implements OnModuleInit {
     private readonly cjService: CjService,
     private readonly redisService: RedisService,
     private readonly mailService: MailService,
-  ) {}
+  ) { }
 
   async onModuleInit() {
     // Delay first execution on startup by 30 seconds to allow the application to fully boot
@@ -83,9 +83,7 @@ export class CjCronService implements OnModuleInit {
     }
   }
 
-  /**
-   * Execute the synchronization flow with timeout, health check, locking, metrics logging, and notifications.
-   */
+
   private async executeSyncWithMetrics() {
     if (this.isSyncing) {
       this.logger.warn(
@@ -119,16 +117,28 @@ export class CjCronService implements OnModuleInit {
       // 2. Timeout Wrapper (30 Minutes max execution limit)
       const TIMEOUT_LIMIT = 30 * 60 * 1000;
       const syncPromise = this.cjService.runCatalogSync();
-      const timeoutPromise = new Promise<{ success: boolean; count: number }>(
-        (_, reject) =>
-          setTimeout(
-            () =>
-              reject(new Error('Sync execution timed out after 30 minutes')),
-            TIMEOUT_LIMIT,
-          ),
+      const timeoutPromise = new Promise<{
+        success: boolean;
+        count: number;
+        skipped?: boolean;
+      }>((_, reject) =>
+        setTimeout(
+          () =>
+            reject(new Error('Sync execution timed out after 30 minutes')),
+          TIMEOUT_LIMIT,
+        ),
       );
 
       const result = await Promise.race([syncPromise, timeoutPromise]);
+
+      // ── A lock-skip is NOT a failure — another sync was already holding
+      // the Redis lock. Don't touch the failure counter or send alerts. ──
+      if (result.skipped) {
+        this.logger.warn(
+          '[Cron] Sync skipped — another sync was already in progress (Redis lock held).',
+        );
+        return;
+      }
 
       const durationMs = Date.now() - startTime;
       const endMemory = process.memoryUsage().heapUsed;

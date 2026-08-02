@@ -8,9 +8,12 @@ import { Order, OrderSchema } from '../orders/schemas/order.schema';
 
 import { CjClient } from './cj.client';
 
+import { SearchModule } from '../search/search.module';
+
 @Module({
   imports: [
     RedisModule,
+    SearchModule,
     MongooseModule.forFeature([{ name: Order.name, schema: OrderSchema }]),
   ],
   controllers: [CjController],
