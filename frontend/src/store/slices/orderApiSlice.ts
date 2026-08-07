@@ -6,7 +6,7 @@ const PAYMENTS_URL = '/api/payments';
 export const orderApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     createOrder: builder.mutation({
-      query: (order: { items: { productId: string; quantity: number }[]; totalAmount: number; paymentMethod?: string }) => ({
+      query: (order: { items: { productId: string; quantity: number }[]; totalAmount: number; paymentMethod?: string; shippingDetails?: any; currency?: string }) => ({
         url: ORDERS_URL,
         method: 'POST',
         body: order,
@@ -29,28 +29,35 @@ export const orderApiSlice = apiSlice.injectEndpoints({
       providesTags: ['Order'],
       keepUnusedDataFor: 5,
     }),
-    createRazorpayOrder: builder.mutation({
-      query: (arg: string | { orderId: string; currency?: string }) => {
+    createCheckoutSession: builder.mutation({
+      query: (
+        arg:
+          | string
+          | { orderId: string; currency?: string }
+          | {
+              items: {
+                productId: string;
+                quantity: number;
+                vid?: string;
+                sku?: string;
+                color?: string;
+                size?: string;
+                name?: string;
+                image?: string;
+                price?: number;
+              }[];
+              totalAmount: number;
+              currency?: string;
+              shippingDetails?: Record<string, any>;
+            }
+      ) => {
         const body = typeof arg === 'string' ? { orderId: arg } : arg;
         return {
-          url: `${PAYMENTS_URL}/razorpay/order`,
+          url: `${PAYMENTS_URL}/create-checkout-session`,
           method: 'POST',
           body,
         };
       },
-    }),
-    verifyRazorpayPayment: builder.mutation({
-      query: (payload: {
-        orderId: string;
-        razorpayOrderId: string;
-        razorpayPaymentId: string;
-        razorpaySignature: string;
-      }) => ({
-        url: `${PAYMENTS_URL}/razorpay/verify`,
-        method: 'POST',
-        body: payload,
-      }),
-      invalidatesTags: (_, __, { orderId }) => [{ type: 'Order' as const, id: orderId }, 'Order'],
     }),
     cancelOrder: builder.mutation({
       query: (orderId: string) => ({
@@ -66,7 +73,6 @@ export const {
   useCreateOrderMutation,
   useGetOrderDetailsQuery,
   useGetUserOrdersQuery,
-  useCreateRazorpayOrderMutation,
-  useVerifyRazorpayPaymentMutation,
+  useCreateCheckoutSessionMutation,
   useCancelOrderMutation,
 } = orderApiSlice;

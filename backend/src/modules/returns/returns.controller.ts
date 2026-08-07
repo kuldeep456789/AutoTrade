@@ -13,7 +13,7 @@ import { ReturnsService } from './returns.service';
 
 @Controller('returns')
 export class ReturnsController {
-  constructor(private readonly returnsService: ReturnsService) { }
+  constructor(private readonly returnsService: ReturnsService) {}
 
   @Post()
   create(

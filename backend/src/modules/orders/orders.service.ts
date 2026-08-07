@@ -7,6 +7,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { JwtService } from '@nestjs/jwt';
 import { Model, Types } from 'mongoose';
 import { UsersService } from '../users/users.service';
+import { SearchRepository } from '../search/search.repository';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { Order } from './schemas/order.schema';
 
@@ -16,7 +17,8 @@ export class OrdersService {
     @InjectModel(Order.name) private readonly orderModel: Model<Order>,
     private readonly jwtService: JwtService,
     private readonly usersService: UsersService,
-  ) { }
+    private readonly searchRepository: SearchRepository,
+  ) {}
 
   async getOrders(token: string) {
     const user = await this.resolveUser(token);
@@ -30,17 +32,9 @@ export class OrdersService {
       .exec();
 
     try {
-      const ProductModel = this.orderModel.db.model('Product');
-      for (const order of orders) {
-        for (const item of order.items) {
-          const product: any = await ProductModel.findOne({ pid: item.productId }).select('images').lean().exec();
-          if (product && product.images && product.images.length > 0) {
-            (item as any).image = product.images[0];
-          }
-        }
-      }
+      await this.searchRepository.enrichOrderItemsBatch(orders);
     } catch (e) {
-      console.error('[OrdersService] Error attaching images to orders', e);
+      console.error('[OrdersService] Error hydrating order items', e);
     }
 
     return { orders };
@@ -56,7 +50,7 @@ export class OrdersService {
     let order;
 
     if (Types.ObjectId.isValid(cleanId) && cleanId.length === 24) {
-      order = await this.orderModel.findById(cleanId).exec();
+      order = await this.orderModel.findById(cleanId).lean().exec();
     } else {
       const allOrders = await this.orderModel
         .find()
@@ -84,62 +78,8 @@ export class OrdersService {
     }
 
     try {
-      const ProductModel = this.orderModel.db.model('Product');
-      for (const item of order.items) {
-        if (item.productId) {
-          // const product: any = await ProductModel.findOne({ pid: item.productId }).select('images').lean().exec();
-          // if (product && product.images && product.images.length > 0) {
-          //   (item as any).image = product.images[0];
-          // }
-          const product: any = await ProductModel.findOne({
-            pid: item.productId,
-          })
-            .select(`
-    pid
-    images
-    title
-    productName
-    name
-    price
-    discountPrice
-    colors
-    sizes
-    sku
-  `)
-            .lean()
-            .exec();
-
-          if (product) {
-            (item as any).image =
-              product.images?.[0] ?? null;
-
-            (item as any).productName =
-              product.title ||
-              product.productName ||
-              product.name ||
-              'Unknown Product';
-
-            (item as any).price =
-              product.discountPrice ||
-              product.price ||
-              0;
-
-            (item as any).sku =
-              product.sku || '';
-
-            (item as any).color =
-              item.variant?.color ||
-              product.colors?.[0] ||
-              '';
-
-            (item as any).size =
-              item.variant?.size ||
-              product.sizes?.[0] ||
-              '';
-          }
-        }
-      }
-    } catch (e) { }
+      await this.searchRepository.enrichOrderItems(order.items);
+    } catch (e) {}
 
     return { order };
   }
@@ -151,24 +91,24 @@ export class OrdersService {
       throw new BadRequestException('items are required');
     }
 
-    if (dto.totalAmount == null || dto.totalAmount < 0) {
-      throw new BadRequestException('totalAmount is required');
+    if (dto.totalAmount == null || dto.totalAmount <= 0) {
+      throw new BadRequestException('Valid totalAmount is required');
     }
 
-    if (dto.totalAmount < 50000) {
-      throw new BadRequestException('Minimum order value is ₹50,000');
-    }
+    const paymentMethod = 'Stripe';
+    const paymentStatus = 'pending';
 
-    const paymentMethod = 'Razorpay';
-    const paymentStatus = 'unpaid';
+    const items = await this.resolveItemVids(dto.items);
 
     const order = await this.orderModel.create({
       userId: new Types.ObjectId(user.id),
-      items: dto.items,
+      items,
       totalAmount: dto.totalAmount,
+      currency: dto.currency || 'INR',
       status: 'pending',
       paymentProvider: paymentMethod,
       paymentStatus,
+      shippingDetails: dto.shippingDetails,
     });
 
     return {
@@ -189,16 +129,62 @@ export class OrdersService {
     const userId = user.id || (user as any)._id?.toString() || '';
 
     if (user.role !== 'admin' && orderUserId !== userId) {
-      throw new UnauthorizedException('You do not have permission to cancel this order');
+      throw new UnauthorizedException(
+        'You do not have permission to cancel this order',
+      );
     }
 
     if (order.paymentStatus === 'paid') {
-      throw new BadRequestException('Cannot cancel paid order directly, please request a return');
+      throw new BadRequestException(
+        'Cannot cancel paid order directly, please request a return',
+      );
     }
 
     order.status = 'cancelled';
     await order.save();
     return { message: 'Order cancelled successfully', order };
+  }
+
+  private async resolveItemVids(items: any[]) {
+    const withVids = items.filter((i) => i.vid);
+    const missing = items.filter((i) => !i.vid);
+
+    if (missing.length === 0) return items;
+
+    const pids = [...new Set(missing.map((i) => i.productId))];
+    try {
+      const products = await this.searchRepository.findProductsByPids(pids);
+      const pidMap = new Map<string, any>();
+      for (const p of products) {
+        if (!p) continue;
+        pidMap.set(String(p.pid || p.id || p._id), p);
+      }
+
+      return items.map((item) => {
+        if (item.vid) return item;
+        const prod = pidMap.get(String(item.productId));
+        if (!prod) return item;
+
+        let vid = '';
+        if (item.color || item.size) {
+          const match = (prod.variants || []).find(
+            (v: any) =>
+              (!item.color ||
+                String(v.color).toLowerCase() ===
+                  String(item.color).toLowerCase()) &&
+              (!item.size ||
+                String(v.size).toLowerCase() ===
+                  String(item.size).toLowerCase()),
+          );
+          vid = match?.vid || '';
+        }
+        if (!vid) vid = prod.variants?.[0]?.vid || prod.vid || '';
+        return { ...item, vid };
+      });
+    } catch (err) {
+      console.error('[OrdersService] resolveItemVids error:', err);
+      return items;
+    }
   }
 
   private async resolveUser(token: string) {

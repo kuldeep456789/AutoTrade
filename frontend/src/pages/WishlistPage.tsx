@@ -7,7 +7,7 @@ import type { RootState } from '../store/store';
 import { removeFromWishlist } from '../store/slices/wishlistSlice';
 import { addToCart } from '../store/slices/cartSlice';
 import { useAddToCartMutation } from '../store/slices/cartApiSlice';
-import { useRemoveWishlistItemMutation } from '../store/slices/wishlistApiSlice';
+import { useRemoveWishlistItemMutation, useGetWishlistQuery } from '../store/slices/wishlistApiSlice';
 
 const WishlistPage = () => {
   const { formatCurrency } = useCurrency();
@@ -17,6 +17,15 @@ const WishlistPage = () => {
   const wishlistItems = useSelector((state: RootState) => state.wishlist.wishlistItems);
   const [addToCartBackend, { isLoading: isAddingToCart }] = useAddToCartMutation();
   const [removeWishlistItemBackend] = useRemoveWishlistItemMutation();
+
+  const {
+    data: serverWishlist,
+    isLoading: isFetchingWishlist,
+    isError: isWishlistError,
+    error: wishlistError,
+  } = useGetWishlistQuery(undefined, {
+    skip: !userInfo?.accessToken,
+  });
 
   const moveToCart = async (item: any) => {
     try {
@@ -38,7 +47,7 @@ const WishlistPage = () => {
       dispatch(removeFromWishlist(item._id));
 
       if (userInfo?.accessToken) {
-        removeWishlistItemBackend(item._id);
+        await removeWishlistItemBackend(item._id).unwrap();
       }
 
       toast.success('Item moved to your Bag successfully.');
@@ -48,13 +57,52 @@ const WishlistPage = () => {
     }
   };
 
-  const handleRemove = (item: any) => {
+  const handleRemove = async (item: any) => {
     dispatch(removeFromWishlist(item._id));
     if (userInfo?.accessToken) {
-      removeWishlistItemBackend(item._id);
+      try {
+        await removeWishlistItemBackend(item._id).unwrap();
+      } catch {
+        // Silently handle backend removal failure
+      }
     }
     toast('Item removed from Wishlist.');
   };
+
+  if (isFetchingWishlist) {
+    return (
+      <div className="min-h-screen bg-zinc-50 dark:bg-[#0F0F10]">
+        <div className="mx-auto max-w-[1500px] px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+          <div className="flex items-center justify-center py-24">
+            <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isWishlistError) {
+    return (
+      <div className="min-h-screen bg-zinc-50 dark:bg-[#0F0F10]">
+        <div className="mx-auto max-w-[1500px] px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+          <div className="text-center py-24 max-w-lg mx-auto">
+            <h2 className="text-[22px] font-bold text-zinc-900 dark:text-white mb-3">
+              Failed to load wishlist
+            </h2>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6">
+              {'data' in (wishlistError as any) ? (wishlistError as any).data?.message : 'Something went wrong. Please try again.'}
+            </p>
+            <button
+              onClick={() => navigate('/')}
+              className="inline-flex items-center justify-center h-[52px] px-10 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-[13px] font-bold tracking-wider hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-all duration-200 shadow-md hover:shadow-lg active:scale-[0.98] cursor-pointer"
+            >
+              BACK TO SHOP
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-[#0F0F10]">

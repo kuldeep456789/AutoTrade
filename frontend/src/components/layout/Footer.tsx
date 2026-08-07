@@ -59,7 +59,7 @@ const Footer = () => {
             </Link>
 
             <p className="text-sm text-zinc-400 leading-7 font-normal">
-              Your premier destination for luxury automotive accessories, diagnostic tools, replacement parts, and maintenance electronics — trusted by thousands of car enthusiasts across India.
+              Your premier destination for luxury automotive accessories, diagnostic tools replacement parts, and maintenance electronics — trusted by thousands of car enthusiasts across India.
             </p>
 
             {/* Social Icons */}
@@ -98,7 +98,7 @@ const Footer = () => {
               {[
                 { to: '/collections/exterior-accessories', label: 'Exterior Accessories' },
                 { to: '/collections/interior-accessories', label: 'Interior Accessories' },
-                { to: '/collections/tools-maintenance-care', label: 'Tools & Maintenance' },
+                { to: '/collections/tools-maintenance-care', label: 'Tools, Maintenance & Care' },
                 { to: '/collections/car-electronics', label: 'Car Electronics' },
                 { to: '/collections/motorcycle-accessories', label: 'Motorcycle Accessories' },
                 { to: '/collections/auto-replacement-parts', label: 'Auto Replacement Parts' },
@@ -127,7 +127,7 @@ const Footer = () => {
               {[
                 // { to: trackOrderLink, label: 'Track Order' },
                 { to: returnsLink, label: 'Returns & Refunds' },
-                { to: supportLink, label: 'Support Center' },
+                // { to: supportLink, label: 'Support Center' },
                 // { to: '/faq', label: 'FAQs' },
                 // { to: '/shipping-policy', label: 'Shipping Policy' },
                 // { to: '/privacy-policy', label: 'Privacy Policy' },
@@ -181,32 +181,19 @@ const Footer = () => {
                   </span>
                 </a>
               </li>
-              <li className="flex items-start gap-3.5 text-sm text-zinc-400">
-                <span className="w-8 h-8 rounded-lg bg-zinc-800/80 border border-zinc-700/50 flex items-center justify-center shrink-0">
-                  <MapPin size={15} className="text-zinc-400" />
+              <li className="group flex items-start gap-3.5 text-sm text-zinc-400 hover:text-white transition-colors">
+                <span className="w-8 h-8 rounded-lg bg-zinc-800/80 border border-zinc-700/50 flex items-center justify-center shrink-0 group-hover:border-orange-500/40 group-hover:bg-orange-500/10 transition-all duration-200">
+                  <MapPin size={15} className="text-zinc-400 group-hover:text-orange-400 transition-colors" />
                 </span>
                 <span className="pt-1">
                   <span className="block text-[10px] text-zinc-600 uppercase tracking-widest font-bold mb-0.5">Address</span>
-                  Bangalore, Karnataka, India
+                  Banglore, Karnataka, India
                 </span>
               </li>
             </ul>
 
-            {/* Business Hours */}
-            <div className="p-4 rounded-xl border border-zinc-800/80 bg-zinc-900/40">
-              <p className="text-[10px] tracking-[0.15em] text-zinc-500 uppercase font-bold mb-2.5">Business Hours</p>
-              <div className="space-y-1.5">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-zinc-500">Mon – Sat</span>
-                  <span className="text-xs text-zinc-300 font-medium">9:00 AM – 6:00 PM</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-zinc-500">Sunday</span>
-                  <span className="text-xs text-zinc-600">Closed</span>
-                </div>
-              </div>
-            </div>
           </div>
+
 
         </div>
       </div>
@@ -216,47 +203,12 @@ const Footer = () => {
         <div className="border-t border-zinc-800/60" />
       </div>
 
-      {/* ── Bottom Bar ── */}
-      <div className="w-full max-w-[1920px] mx-auto px-8 sm:px-14 lg:px-20 xl:px-28 py-6">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
 
-          {/* Left: Copyright + Legal Links */}
-          <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-5 text-center sm:text-left">
-            <p className="text-xs text-zinc-500 font-medium">
-              © {new Date().getFullYear()} <span className="text-zinc-400">AutoTrade</span> (autotrade.in). All rights reserved.
-            </p>
-            <div className="hidden sm:block w-px h-3.5 bg-zinc-700" />
-            <div className="flex items-center gap-4">
-              {[
-                { label: 'Terms of Service', to: '/terms-of-service' },
-                { label: 'Privacy Policy', to: '/privacy-policy' },
-                { label: 'Cookie Policy', to: '/cookie-policy' },
-              ].map(({ label, to }) => (
-                <Link key={label} to={to} className="text-[11px] text-zinc-500 hover:text-zinc-300 transition-colors">
-                  {label}
-                </Link>
-              ))}
-            </div>
-          </div>
-
-          {/* Right: Payment Methods */}
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            {['VISA', 'Mastercard', 'RuPay', 'UPI', 'Paytm'].map((method) => (
-              <span
-                key={method}
-                className="px-3.5 py-1.5 rounded-md border border-zinc-700/60 bg-zinc-900/60 text-[10px] font-bold text-zinc-400 tracking-wider hover:border-orange-500/30 hover:text-zinc-200 transition-all duration-200 cursor-default"
-              >
-                {method}
-              </span>
-            ))}
-          </div>
-
-        </div>
-      </div>
 
     </footer>
   );
 };
 
 export default Footer;
+
 

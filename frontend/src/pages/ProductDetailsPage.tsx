@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { useGetProductDetailsQuery, useCreateReviewMutation, useGetRelatedProductsQuery } from '../store/slices/productApiSlice';
+import { useGetSettingsQuery } from '../store/slices/settingsApiSlice';
 import { addToCart } from '../store/slices/cartSlice';
 import { toggleWishlist } from '../store/slices/wishlistSlice';
 import type { RootState } from '../store/store';
@@ -9,7 +10,6 @@ import { ShoppingBag, Heart, Star, Check, ChevronRight, ChevronLeft, ChevronUp, 
 import toast from 'react-hot-toast';
 import Loader from '../components/Loader';
 import ProductCard from '../components/product/ProductCard';
-import WishlistLoginPopup from '../components/WishlistLoginPopup';
 import { getColorHex } from '../utils/colorMap';
 import { getProductId } from '../lib/product';
 import { useCurrency } from '../context/CurrencyContext';
@@ -159,6 +159,9 @@ const ProductDetailsPage = () => {
   const wishlistItems = useSelector((state: RootState) => state.wishlist.wishlistItems);
   const productId = product ? getProductId(product) || id || '' : '';
   const isWishlisted = product ? wishlistItems.some((item: any) => item._id === productId) : false;
+  
+  const { data: settingsData } = useGetSettingsQuery(undefined);
+  const gstPercentage = settingsData?.settings?.gstPercentage || 18;
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedColor, setSelectedColor] = useState('');
   const [qty, setQty] = useState(1);
@@ -178,13 +181,8 @@ const ProductDetailsPage = () => {
   const [userNewReviews, setUserNewReviews] = useState<any[]>([]);
   const [helpfulVotes, setHelpfulVotes] = useState<Record<number, boolean>>({});
   const reviewRef = useRef<HTMLDivElement>(null);
-  const [showWishlistPopup, setShowWishlistPopup] = useState(false);
 
   const handleWishlistToggle = () => {
-    if (!userInfo) {
-      setShowWishlistPopup(true);
-      return;
-    }
     dispatch(
       toggleWishlist({
         _id: productId,
@@ -202,6 +200,12 @@ const ProductDetailsPage = () => {
   useEffect(() => {
     setSelectedImage(0);
   }, [selectedColor]);
+
+  useEffect(() => {
+    setSelectedImage(0);
+    setZoomLens({ active: false, imgX: 50, imgY: 50, conX: 50, conY: 50 });
+    setLightboxOpen(false);
+  }, [id]);
 
   useEffect(() => {
     const pending = sessionStorage.getItem('pendingCartItem');
@@ -269,6 +273,20 @@ const ProductDetailsPage = () => {
 
   const handleAddToCart = () => {
     const activeColor = selectedColor || (colors && colors.length > 0 ? colors[0] : 'Default');
+    const activeSize = 'One Size';
+    const activeVariant = (product.variants || []).find(
+      (v: any) => String(v.color) === activeColor && String(v.size || 'One Size') === activeSize
+    );
+    const itemSnapshot = {
+      _id: productId,
+      name: product.name,
+      price: product.discountPrice || product.price,
+      image: product?.images?.[0] || '',
+      qty: qty,
+      variant: { color: activeColor, size: activeSize },
+      vid: activeVariant?.vid || '',
+      sku: product.sku || product.pid || '',
+    };
     if (!userInfo) {
       const pendingItem = {
         _id: productId,
@@ -276,22 +294,16 @@ const ProductDetailsPage = () => {
         price: product.discountPrice || product.price,
         image: product?.images?.[0] || '',
         qty: qty,
-        variant: { color: activeColor, size: 'One Size' },
+        variant: { color: activeColor, size: activeSize },
+        vid: activeVariant?.vid || '',
+        sku: product.sku || product.pid || '',
       };
       sessionStorage.setItem('pendingCartItem', JSON.stringify(pendingItem));
       navigate(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
       return;
     }
     dispatch(
-      addToCart({
-        _id: productId,
-        name: product.name,
-        price: product.discountPrice || product.price,
-        image: product?.images?.[0] || '',
-        qty: qty,
-        increment: true,
-        variant: { color: activeColor, size: 'One Size' },
-      })
+      addToCart(itemSnapshot)
     );
     setIsAdded(true);
     toast.success('Product added to your bag');
@@ -300,6 +312,10 @@ const ProductDetailsPage = () => {
 
   const handleBuyNow = () => {
     const activeColor = selectedColor || (colors && colors.length > 0 ? colors[0] : 'Default');
+    const activeSize = 'One Size';
+    const activeVariant = (product.variants || []).find(
+      (v: any) => String(v.color) === activeColor && String(v.size || 'One Size') === activeSize
+    );
     dispatch(
       addToCart({
         _id: productId,
@@ -308,7 +324,9 @@ const ProductDetailsPage = () => {
         image: product?.images?.[0] || '',
         qty: qty,
         increment: true,
-        variant: { color: activeColor, size: 'One Size' },
+        variant: { color: activeColor, size: activeSize },
+        vid: activeVariant?.vid || '',
+        sku: product.sku || product.pid || '',
       })
     );
     navigate('/cart');
@@ -468,9 +486,9 @@ const ProductDetailsPage = () => {
 
                   {/* Badges */}
                   <div className="absolute top-3 left-3 flex flex-col gap-2 z-10">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-950/90 text-emerald-800 dark:text-emerald-300 text-xs font-bold border border-emerald-300/60 dark:border-emerald-800 shadow-sm backdrop-blur-sm">
-                      <span className="text-xs">💵</span>
-                      18% GST
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-xs font-bold border border-emerald-200 dark:border-emerald-500/20">
+                      <span className="text-[10px]">💵</span>
+                      {gstPercentage}% GST
                     </span>
                   </div>
 
@@ -634,26 +652,7 @@ const ProductDetailsPage = () => {
           </div>
         </div>
       )}
-
-
-
-
-
-
-      {showWishlistPopup && (
-        <WishlistLoginPopup
-          product={{
-            _id: productId,
-            name: product.name,
-            price: product.price,
-            discountPrice: product.discountPrice,
-            image: product?.images?.[0] || '',
-          }}
-          onClose={() => setShowWishlistPopup(false)}
-        />
-      )}
-
-      {/* Image Lightbox */}
+       {/* Image Lightbox */}
       <div
         className={`fixed inset-0 z-[80] flex items-center justify-center transition-opacity duration-300 ${lightboxOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
           }`}

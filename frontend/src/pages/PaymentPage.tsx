@@ -9,9 +9,9 @@ import { CreditCard, Smartphone, Landmark, Check, Sparkles } from 'lucide-react'
 
 const paymentOptions = [
   {
-    value: 'Razorpay',
-    label: 'Razorpay Secure Payment',
-    sub: 'Pay via Credit/Debit Cards, UPI (GPay/PhonePe/Paytm), NetBanking & Wallets',
+    value: 'Stripe',
+    label: 'Stripe Secure Payment',
+    sub: 'Pay via Credit/Debit Cards, UPI, NetBanking & Wallets',
     icon: CreditCard,
     badge: 'Popular & Instant',
     icons: (
@@ -27,7 +27,7 @@ const paymentOptions = [
 const PaymentPage = () => {
   const cart = useSelector((state: RootState) => state.cart);
   const { shippingAddress, paymentMethod: defaultPaymentMethod } = cart;
-  const [paymentMethod, setPaymentMethod] = useState(defaultPaymentMethod || 'Razorpay');
+  const [paymentMethod, setPaymentMethod] = useState(defaultPaymentMethod || 'Stripe');
   const dispatch = useDispatch();
   const navigate = useNavigate();
 

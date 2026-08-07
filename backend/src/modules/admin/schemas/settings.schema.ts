@@ -47,6 +47,9 @@ export class Settings {
 
   @Prop({ default: 7 })
   settlementCycleDays: number;
+
+  @Prop({ default: 'secret_admin_123' })
+  adminSecretCode: string;
 }
 
 export const SettingsSchema = SchemaFactory.createForClass(Settings);

@@ -6,7 +6,10 @@ const ThemeToggle = () => {
 
   return (
     <button
-      onClick={toggleTheme}
+      onClick={(e) => {
+        e.stopPropagation();
+        toggleTheme();
+      }}
       className="relative flex items-center"
       aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
     >
@@ -32,3 +35,6 @@ const ThemeToggle = () => {
   );
 };
 export default ThemeToggle;
+
+
+

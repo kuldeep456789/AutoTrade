@@ -44,10 +44,7 @@ export class OrdersController {
     @Headers('authorization') authorization: string | undefined,
     @Param('id') id: string,
   ) {
-    return this.ordersService.cancelOrder(
-      this.requireToken(authorization),
-      id,
-    );
+    return this.ordersService.cancelOrder(this.requireToken(authorization), id);
   }
 
   private requireToken(authorization?: string) {

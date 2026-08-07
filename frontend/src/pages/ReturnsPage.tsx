@@ -6,6 +6,7 @@ import { useCreateReturnMutation, useGetMyReturnsQuery } from '../store/slices/r
 import { Check, X, ChevronRight, ChevronDown, RotateCcw, AlertCircle, PackageCheck, PackageX } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
+import { useCurrency } from '../context/CurrencyContext';
 
 const RETURN_REASONS = [
   'Wrong Size', 'Poor Fit', 'Damaged Item', 'Missing Product',
@@ -51,6 +52,7 @@ const shortOrderId = (id: string) => {
 
 const ReturnsPage = () => {
   const userInfo = useSelector((state: RootState) => state.auth.userInfo);
+  const { formatCurrency } = useCurrency();
   const [activeTab, setActiveTab] = useState<'form' | 'history'>('form');
   const [createReturn, { isLoading: isSubmitting }] = useCreateReturnMutation();
   const { data: myReturns = [], isLoading: returnsLoading, refetch } = useGetMyReturnsQuery(undefined, { skip: !userInfo, pollingInterval: 3000 });
@@ -161,7 +163,7 @@ const ReturnsPage = () => {
         </div>
 
         <h1 className="text-[32px] sm:text-[38px] lg:text-[44px] font-bold leading-[1.1] mb-3">Returns & Refunds</h1>
-        <p className="text-[15px] text-zinc-500 mb-8 max-w-xl">Hassle-free returns within 7 days of delivery. Start a return or track an existing request.</p>
+        {/* <p className="text-[15px] text-zinc-500 mb-8 max-w-xl">Hassle-free returns within 7 days of delivery. Start a return or track an existing request.</p> */}
 
         {/* Tab Navigation */}
         <div className="flex gap-1 mb-8 p-1 bg-zinc-100 dark:bg-zinc-800 rounded-xl w-fit">
@@ -398,7 +400,7 @@ const ReturnsPage = () => {
                                   {ret.refundAmount != null && (
                                     <div>
                                       <p className="text-[11px] text-zinc-400 font-semibold uppercase tracking-wider">Refund Amount</p>
-                                      <p className="text-[13px] font-medium mt-0.5 text-green-600 font-bold">₹{ret.refundAmount}</p>
+                                      <p className="text-[13px] font-medium mt-0.5 text-green-600 font-bold">{formatCurrency(ret.refundAmount)}</p>
                                     </div>
                                   )}
                                   {ret.pickupDate && (

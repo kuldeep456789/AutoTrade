@@ -5,6 +5,9 @@
 @variant dark (&:where(.dark, .dark *));
 
 @theme {
+  /* Breakpoints */
+  --breakpoint-xs: 380px;
+
   /* Font families */
   --font-family-sans: "Space Grotesk", "Inter", sans-serif;
   --font-family-mono: "JetBrains Mono", monospace;
@@ -146,7 +149,7 @@
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
-    font-family: "Outfit", "Space Grotesk", sans-serif;
+    font-family: var(--font-family-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     -webkit-tap-highlight-color: transparent;
@@ -161,18 +164,91 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  /* Keep inputs neutral: never force text-transform or a fixed alignment that
+     would break per-component centering (e.g. OTP boxes). Components own their
+     own text-align via utilities. Direction stays LTR so CJ/product content
+     never renders RTL unexpectedly. */
   input,
   textarea,
   select {
-    text-align: left !important;
-    direction: ltr !important;
+    direction: ltr;
     text-transform: none;
   }
 
   input::placeholder,
   textarea::placeholder {
-    text-align: left !important;
     text-transform: none;
+  }
+
+  /* ── Remove unwanted browser editing / selection / autofill artifacts ──
+     Preserve accessibility: visible focus is kept only for keyboard users via
+     a clean custom focus ring (:focus-visible). */
+
+  /* Neutralize the default focus outline; interactive elements that need a
+     visible ring get one only when focused via keyboard. */
+  :focus {
+    outline: none;
+  }
+
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* Prevent long-press callout / selection handles on mobile for UI chrome. */
+  button,
+  a,
+  [role="button"],
+  [role="tab"],
+  select {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* Text stays selectable where users expect it (form fields, content). */
+  input,
+  textarea {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+
+  /* Kill the yellow/blue browser autofill tint so themed inputs look clean. */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:-webkit-autofill:active,
+  textarea:-webkit-autofill,
+  textarea:-webkit-autofill:hover,
+  textarea:-webkit-autofill:focus,
+  select:-webkit-autofill,
+  select:-webkit-autofill:hover,
+  select:-webkit-autofill:focus {
+    -webkit-text-fill-color: hsl(var(--foreground)) !important;
+    -webkit-box-shadow: 0 0 0 1000px hsl(var(--card)) inset !important;
+    box-shadow: 0 0 0 1000px hsl(var(--card)) inset !important;
+    transition: background-color 9999s ease-in-out 0s;
+    caret-color: hsl(var(--foreground));
+  }
+
+  /* Remove number spinner arrows wherever they appear. */
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+
+  /* A sensible themed caret color so cursors never disappear in dark mode. */
+  input,
+  textarea,
+  select {
+    caret-color: hsl(var(--foreground));
   }
 
   img {
@@ -346,17 +422,53 @@ img {
   height: 0 !important;
 }
 
-/* Razorpay Modal Responsive Overlay Fixes */
-.razorpay-container {
-  z-index: 999999 !important;
-}
-iframe.razorpay-checkout-frame {
-  max-width: 100vw !important;
-  max-height: 100vh !important;
-}
-
 /* Typewriter cursor blink */
 @keyframes blink-cursor {
   0%, 100% { opacity: 1; }
   50% { opacity: 0; }
+}
+
+/* ── Mobile-first scroll reveal (subtle, GPU-friendly, no layout shift) ── */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.reveal-rise {
+  animation: rise-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.reveal-fade-up {
+  animation: fade-up 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Respect users who prefer reduced motion: skip scroll/hover animations. */
+@media (prefers-reduced-motion: reduce) {
+  .reveal-rise,
+  .reveal-fade-up,
+  .animate-fadeIn,
+  .animate-fade-in {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+  * {
+    transition-duration: 0.01ms !important;
+  }
 }

@@ -6,9 +6,9 @@ import toast from 'react-hot-toast';
 import { addToCart } from '../../store/slices/cartSlice';
 import { toggleWishlist } from '../../store/slices/wishlistSlice';
 import type { RootState } from '../../store/store';
-import WishlistLoginPopup from '../WishlistLoginPopup';
 import { getProductId } from '../../lib/product';
 import { useCurrency } from '../../context/CurrencyContext';
+import { useGetSettingsQuery } from '../../store/slices/settingsApiSlice';
 
 interface ProductCardProps {
   product: any;
@@ -32,7 +32,8 @@ const ProductCard = ({ product }: ProductCardProps) => {
   const [imageFailed, setImageFailed] = useState(false);
   const [hovered, setHovered] = useState(false);
   const [isAdded, setIsAdded] = useState(false);
-  const [showWishlistPopup, setShowWishlistPopup] = useState(false);
+  const { data: settingsData } = useGetSettingsQuery(undefined);
+  const gstPercentage = settingsData?.settings?.gstPercentage || 18;
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -53,6 +54,11 @@ const ProductCard = ({ product }: ProductCardProps) => {
   const displayOriginalPrice = rawOriginal && Number(rawOriginal) > Number(currentPrice)
     ? Number(rawOriginal)
     : Math.round(Number(currentPrice) * 1.3);
+
+  const discountPercent =
+    displayOriginalPrice > Number(currentPrice)
+      ? Math.round(((displayOriginalPrice - Number(currentPrice)) / displayOriginalPrice) * 100)
+      : 0;
 
 
 
@@ -78,10 +84,6 @@ const ProductCard = ({ product }: ProductCardProps) => {
   const handleWishlistClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!userInfo) {
-      setShowWishlistPopup(true);
-      return;
-    }
     dispatch(
       toggleWishlist({
         _id: productId,
@@ -108,6 +110,8 @@ const ProductCard = ({ product }: ProductCardProps) => {
         image: primaryImage,
         qty: 1,
         variant: { color: product.colors?.[0] || 'Default', size: 'One Size' },
+        vid: product.variants?.[0]?.vid || '',
+        sku: product.sku || product.pid || '',
       };
       sessionStorage.setItem('pendingCartItem', JSON.stringify(pendingItem));
       navigate(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
@@ -122,6 +126,8 @@ const ProductCard = ({ product }: ProductCardProps) => {
         image: primaryImage,
         qty: 1,
         variant: { color: product.colors?.[0] || 'Default', size: 'One Size' },
+        vid: product.variants?.[0]?.vid || '',
+        sku: product.sku || product.pid || '',
       })
     );
     setIsAdded(true);
@@ -131,7 +137,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
 
   return (
     <div
-      className="group relative flex flex-col h-full w-full bg-white dark:bg-[#111111] border border-zinc-200 dark:border-[#262626] rounded-[20px] overflow-hidden transition-all duration-300 hover:border-[#FF7A00] hover:shadow-xl hover:shadow-orange-500/10"
+      className="group relative flex flex-col h-full w-full bg-white dark:bg-[#111111] border border-zinc-200 dark:border-[#262626] rounded-[20px] overflow-hidden transition-all duration-300 hover:border-[#FF7A00] hover:shadow-xl hover:shadow-orange-500/10 active:scale-[0.99]"
 
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -142,7 +148,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
         <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5">
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-100 dark:bg-emerald-950/90 text-emerald-800 dark:text-emerald-300 text-[10px] sm:text-[11px] font-bold border border-emerald-300/60 dark:border-emerald-800 shadow-sm backdrop-blur-sm">
             <span className="text-[10px]">💵</span>
-            18% GST
+            {gstPercentage}% GST
           </span>
         </div>
 
@@ -150,20 +156,20 @@ const ProductCard = ({ product }: ProductCardProps) => {
           src={imageFailed ? PLACEHOLDER_IMAGE : (hovered && hoverImage ? hoverImage : primaryImage)}
           alt={productName}
           onError={() => setImageFailed(true)}
-          className="w-full h-full object-cover transition-opacity duration-300"
+          className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
           loading="lazy"
         />
 
         {/* Circular wishlist button */}
         <button
           onClick={handleWishlistClick}
-          className={`absolute top-3 right-3 z-10 flex items-center justify-center w-8 h-8 rounded-full border border-zinc-200 bg-white shadow-sm transition-colors duration-300 cursor-pointer ${isWishlisted
-            ? 'text-red-500 border-red-500'
+          className={`absolute top-3 right-3 z-10 flex items-center justify-center w-10 h-10 rounded-full border border-zinc-200 bg-white/95 shadow-md backdrop-blur-sm transition-all duration-300 active:scale-90 cursor-pointer ${isWishlisted
+            ? 'text-red-500 border-red-500 bg-white'
             : 'text-zinc-500 hover:text-red-500 hover:border-red-500'
             }`}
           aria-label="Wishlist"
         >
-          <Heart size={15} fill={isWishlisted ? 'currentColor' : 'none'} strokeWidth={1.5} />
+          <Heart size={18} fill={isWishlisted ? 'currentColor' : 'none'} strokeWidth={1.5} />
         </button>
       </Link>
 
@@ -173,22 +179,22 @@ const ProductCard = ({ product }: ProductCardProps) => {
 
       {/* Product Content Details */}
       <div className="flex flex-col p-4 bg-white dark:bg-[#111111]">
-        <Link to={`/product/${productId}`} className="block mb-1">
-          <h3 className="text-[13px] sm:text-[14px] font-inter font-semibold text-zinc-900 dark:text-white group-hover:text-[#FF7A00] transition-colors line-clamp-1 leading-snug tracking-tight">
+        <Link to={`/product/${productId}`} className="block mb-2">
+          <h3 className="text-sm sm:text-[15px] font-inter font-semibold text-zinc-900 dark:text-white group-hover:text-[#FF7A00] transition-colors line-clamp-2 leading-snug tracking-tight">
             {productName}
           </h3>
         </Link>
 
-        <div className="mt-3 flex items-end justify-between gap-3">
+        <div className="mt-auto flex items-end justify-between gap-3">
           <div className="flex flex-col gap-1.5">
 
             <div className="flex items-center gap-2 flex-wrap">
 
-              <span className="text-[17px] sm:text-[19px] font-bold text-zinc-950 dark:text-white">
+              <span className="text-lg sm:text-xl font-bold text-zinc-950 dark:text-white tabular-nums">
                 {formatCurrency(currentPrice)}
               </span>
 
-              <span className="text-[12px] text-zinc-400 line-through">
+              <span className="text-xs text-zinc-400 line-through">
                 {formatCurrency(displayOriginalPrice)}
               </span>
 
@@ -202,7 +208,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
 
           <button
             onClick={handleQuickAdd}
-            className={`px-4 h-10 rounded-full flex items-center justify-center gap-2 transition-all duration-300 active:scale-95 cursor-pointer shrink-0 border text-[11px] font-bold uppercase tracking-wider ${isAdded
+            className={`min-w-[88px] px-4 h-11 rounded-full flex items-center justify-center gap-2 transition-all duration-300 active:scale-95 cursor-pointer shrink-0 border text-[11px] font-bold uppercase tracking-wider ${isAdded
               ? 'bg-zinc-950 dark:bg-white border-transparent text-white dark:text-zinc-950'
               : 'bg-zinc-950 border-zinc-800 text-white hover:bg-[#FF7A00] hover:border-[#FF7A00]'
               }`}
@@ -210,12 +216,12 @@ const ProductCard = ({ product }: ProductCardProps) => {
 
             {isAdded ? (
               <>
-                <Check size={13} strokeWidth={3} />
+                <Check size={14} strokeWidth={3} />
                 <span>Added</span>
               </>
             ) : (
               <>
-                <ShoppingCart size={13} strokeWidth={2.5} />
+                <ShoppingCart size={14} strokeWidth={2.5} />
                 <span>ADD CART</span>
               </>
             )}
@@ -224,19 +230,6 @@ const ProductCard = ({ product }: ProductCardProps) => {
         </div>
 
       </div>
-
-      {showWishlistPopup && (
-        <WishlistLoginPopup
-          product={{
-            _id: productId,
-            name: productName,
-            price: currentPrice,
-            discountPrice: product.discountPrice,
-            image: primaryImage,
-          }}
-          onClose={() => setShowWishlistPopup(false)}
-        />
-      )}
     </div>
   );
 };

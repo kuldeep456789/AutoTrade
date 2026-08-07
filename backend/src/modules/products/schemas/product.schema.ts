@@ -10,6 +10,9 @@ export class Product {
   productName!: string;
 
   @Prop({ default: '' })
+  brand!: string;
+
+  @Prop({ default: '' })
   collectionType!: string;
 
   @Prop({ default: '' })
@@ -80,4 +83,3 @@ ProductSchema.index({ subcategoryName: 1 });
 ProductSchema.index({ categoryName: 1 });
 ProductSchema.index({ brand: 1 });
 ProductSchema.index({ updatedAt: -1 });
-

@@ -3,14 +3,8 @@ import { HydratedDocument, Types } from 'mongoose';
 
 export type ReturnDocument = HydratedDocument<ReturnRequest>;
 
-@Schema({ timestamps: true })
-export class ReturnRequest {
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true, index: true })
-  userId: Types.ObjectId;
-
-  @Prop({ required: true })
-  orderId: string;
-
+@Schema({ _id: false })
+export class ReturnItem {
   @Prop({ required: true })
   productId: string;
 
@@ -26,17 +20,60 @@ export class ReturnRequest {
   @Prop()
   productColor?: string;
 
-  @Prop({ required: true })
+  @Prop({ default: 1 })
+  quantity: number;
+
+  @Prop()
+  price?: number;
+
+  @Prop()
+  sku?: string;
+
+  @Prop()
+  variantId?: string;
+}
+
+export const ReturnItemSchema =
+  SchemaFactory.createForClass(ReturnItem);
+
+@Schema({ timestamps: true })
+export class ReturnRequest {
+  @Prop({
+    type: Types.ObjectId,
+    ref: 'User',
+    required: true,
+    index: true,
+  })
+  userId: Types.ObjectId;
+
+  @Prop({
+    required: true,
+    index: true,
+  })
+  orderId: string;
+
+  @Prop({
+    type: [ReturnItemSchema],
+    required: true,
+    default: [],
+  })
+  items: ReturnItem[];
+
+  @Prop({
+    required: true,
+  })
   reason: string;
 
   @Prop()
   description?: string;
 
-  @Prop({ type: [String], default: [] })
+  @Prop({
+    type: [String],
+    default: [],
+  })
   images: string[];
 
   @Prop({
-    required: true,
     enum: [
       'requested',
       'approved',
@@ -53,7 +90,9 @@ export class ReturnRequest {
   @Prop()
   pickupDate?: Date;
 
-  @Prop()
+  @Prop({
+    default: 0,
+  })
   refundAmount?: number;
 
   @Prop({
@@ -65,7 +104,9 @@ export class ReturnRequest {
   @Prop()
   exchangeSize?: string;
 
-  @Prop({ type: Object })
+  @Prop({
+    type: Object,
+  })
   pickupAddress?: {
     street: string;
     city: string;
@@ -76,6 +117,53 @@ export class ReturnRequest {
 
   @Prop()
   adminRemarks?: string;
+
+  @Prop({
+    default: 0,
+  })
+  totalItems: number;
+
+  @Prop({
+    default: 0,
+  })
+  totalReturnAmount: number;
+
+  @Prop()
+  approvedBy?: string;
+
+  @Prop()
+  approvedAt?: Date;
+
+  @Prop()
+  rejectedAt?: Date;
+
+  @Prop()
+  refundTransactionId?: string;
+
+  @Prop()
+  pickupTrackingId?: string;
+
+  @Prop({
+    default: false,
+  })
+  isExchange: boolean;
+
+  @Prop()
+  exchangeOrderId?: string;
 }
 
-export const ReturnRequestSchema = SchemaFactory.createForClass(ReturnRequest);
+export const ReturnRequestSchema =
+  SchemaFactory.createForClass(ReturnRequest);
+
+ReturnRequestSchema.index({
+  userId: 1,
+  orderId: 1,
+});
+
+ReturnRequestSchema.index({
+  status: 1,
+});
+
+ReturnRequestSchema.index({
+  createdAt: -1,
+});

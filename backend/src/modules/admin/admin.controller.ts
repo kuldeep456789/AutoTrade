@@ -26,6 +26,10 @@ import { ActivityLog } from './schemas/activity-log.schema';
 import { Settings } from './schemas/settings.schema';
 import { Product } from '../products/schemas/product.schema';
 import { CustomerIssue } from './schemas/customer-issue.schema';
+import { UserActivityLog } from '../users/schemas/user-activity-log.schema';
+import { SearchRepository } from '../search/search.repository';
+
+import { SettingsService } from '../settings/settings.service';
 
 @Controller('admin')
 export class AdminController {
@@ -43,8 +47,12 @@ export class AdminController {
     @InjectModel(Product.name) private readonly productModel: Model<Product>,
     @InjectModel(CustomerIssue.name)
     private readonly customerIssueModel: Model<CustomerIssue>,
+    @InjectModel(UserActivityLog.name)
+    private readonly userActivityLogModel: Model<UserActivityLog>,
     private readonly jwtService: JwtService,
     private readonly usersService: UsersService,
+    private readonly searchRepository: SearchRepository,
+    private readonly settingsService: SettingsService,
   ) { }
 
   // ─── Seed admin ───────────────────────────────────────────────────────────
@@ -63,43 +71,140 @@ export class AdminController {
       .exec();
     return { message: 'You are now an admin. Please log in again.' };
   }
+  @Get('settings')
+  async getSettings(@Headers('authorization') authorization?: string) {
+    await this.requireAdmin(authorization);
+    const settings = await this.settingsService.getSettings();
+    return { settings };
+  }
 
-  // ─── Dashboard ────────────────────────────────────────────────────────────
+  @Patch('settings')
+  async updateSettings(
+    @Body() updateData: Partial<Settings>,
+    @Headers('authorization') authorization?: string,
+  ) {
+    await this.requireAdmin(authorization);
+    const settings = await this.settingsService.updateSettings(updateData as any);
+    return { settings, message: 'Settings updated successfully' };
+  }
+
   @Get('dashboard')
   async getDashboard(@Headers('authorization') authorization?: string) {
     await this.requireAdmin(authorization);
 
-    const [totalUsers, totalOrders, pendingReturns, revenueAgg, recentOrders, unpaidOrders] =
-      await Promise.all([
-        this.userModel.countDocuments().exec(),
-        this.orderModel.countDocuments().exec(),
-        this.returnModel.countDocuments({ status: 'requested' }).exec(),
-        this.orderModel
-          .aggregate([
-            { $match: { paymentStatus: 'paid' } },
-            { $group: { _id: null, total: { $sum: '$totalAmount' } } },
-          ])
-          .exec(),
-        this.orderModel
-          .find({ paymentStatus: 'paid' })
-          .sort({ createdAt: -1 })
-          .limit(5)
-          .populate('userId', 'name email firstName lastName')
-          .lean()
-          .exec(),
-        this.orderModel
-          .countDocuments({ paymentStatus: { $ne: 'paid' } })
-          .exec(),
-      ]);
+    const [
+      totalUsers,
+      totalOrders,
+      pendingReturns,
+      revenueAgg,
+      recentOrders,
+      pendingPaymentOrders,
+    ] = await Promise.all([
+      this.userModel.countDocuments().exec(),
+      this.orderModel.countDocuments().exec(),
+      this.returnModel.countDocuments({ status: 'requested' }).exec(),
+      this.orderModel
+        .aggregate([
+          { $match: { paymentStatus: 'paid' } },
+          { $group: { _id: null, total: { $sum: '$totalAmount' } } },
+        ])
+        .exec(),
+      this.orderModel
+        .find({ paymentStatus: 'paid' })
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .populate('userId', 'name email firstName lastName')
+        .lean()
+        .exec(),
+      this.orderModel.countDocuments({ paymentStatus: { $ne: 'paid' } }).exec(),
+    ]);
 
     const revenue = revenueAgg[0]?.total ?? 0;
     return {
-      stats: { totalUsers, totalOrders, pendingReturns, totalRevenue: revenue, unpaidOrders },
+      stats: {
+        totalUsers,
+        totalOrders,
+        pendingReturns,
+        totalRevenue: revenue,
+        pendingPaymentOrders,
+      },
       recentOrders,
     };
   }
 
-  // ─── Analytics ────────────────────────────────────────────────────────────
+
+  @Get('finance')
+  async getFinance(@Headers('authorization') authorization?: string) {
+    await this.requireAdmin(authorization);
+
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay());
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const [
+      totalOrders,
+      pendingOrders,
+      deliveredOrders,
+      cancelledOrders,
+      revenueStats,
+      refundsStats
+    ] = await Promise.all([
+      this.orderModel.countDocuments().exec(),
+      this.orderModel.countDocuments({ status: 'pending' }).exec(),
+      this.orderModel.countDocuments({ status: 'delivered' }).exec(),
+      this.orderModel.countDocuments({ status: 'cancelled' }).exec(),
+      this.orderModel.aggregate([
+        { $match: { paymentStatus: 'paid' } },
+        {
+          $group: {
+            _id: null,
+            totalRevenue: { $sum: '$totalAmount' },
+            todayRevenue: { 
+              $sum: { $cond: [{ $gte: ['$createdAt', startOfToday] }, '$totalAmount', 0] } 
+            },
+            weeklyRevenue: { 
+              $sum: { $cond: [{ $gte: ['$createdAt', startOfWeek] }, '$totalAmount', 0] } 
+            },
+            monthlyRevenue: { 
+              $sum: { $cond: [{ $gte: ['$createdAt', startOfMonth] }, '$totalAmount', 0] } 
+            },
+            orderCount: { $sum: 1 }
+          }
+        }
+      ]).exec(),
+      this.returnModel.aggregate([
+        { $match: { status: 'refunded' } },
+        { $group: { _id: null, totalRefunds: { $sum: '$refundAmount' } } }
+      ]).exec()
+    ]);
+
+    const settings = await this.settingsModel.findOne().lean().exec();
+    const gstRate = settings?.gstRate || 18;
+
+    const stats = revenueStats[0] || { totalRevenue: 0, todayRevenue: 0, weeklyRevenue: 0, monthlyRevenue: 0, orderCount: 0 };
+    const totalRefunds = refundsStats[0]?.totalRefunds || 0;
+    
+    // Total GST Collected = Total Revenue - (Total Revenue / (1 + GST Rate / 100))
+    // Or simplified if TotalAmount is inclusive of GST: GST = TotalAmount * (gstRate / (100 + gstRate))
+    const totalGst = stats.totalRevenue * (gstRate / (100 + gstRate));
+    const averageOrderValue = stats.orderCount > 0 ? stats.totalRevenue / stats.orderCount : 0;
+
+    return {
+      totalRevenue: stats.totalRevenue,
+      todayRevenue: stats.todayRevenue,
+      weeklyRevenue: stats.weeklyRevenue,
+      monthlyRevenue: stats.monthlyRevenue,
+      totalOrders,
+      averageOrderValue,
+      totalGst,
+      pendingOrders,
+      deliveredOrders,
+      cancelledOrders,
+      totalRefunds
+    };
+  }
+
   @Get('analytics')
   async getAnalytics(
     @Headers('authorization') authorization?: string,
@@ -172,7 +277,7 @@ export class AdminController {
     return { revenueByDay, ordersByStatus, topCustomers, monthlyRevenue };
   }
 
-  // ─── Search ───────────────────────────────────────────────────────────────
+
   @Get('search')
   async search(
     @Headers('authorization') authorization?: string,
@@ -203,7 +308,7 @@ export class AdminController {
 
     // Search orders by ID or status
     // Mongoose ObjectIds can be queried if it's a valid hex string
-    let orderQuery: any = { paymentStatus: 'paid' };
+    const orderQuery: any = { paymentStatus: 'paid' };
     if (query.match(/^[0-9a-fA-F]{24}$/)) {
       orderQuery._id = query;
     } else {
@@ -220,7 +325,7 @@ export class AdminController {
     return { users, orders };
   }
 
-  // ─── Users ────────────────────────────────────────────────────────────────
+
   @Get('users')
   async getUsers(@Headers('authorization') authorization?: string) {
     await this.requireAdmin(authorization);
@@ -241,11 +346,14 @@ export class AdminController {
     const user = await this.userModel.findById(id).exec();
     if (!user) throw new NotFoundException('User not found');
     if (user.role === 'admin')
-      throw new UnauthorizedException('Cannot delete an admin account');
+      throw new BadRequestException('Cannot delete an admin user');
+
     await this.userModel.findByIdAndDelete(id).exec();
-    await this.logActivity('user_deleted', `Deleted user ${user.email}`);
-    return { message: 'User deleted successfully' };
+    return { success: true, message: 'User deleted successfully' };
   }
+
+
+
 
   @Get('orders')
   async getOrders(@Headers('authorization') authorization?: string) {
@@ -258,68 +366,8 @@ export class AdminController {
       .lean()
       .exec();
 
-    // Collect all unique product IDs referenced across all orders
-    const productIds = [
-      ...new Set(
-        orders.flatMap(order =>
-          (order.items || [])
-            .map((item: any) => item.productId)
-            .filter(Boolean),
-        ),
-      ),
-    ];
 
-    console.log('Order productIds:', productIds);
-
-    // Fetch all matching products in one query
-    const products = await this.productModel
-      .find({ pid: { $in: productIds } })
-      .select(`
-        pid
-        title
-        productName
-        name
-        images
-        price
-        discountPrice
-        colors
-        sizes
-        sku
-      `)
-      .lean()
-      .exec();
-
-    console.log(
-      'Mongo products:',
-      products.map((p: any) => ({
-        pid: p.pid,
-        title: p.title,
-        productName: p.productName,
-      })),
-    );
-
-    const productMap = new Map(products.map((p: any) => [p.pid, p]));
-
-    for (const order of orders) {
-      for (const item of order.items || []) {
-        console.log('Lookup:', item.productId, '=>', productMap.has(item.productId));
-      }
-    }
-
-    // Attach product details to every order item
-    for (const order of orders) {
-      for (const item of order.items || []) {
-        const product: any = productMap.get(item.productId);
-        if (!product) continue;
-
-        item.image = product.images?.[0] || 'https://placehold.co/80x80?text=No+Image';
-        item.productName = product.title || product.productName || product.name || 'Unknown Product';
-        item.price = product.discountPrice || product.price || 0;
-        item.sku = product.sku || '';
-        item.color = item.variant?.color || product.colors?.[0] || '';
-        item.size = item.variant?.size || product.sizes?.[0] || '';
-      }
-    }
+    await this.searchRepository.enrichOrderItemsBatch(orders);
 
     return { orders };
   }
@@ -342,8 +390,7 @@ export class AdminController {
       'confirmed',
       'processing',
       'shipped',
-      'out_for_delivery',
-      'out for delivery',
+
       'delivered',
       'cancelled',
     ];
@@ -361,7 +408,7 @@ export class AdminController {
     return { message: 'Order status updated', order };
   }
 
-  // ─── Returns ──────────────────────────────────────────────────────────────
+
   @Get('returns')
   async getReturns(@Headers('authorization') authorization?: string) {
     await this.requireAdmin(authorization);
@@ -407,7 +454,7 @@ export class AdminController {
     return { message: 'Return status updated', return: ret };
   }
 
-  // ─── Coupons ──────────────────────────────────────────────────────────────
+
   @Get('coupons')
   async getCoupons(@Headers('authorization') authorization?: string) {
     await this.requireAdmin(authorization);
@@ -472,7 +519,7 @@ export class AdminController {
     return { message: 'Coupon deleted' };
   }
 
-  // ─── Notifications ────────────────────────────────────────────────────────
+
   @Get('notifications')
   async getNotifications(@Headers('authorization') authorization?: string) {
     await this.requireAdmin(authorization);
@@ -509,7 +556,7 @@ export class AdminController {
     return { notification };
   }
 
-  // ─── Activity Logs ────────────────────────────────────────────────────────
+
   @Get('activity-logs')
   async getActivityLogs(@Headers('authorization') authorization?: string) {
     await this.requireAdmin(authorization);
@@ -522,7 +569,7 @@ export class AdminController {
     return { logs };
   }
 
-  // ─── Products ─────────────────────────────────────────────────────────────
+
   @Get('products')
   async getProducts(
     @Headers('authorization') authorization?: string,
@@ -573,7 +620,7 @@ export class AdminController {
     return { message: 'Product deleted successfully' };
   }
 
-  // ─── Customer Issues ──────────────────────────────────────────────────────
+
   @Get('issues')
   async getIssues(@Headers('authorization') authorization?: string) {
     await this.requireAdmin(authorization);
@@ -609,48 +656,65 @@ export class AdminController {
     return { message: 'Issue status updated', issue };
   }
 
-  // ─── Settings ─────────────────────────────────────────────────────────────
-  @Get('settings')
-  async getSettings(@Headers('authorization') authorization?: string) {
-    await this.requireAdmin(authorization);
-    let settings = await this.settingsModel.findOne().lean().exec();
-    if (!settings) {
-      settings = await this.settingsModel.create({
-        storeName: 'AutoTrade',
-        storeEmail: 'hello@autotrade.in',
-        currency: 'INR',
-        heroBannerImages: [],
-        maintenanceMode: false,
-        freeShippingThreshold: 499,
-        socialLinks: {},
-      });
-    }
-    return { settings };
-  }
 
-  @Patch('settings')
-  async updateSettings(
-    @Body()
-    body: Partial<{
-      storeName: string;
-      storeEmail: string;
-      currency: string;
-      heroBannerImages: string[];
-      maintenanceMode: boolean;
-      freeShippingThreshold: number;
-      socialLinks: Record<string, string>;
-    }>,
+
+
+
+  @Get('user-activity-logs')
+  async getUserActivityLogs(
+    @Query('page') pageStr?: string,
+    @Query('limit') limitStr?: string,
+    @Query('search') search?: string,
+    @Query('eventTypes') eventTypes?: string,
+    @Query('verificationStatus') verificationStatus?: string,
     @Headers('authorization') authorization?: string,
   ) {
     await this.requireAdmin(authorization);
-    const settings = await this.settingsModel
-      .findOneAndUpdate({}, { $set: body }, { new: true, upsert: true })
-      .exec();
-    await this.logActivity('settings_updated', 'Admin updated store settings');
-    return { settings };
+
+    const page = Math.max(1, parseInt(pageStr || '1', 10));
+    const limit = Math.max(1, parseInt(limitStr || '50', 10));
+    const skip = (page - 1) * limit;
+
+    const query: any = {};
+
+    if (search?.trim()) {
+      query.$or = [
+        { email: { $regex: search, $options: 'i' } },
+        { userName: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    if (eventTypes?.trim()) {
+      const types = eventTypes.split(',').map(t => t.trim()).filter(Boolean);
+      if (types.length) query.eventType = { $in: types };
+    }
+
+    if (verificationStatus?.trim()) {
+      query.verificationStatus = verificationStatus;
+    }
+
+    const [logs, total] = await Promise.all([
+      this.userActivityLogModel
+        .find(query)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean()
+        .exec(),
+      this.userActivityLogModel.countDocuments(query).exec()
+    ]);
+
+    return {
+      logs,
+      pagination: {
+        total,
+        page,
+        limit,
+        pages: Math.ceil(total / limit),
+      }
+    };
   }
 
-  // ─── Private helpers ──────────────────────────────────────────────────────
   private async requireAdmin(authorization?: string) {
     const token = authorization?.replace(/^Bearer\s+/i, '');
     if (token) {
@@ -691,7 +755,7 @@ export class AdminController {
     try {
       await this.activityLogModel.create({ action, description });
     } catch {
-      // Non-critical — swallow errors
+
     }
   }
 }

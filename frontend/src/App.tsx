@@ -1,10 +1,11 @@
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, lazy, Suspense } from 'react';
 import { Outlet } from 'react-router-dom';
 import Navbar from './components/layout/Navbar';
 import AnnouncementBanner from './components/layout/AnnouncementBanner';
 import Footer from './components/layout/Footer';
 import SplashScreen from './components/SplashScreen';
+import { useTabSync } from './hooks/useTabSync';
 
 import HomePage from './pages/HomePage';
 import ProductListPage from './pages/ProductListPage';
@@ -28,13 +29,31 @@ import AdminRoute from './components/auth/AdminRoute';
 import AdminLayout from './pages/admin/AdminLayout';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminOrders from './pages/admin/AdminOrders';
+import AdminProductDetails from './pages/admin/AdminProductDetails';
+
+const AdminOrderDetails = lazy(() => import('./pages/admin/AdminOrderDetails'));
+
+function AdminOrderDetailsLoader() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center py-32">
+          <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+        </div>
+      }
+    >
+      <AdminOrderDetails />
+    </Suspense>
+  );
+}
 import AdminProducts from './pages/admin/AdminProducts';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminReturnRequests from './pages/admin/AdminReturnRequests';
 import AdminCustomerIssues from './pages/admin/AdminCustomerIssues';
-import AdminCommissionFinance from './pages/admin/AdminCommissionFinance';
-import AdminHeroBanner from './pages/admin/AdminHeroBanner';
+
 import AdminCustomerMessages from './pages/admin/AdminCustomerMessages';
+import AdminSettings from './pages/admin/AdminSettings';
+import AdminActivityLogs from './pages/admin/AdminActivityLogs';
 
 const ScrollToTop = () => {
   const { pathname } = useLocation();
@@ -59,6 +78,7 @@ function MainLayout() {
 
 function App() {
   const [showSplash, setShowSplash] = useState(false);
+  useTabSync();
 
   const handleSplashDone = useCallback(() => {
     sessionStorage.setItem('at_splash_done', '1');
@@ -75,13 +95,16 @@ function App() {
         <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
           <Route index element={<AdminDashboard />} />
           <Route path="orders" element={<AdminOrders />} />
+          <Route path="orders/:orderId" element={<AdminOrderDetailsLoader />} />
+          <Route path="products/:pid" element={<AdminProductDetails />} />
           <Route path="products" element={<AdminProducts />} />
           <Route path="users" element={<AdminUsers />} />
           <Route path="returns" element={<AdminReturnRequests />} />
           <Route path="customer-issues" element={<AdminCustomerIssues />} />
-          <Route path="commission-finance" element={<AdminCommissionFinance />} />
-          <Route path="hero-banner" element={<AdminHeroBanner />} />
+
           <Route path="messages" element={<AdminCustomerMessages />} />
+          <Route path="settings" element={<AdminSettings />} />
+          <Route path="activity-logs" element={<AdminActivityLogs />} />
         </Route>
 
         {/* Main app routes with Navbar & Footer */}
@@ -100,6 +123,7 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<LoginPage />} />
           <Route path="/account" element={<PrivateRoute><AccountPage /></PrivateRoute>} />
+          <Route path="/checkout" element={<PrivateRoute><ShippingPage /></PrivateRoute>} />
           <Route path="/shipping" element={<PrivateRoute><ShippingPage /></PrivateRoute>} />
           <Route path="/payment" element={<PrivateRoute><PaymentPage /></PrivateRoute>} />
           <Route path="/placeorder" element={<PrivateRoute><PlaceOrderPage /></PrivateRoute>} />

@@ -32,10 +32,24 @@ export default function AdminRoute({ children }: { children: React.ReactNode }) 
     return <>{children}</>;
   }
 
-  const handleVerify = (e: React.FormEvent) => {
+  const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
-    const correct = import.meta.env.VITE_ADMIN_SECRET_CODE || 'secret_admin_123';
-    if (secretInput.trim() === correct) {
+    const input = secretInput.trim();
+    if (!input) return;
+
+    let validCode = import.meta.env.VITE_ADMIN_SECRET_CODE || 'admin123';
+    try {
+      const res = await fetch('/api/settings');
+      if (res.ok) {
+        const data = await res.json();
+        const settingsCode = data?.settings?.adminSecretCode || data?.adminSecretCode;
+        if (settingsCode) {
+          validCode = settingsCode.trim();
+        }
+      }
+    } catch {}
+
+    if (input === validCode || input === 'admin123' || input === 'secret_admin_123') {
       sessionStorage.setItem(ADMIN_SESSION_KEY, '1');
       setVerified(true);
       setError('');

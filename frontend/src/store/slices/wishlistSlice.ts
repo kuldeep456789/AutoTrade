@@ -42,9 +42,14 @@ const wishlistSlice = createSlice({
       state.wishlistItems = [];
       localStorage.removeItem('wishlistItems');
     },
+    syncFromStorage: (state) => {
+      state.wishlistItems = localStorage.getItem('wishlistItems')
+        ? JSON.parse(localStorage.getItem('wishlistItems') as string)
+        : [];
+    },
   },
 });
 
-export const { toggleWishlist, removeFromWishlist, clearWishlist } = wishlistSlice.actions;
+export const { toggleWishlist, removeFromWishlist, clearWishlist, syncFromStorage } = wishlistSlice.actions;
 
 export default wishlistSlice.reducer;

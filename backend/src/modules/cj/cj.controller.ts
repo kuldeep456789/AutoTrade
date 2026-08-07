@@ -3,7 +3,7 @@ import { CjService } from './cj.service';
 
 @Controller('cj')
 export class CjController {
-  constructor(private readonly cjService: CjService) { }
+  constructor(private readonly cjService: CjService) {}
 
   @Post('sync-order/:orderId')
   syncOrder(@Param('orderId') orderId: string) {

@@ -86,7 +86,7 @@ const AnnouncementBanner = () => {
                       animate={{ opacity: 1, y: 0, scaleY: 1 }}
                       exit={{ opacity: 0, y: -6, scaleY: 0.97 }}
                       transition={{ duration: 0.15, ease: 'easeOut' }}
-                      style={{ transformOrigin: 'top center' }}
+                      style={{ transformOrigin: 'top center' } as React.CSSProperties}
                       className="absolute top-full left-0 mt-0 z-50 flex rounded-xl overflow-hidden shadow-2xl border border-zinc-800 bg-zinc-950 p-1"
                       onMouseEnter={handleDropdownEnter}
                       onMouseLeave={handleDropdownLeave}

@@ -5,6 +5,7 @@ import {
   Logger,
   UnauthorizedException,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -13,10 +14,15 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { MailService } from '../mail/mail.service';
 import { OtpStoreService } from './services/otp-store.service';
+import { RedisService } from '../redis/redis.service';
 import { authenticator } from 'otplib';
 import * as qrcode from 'qrcode';
+import { validatePassword } from '../../common/validators/password.validator';
+import { UserActivityLogService } from '../users/user-activity-log.service';
+import { EventType, RegistrationStatus, VerificationStatus } from '../users/schemas/user-activity-log.schema';
 
-// ─── In-memory rate limiter for admin secret brute-force protection ──────────
+import { SettingsService } from '../settings/settings.service';
+
 interface FailEntry {
   count: number;
   firstFailAt: number;
@@ -24,407 +30,576 @@ interface FailEntry {
 }
 
 const ADMIN_SECRET_RATE_LIMIT = {
-  MAX_ATTEMPTS: 5,          // max failures in window
-  WINDOW_MS: 15 * 60_000,  // 15-minute window
-  LOCK_MS: 30 * 60_000,    // 30-minute lockout after limit
+  MAX_ATTEMPTS: 5,
+  WINDOW_MS: 15 * 60_000,
+  LOCK_MS: 30 * 60_000,
 };
+
+const LOGIN_RATE_LIMIT = {
+  MAX_ATTEMPTS: 5,
+  WINDOW_MS: 15 * 60_000,
+  LOCK_MS: 15 * 60_000,
+};
+
+const ACCESS_TOKEN_TTL = '15m';
+const REFRESH_TOKEN_TTL = '7d';
+const REFRESH_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60;
+const TWO_FA_TEMP_TOKEN_TTL = '5m';
+const EMAIL_DEDUP_TTL = 60;
 
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
 
-  /** Key: email → failure tracking for admin secret attempts */
   private readonly adminSecretFailures = new Map<string, FailEntry>();
+  private readonly loginFailures = new Map<string, FailEntry>();
+  private readonly refreshTokenStore = new Map<string, { hash: string; expiresAt: number }>();
 
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
     private readonly mailService: MailService,
     private readonly otpStore: OtpStoreService,
-  ) {}
+    private readonly activityLogService: UserActivityLogService,
+    @Optional() private readonly redisService?: RedisService,
+    @Optional() private readonly settingsService?: SettingsService,
+  ) { }
+
+  private async dedupEmail(key: string): Promise<boolean> {
+    if (!this.redisService?.isReady()) return false;
+    const exists = await this.redisService.exists(`email:${key}`);
+    if (exists) return true;
+    await this.redisService.setJson(`email:${key}`, { sent: true }, EMAIL_DEDUP_TTL);
+    return false;
+  }
+
+  private async fireAndForgetEmail(
+    emailFn: () => Promise<void>,
+    context: string,
+  ): Promise<void> {
+    try {
+      await emailFn();
+    } catch (err: any) {
+      this.logger.error(`[EMAIL ERROR] ${context}: ${err?.message}`);
+    }
+  }
+
+  private fireAndForgetOtp(name: string, email: string, otp: string): void {
+    this.fireAndForgetEmail(
+      () => this.mailService.sendOtp(name, email, otp),
+      `OTP email to ${email}`,
+    );
+  }
+
+  private fireAndForgetWelcome(name: string, email: string): void {
+    this.fireAndForgetEmail(
+      () => this.mailService.sendWelcome(name, email),
+      `welcome email to ${email}`,
+    );
+  }
 
   // ─── Private: Admin Secret Validation ─────────────────────────────────────
 
-  /**
-   * Validates the admin secret code.
-   *
-   * Security rules:
-   *  - Empty/blank → user is treated as a regular customer (not an error).
-   *  - Correct code → user is treated as admin.
-   *  - Incorrect code → ForbiddenException (403), security log, rate-limit check.
-   *
-   * @param adminSecret The value submitted by the user (may be undefined/empty).
-   * @param email The registering email — used for rate-limit tracking and logging.
-   * @returns { isAdmin: boolean } — true only when the correct code was supplied.
-   */
-  private checkAdminSecret(
+  private async checkAdminSecret(
     adminSecret: string | undefined,
     email: string,
-  ): { isAdmin: boolean } {
+  ): Promise<{ isAdmin: boolean }> {
     const provided = adminSecret?.trim();
+    if (!provided) return { isAdmin: false };
 
-    // Blank → regular user, no validation needed
-    if (!provided) {
-      return { isAdmin: false };
-    }
-
-    // Rate-limit check (before comparing, to prevent timing oracle)
     const normalized = email.toLowerCase().trim();
     const entry = this.adminSecretFailures.get(normalized);
     const now = Date.now();
 
     if (entry?.lockedUntil && now < entry.lockedUntil) {
       const remainingMin = Math.ceil((entry.lockedUntil - now) / 60_000);
-      this.logger.warn(
-        `[ADMIN_SECRET] Rate-limited attempt from email=${normalized}. ` +
-        `Locked for ${remainingMin} more minute(s).`,
-      );
       throw new ForbiddenException(
-        `Too many invalid Admin Secret Code attempts. ` +
-        `Please try again in ${remainingMin} minute(s).`,
+        `Too many invalid Admin Secret Code attempts. Please try again in ${remainingMin} minute(s).`,
       );
     }
 
-    // Compare secret (constant-time via simple string equality — secrets are long enough)
-    const validSecret = (process.env.ADMIN_SECRET_CODE || 'secret_admin_123').trim();
+    let validSecret = (process.env.ADMIN_SECRET_CODE || 'secret_admin_123').trim();
+    if (this.settingsService) {
+      try {
+        const settings = await this.settingsService.getSettings();
+        if (settings?.adminSecretCode) {
+          validSecret = settings.adminSecretCode.trim();
+        }
+      } catch (err: any) {
+        // Fall back to env default
+      }
+    }
+
     const isCorrect = provided === validSecret;
 
     if (!isCorrect) {
-      // Record failure — log WITHOUT revealing the provided or real secret
-      this.recordAdminSecretFailure(normalized, now);
-      this.logger.warn(
-        `[ADMIN_SECRET] Invalid admin secret attempt — email=${normalized} ` +
-        `at ${new Date(now).toISOString()}. ` +
-        `Failure #${this.adminSecretFailures.get(normalized)?.count ?? '?'}.`,
-      );
+      this.recordFailure(this.adminSecretFailures, normalized, now, ADMIN_SECRET_RATE_LIMIT);
+      this.logger.warn(`Failed admin secret attempt for email=${normalized}. Provided length=${provided.length}`);
       throw new ForbiddenException(
         'Invalid Admin Secret Code. Leave the field blank to register as a regular user.',
       );
     }
 
-    // Success — clear any previous failure count
     this.adminSecretFailures.delete(normalized);
-    this.logger.log(
-      `[ADMIN_SECRET] Valid admin secret used for email=${normalized}.`,
-    );
     return { isAdmin: true };
   }
 
-  /** Record and possibly lock an email after repeated admin secret failures. */
-  private recordAdminSecretFailure(email: string, now: number): void {
-    const existing = this.adminSecretFailures.get(email);
-    const { MAX_ATTEMPTS, WINDOW_MS, LOCK_MS } = ADMIN_SECRET_RATE_LIMIT;
+  // ─── Private: Shared Rate-Limit Helper ────────────────────────────────────
 
-    if (!existing || now - existing.firstFailAt > WINDOW_MS) {
-      // Start a fresh window
-      this.adminSecretFailures.set(email, { count: 1, firstFailAt: now });
+  private recordFailure(
+    map: Map<string, FailEntry>,
+    key: string,
+    now: number,
+    cfg: { MAX_ATTEMPTS: number; WINDOW_MS: number; LOCK_MS: number },
+  ): void {
+    const existing = map.get(key);
+
+    if (!existing || now - existing.firstFailAt > cfg.WINDOW_MS) {
+      map.set(key, { count: 1, firstFailAt: now });
       return;
     }
 
     const count = existing.count + 1;
-    if (count >= MAX_ATTEMPTS) {
-      this.adminSecretFailures.set(email, {
-        count,
-        firstFailAt: existing.firstFailAt,
-        lockedUntil: now + LOCK_MS,
-      });
-      this.logger.warn(
-        `[ADMIN_SECRET] Rate-limit triggered for email=${email} after ${count} failures. ` +
-        `Locked for ${LOCK_MS / 60_000} minutes.`,
-      );
+    if (count >= cfg.MAX_ATTEMPTS) {
+      map.set(key, { count, firstFailAt: existing.firstFailAt, lockedUntil: now + cfg.LOCK_MS });
+      this.logger.warn(`Rate-limit triggered for key=${key} after ${count} failures.`);
     } else {
-      this.adminSecretFailures.set(email, { ...existing, count });
+      map.set(key, { ...existing, count });
     }
   }
 
-  // ─── Public Auth Methods ───────────────────────────────────────────────────
+  private checkLoginLock(normalizedEmail: string): void {
+    const entry = this.loginFailures.get(normalizedEmail);
+    const now = Date.now();
+    if (entry?.lockedUntil && now < entry.lockedUntil) {
+      const remainingMin = Math.ceil((entry.lockedUntil - now) / 60_000);
+      throw new ForbiddenException(
+        `Too many failed login attempts. Please try again in ${remainingMin} minute(s).`,
+      );
+    }
+  }
 
-  /**
-   * STEP 1 of registration.
-   *
-   * Correct order (enforced strictly):
-   *   1. Validate required fields (fast, no I/O)
-   *   2. Validate admin secret (fast, no I/O) — ForbiddenException if invalid
-   *   3. Check email uniqueness (DB I/O)
-   *   4. Generate OTP (in-memory)
-   *   5. Send OTP email (SMTP I/O)
-   *
-   * No OTP is generated or email sent if the admin secret is wrong.
-   */
-  async sendRegisterOtp(registerDto: RegisterDto) {
-    // ── 1. Field validation (cheapest check first) ──────────────────────────
+  // ─── Private: Token Helpers ────────────────────────────────────────────────
+
+  private async issueTokens(user: SafeUser): Promise<{ accessToken: string; refreshToken: string }> {
+    const payload = { sub: user.id, email: user.email, role: user.role };
+
+    const accessToken = await this.jwtService.signAsync(payload, { expiresIn: ACCESS_TOKEN_TTL });
+    const refreshToken = await this.jwtService.signAsync(
+      { sub: user.id, type: 'refresh' },
+      { expiresIn: REFRESH_TOKEN_TTL },
+    );
+
+    const hash = await bcrypt.hash(refreshToken, 10);
+    const expiresAt = Date.now() + REFRESH_TOKEN_TTL_SECONDS * 1000;
+
+    if (this.redisService?.isReady()) {
+      await this.redisService.setJson(`refresh:${user.id}`, { hash, expiresAt }, REFRESH_TOKEN_TTL_SECONDS);
+    } else {
+      this.refreshTokenStore.set(user.id, { hash, expiresAt });
+    }
+
+    return { accessToken, refreshToken };
+  }
+
+  private async getStoredRefreshHash(userId: string): Promise<{ hash: string; expiresAt: number } | null> {
+    if (this.redisService?.isReady()) {
+      return this.redisService.getJson(`refresh:${userId}`);
+    }
+    return this.refreshTokenStore.get(userId) || null;
+  }
+
+  private async clearRefreshToken(userId: string): Promise<void> {
+    if (this.redisService?.isReady()) {
+      await this.redisService.del(`refresh:${userId}`);
+    } else {
+      this.refreshTokenStore.delete(userId);
+    }
+  }
+
+  private verifyToken(token: string): any {
+    try {
+      return this.jwtService.verify(token, {
+        secret: process.env.JWT_SECRET || 'development-jwt-secret',
+      });
+    } catch {
+      throw new UnauthorizedException('Invalid or expired token');
+    }
+  }
+
+  // ─── Register (OTP flow) ───────────────────────────────────────────────────
+
+  async sendRegisterOtp(registerDto: RegisterDto, ip?: string, userAgent?: string) {
     const { firstName, email, password, adminSecret, adminSecretCode } = registerDto;
     const providedSecret = adminSecretCode ?? adminSecret;
 
     if (!firstName?.trim() || !email?.trim() || !password) {
-      throw new BadRequestException(
-        'firstName, email, and password are required.',
-      );
+      throw new BadRequestException('firstName, email, and password are required.');
     }
-    if (password.length < 6) {
-      throw new BadRequestException('Password must be at least 6 characters.');
+
+    const passwordCheck = validatePassword(password);
+    if (!passwordCheck.valid) {
+      throw new BadRequestException(passwordCheck.message);
     }
 
     const normalizedEmail = email.toLowerCase().trim();
+    const { isAdmin } = await this.checkAdminSecret(providedSecret, normalizedEmail);
 
-    // ── 2. Admin secret validation (before any I/O) ─────────────────────────
-    //    ForbiddenException (403) + rate-limit if invalid code provided.
-    //    Empty code → regular user, no error.
-    const { isAdmin } = this.checkAdminSecret(providedSecret, normalizedEmail);
-
-    // ── 3. Email uniqueness check (first DB call) ───────────────────────────
     const existingUser = await this.usersService.findByEmail(normalizedEmail);
     if (existingUser) {
       throw new BadRequestException('This email address is already registered.');
     }
 
-    // ── 4. Generate OTP (saved in Redis / OTP store) ────────────────────────
     const code = await this.otpStore.generate(`register:${normalizedEmail}`);
 
-    // Store the admin intent in the OTP store so verifyRegisterOtp can honour it
-    // without the client needing to re-send the secret (closing the bypass gap).
     if (isAdmin) {
       await this.otpStore.markVerified(`admin_intent:${normalizedEmail}`);
     }
 
-    this.logger.log(
-      `[REGISTER_OTP] OTP generated for email=${normalizedEmail} ` +
-      `role=${isAdmin ? 'admin' : 'customer'}.`,
-    );
+    this.logger.log(`[REGISTER_OTP] OTP generated for email=${normalizedEmail} role=${isAdmin ? 'admin' : 'customer'}.`);
 
-    // ── 5. Send OTP email (SMTP I/O — last, most expensive) ─────────────────
-    await this.mailService.sendOtp(firstName.trim(), normalizedEmail, code);
+    this.fireAndForgetOtp(firstName.trim(), normalizedEmail, code);
 
-    return {
-      success: true,
-      message: 'OTP sent successfully. Please check your email.',
-    };
+    this.activityLogService.logEvent({
+      email: normalizedEmail,
+      userName: firstName,
+      eventType: EventType.REGISTRATION_STARTED,
+      registrationStatus: RegistrationStatus.IN_PROGRESS,
+      verificationStatus: VerificationStatus.PENDING,
+      ipAddress: ip,
+      userAgent: userAgent,
+    });
+
+    return { success: true, message: 'OTP sent successfully. Please check your email.' };
   }
 
-  /**
-   * STEP 2 of registration.
-   *
-   * Verifies the OTP and creates the user account.
-   * The role (admin vs customer) is determined from the server-side flag
-   * set during sendRegisterOtp — the client does NOT re-send the admin secret here,
-   * preventing any role-escalation bypass.
-   */
-  async verifyRegisterOtp(registerDto: RegisterDto, code: string) {
-    const { firstName, lastName, email, password, adminSecret, adminSecretCode } = registerDto;
-    const providedSecret = adminSecretCode ?? adminSecret;
-    const normalizedEmail = email.toLowerCase().trim();
+  async verifyRegisterOtp(registerDto: RegisterDto, code: string, ip?: string, userAgent?: string) {
+    const { firstName, lastName, email, password } = registerDto;
 
-    if (!code) throw new BadRequestException('OTP is required.');
-
-    // ── Verify OTP ──────────────────────────────────────────────────────────
-    const valid = await this.otpStore.verify(`register:${normalizedEmail}`, code);
-    if (!valid) throw new BadRequestException('Invalid or expired OTP.');
-
-    // ── Read role from server-side intent (set during sendRegisterOtp) ───────
-    let isAdmin = await this.otpStore.isVerified(`admin_intent:${normalizedEmail}`);
-    await this.otpStore.invalidate(`admin_intent:${normalizedEmail}`);
-
-    // Fallback: If intent flag was lost or missed, re-verify provided secret
-    if (!isAdmin && providedSecret) {
-      try {
-        const { isAdmin: isSecretValid } = this.checkAdminSecret(providedSecret, normalizedEmail);
-        isAdmin = isSecretValid;
-      } catch {
-        isAdmin = false;
-      }
+    if (!email?.trim() || !code?.trim()) {
+      throw new BadRequestException('Email and OTP code are required.');
     }
 
-    const role = isAdmin ? 'admin' : 'customer';
+    const normalizedEmail = email.toLowerCase().trim();
+    const isValidOtp = await this.otpStore.verify(`register:${normalizedEmail}`, code.trim());
 
-    // ── Create user ──────────────────────────────────────────────────────────
-    const name = `${firstName.trim()} ${lastName?.trim() || ''}`.trim();
+    if (!isValidOtp) {
+      throw new BadRequestException('Invalid or expired OTP.');
+    }
+
+    const existingUser = await this.usersService.findByEmail(normalizedEmail);
+    if (existingUser) {
+      throw new BadRequestException('This email address is already registered.');
+    }
+
+    const wasAdminIntent = await this.otpStore.isVerified(`admin_intent:${normalizedEmail}`);
+    await this.otpStore.invalidate(`admin_intent:${normalizedEmail}`);
+
     const passwordHash = await bcrypt.hash(password, 12);
+    const fullName = [firstName?.trim(), lastName?.trim()].filter(Boolean).join(' ');
 
     const user = await this.usersService.create(
-      name,
+      fullName,
       normalizedEmail,
       passwordHash,
       undefined,
-      role,
+      wasAdminIntent ? 'admin' : 'customer',
     );
 
-    this.logger.log(
-      `[REGISTER] Account created email=${normalizedEmail} role=${role}.`,
-    );
+    const tokens = await this.issueTokens(user);
 
-    // ── Welcome email ────────────────────────────────────────────────────────
-    await this.mailService.sendWelcome(firstName.trim(), normalizedEmail);
+    this.logger.log(`[REGISTER] New user created email=${normalizedEmail} role=${user.role}.`);
 
-    return this.authResponse(user);
+    this.fireAndForgetWelcome(fullName, normalizedEmail);
+
+    this.activityLogService.logEvent({
+      userId: user.id || (user as any)._id?.toString(),
+      email: normalizedEmail,
+      userName: fullName,
+      eventType: EventType.ACCOUNT_CREATED,
+      registrationStatus: RegistrationStatus.COMPLETED,
+      verificationStatus: VerificationStatus.VERIFIED,
+      ipAddress: ip,
+      userAgent: userAgent,
+    });
+
+    return { success: true, user, ...tokens };
   }
 
-  async login(loginDto: LoginDto) {
-    if (!loginDto.email || !loginDto.password) {
-      throw new BadRequestException('email and password are required');
+  // ─── Login ──────────────────────────────────────────────────────────────
+
+  async login(loginDto: LoginDto, ip?: string, userAgent?: string) {
+    const { email, password } = loginDto;
+    const normalizedEmail = email.toLowerCase().trim();
+
+    this.checkLoginLock(normalizedEmail);
+
+    const userDoc = await this.usersService.findByEmailWithPassword(normalizedEmail);
+
+    if (!userDoc) {
+      this.recordFailure(this.loginFailures, normalizedEmail, Date.now(), LOGIN_RATE_LIMIT);
+      this.activityLogService.logEvent({
+        email: normalizedEmail,
+        eventType: EventType.LOGIN_FAILED,
+        ipAddress: ip,
+        userAgent: userAgent,
+        metadata: { reason: 'User not found' },
+      });
+      throw new UnauthorizedException('Invalid email or password.');
     }
 
-    const user = await this.usersService.findByEmailWithPassword(
-      loginDto.email.toLowerCase(),
-    );
-    if (!user) {
-      throw new UnauthorizedException('Invalid email or password');
-    }
-    const passwordMatches = await bcrypt.compare(
-      loginDto.password,
-      user.password,
-    );
-    if (!passwordMatches) {
-      throw new UnauthorizedException('Invalid email or password');
-    }
-
-    if (user.isTwoFactorEnabled) {
-      return {
-        requires2FA: true,
-        tempToken: this.jwtService.sign(
-          { sub: user.id, email: user.email, requires2FA: true },
-          { expiresIn: '15m' },
-        ),
-      };
+    const isMatch = await bcrypt.compare(password, userDoc.password);
+    if (!isMatch) {
+      this.recordFailure(this.loginFailures, normalizedEmail, Date.now(), LOGIN_RATE_LIMIT);
+      this.activityLogService.logEvent({
+        email: normalizedEmail,
+        userId: userDoc.id || userDoc._id?.toString(),
+        userName: userDoc.name,
+        eventType: EventType.LOGIN_FAILED,
+        ipAddress: ip,
+        userAgent: userAgent,
+        metadata: { reason: 'Incorrect password' },
+      });
+      throw new UnauthorizedException('Invalid email or password.');
     }
 
-    return this.authResponse(this.usersService.toSafeUser(user));
-  }
+    this.loginFailures.delete(normalizedEmail);
 
-  async verify2FALogin(tempToken: string, code: string) {
-    try {
-      const payload = await this.jwtService.verifyAsync<{
-        sub: string;
-        email: string;
-        requires2FA: boolean;
-      }>(tempToken);
-
-      if (!payload.requires2FA) {
-        throw new BadRequestException('Invalid token for 2FA verification');
-      }
-
-      const user = await this.usersService.findByIdWithSecret(payload.sub);
-      if (!user || !user.isTwoFactorEnabled || !user.twoFactorSecret) {
-        throw new BadRequestException('2FA is not enabled for this account');
-      }
-
-      authenticator.options = { window: 2 };
-      const cleanCode = (code || '').trim().replace(/\s+/g, '');
-      const isValid = authenticator.check(cleanCode, user.twoFactorSecret);
-
-      if (!isValid) {
-        throw new BadRequestException('Invalid authentication code');
-      }
-
-      return this.authResponse(this.usersService.toSafeUser(user));
-    } catch (error) {
-      if (error instanceof BadRequestException) throw error;
-      throw new UnauthorizedException('Session expired or invalid. Please login again.');
-    }
-  }
-
-  async sendEmailOtp(email: string) {
-    if (!email) throw new BadRequestException('Email is required');
-    const normalized = email.toLowerCase().trim();
-    const user = await this.usersService.findByEmail(normalized);
-    if (!user)
-      throw new BadRequestException('No account found with this email');
-    const code = await this.otpStore.generate(`email:${normalized}`);
-    await this.mailService.sendForgotPassword(user.firstName, normalized, code);
-    return { message: 'OTP sent successfully' };
-  }
-
-  async verifyEmailOtp(email: string, code: string) {
-    if (!email || !code)
-      throw new BadRequestException('Email and OTP are required');
-    const normalized = email.toLowerCase().trim();
-    const valid = await this.otpStore.verify(`email:${normalized}`, code);
-    if (!valid) throw new BadRequestException('Invalid or expired OTP');
-    await this.otpStore.markVerified(`email_verified:${normalized}`);
-    return { message: 'OTP verified successfully', verified: true };
-  }
-
-  async resetPassword(email: string, password: string) {
-    if (!email || !password)
-      throw new BadRequestException('Email and new password are required');
-    if (password.length < 6)
-      throw new BadRequestException('Password must be at least 6 characters');
-    const normalized = email.toLowerCase().trim();
-    const verified = await this.otpStore.isVerified(`email_verified:${normalized}`);
-    if (!verified)
-      throw new BadRequestException(
-        'OTP not verified. Please verify OTP first.',
+    if (userDoc.isTwoFactorEnabled) {
+      const tempToken = await this.jwtService.signAsync(
+        { sub: userDoc.id || userDoc._id?.toString(), purpose: '2fa-pending' },
+        { expiresIn: TWO_FA_TEMP_TOKEN_TTL },
       );
-    const user = await this.usersService.findByEmail(normalized);
-    if (!user)
-      throw new BadRequestException('No account found with this email');
-    await this.usersService.updatePassword(user.id, password);
-    await this.otpStore.invalidate(`email_verified:${normalized}`);
-    return { message: 'Password reset successfully' };
+      return { requiresTwoFactor: true, tempToken };
+    }
+
+    const safeUser = this.usersService.toSafeUser(userDoc);
+    const tokens = await this.issueTokens(safeUser);
+
+    this.logger.log(`[LOGIN] User logged in email=${normalizedEmail}.`);
+    
+    this.activityLogService.logEvent({
+      email: normalizedEmail,
+      userId: safeUser.id,
+      userName: safeUser.name,
+      eventType: EventType.LOGIN_SUCCESS,
+      ipAddress: ip,
+      userAgent: userAgent,
+    });
+
+    return { success: true, user: safeUser, ...tokens };
   }
+
+  async verify2FALogin(tempToken: string, code: string, ip?: string, userAgent?: string) {
+    const payload = this.verifyToken(tempToken);
+    if (payload.purpose !== '2fa-pending') {
+      throw new UnauthorizedException('Invalid token.');
+    }
+
+    const userDoc = await this.usersService.findByIdWithSecret(payload.sub);
+    if (!userDoc?.twoFactorSecret) {
+      throw new UnauthorizedException('Two-factor authentication is not set up.');
+    }
+
+    const isValid = authenticator.verify({ token: code, secret: userDoc.twoFactorSecret });
+    if (!isValid) {
+      throw new UnauthorizedException('Invalid two-factor code.');
+    }
+
+    const safeUser = this.usersService.toSafeUser(userDoc);
+    const tokens = await this.issueTokens(safeUser);
+
+    this.activityLogService.logEvent({
+      email: userDoc.email,
+      userId: safeUser.id,
+      userName: safeUser.name,
+      eventType: EventType.LOGIN_SUCCESS,
+      ipAddress: ip,
+      userAgent: userAgent,
+      metadata: { '2fa': true }
+    });
+
+    return { success: true, user: safeUser, ...tokens };
+  }
+
+  // ─── Session ────────────────────────────────────────────────────────────
 
   async me(token: string) {
-    try {
-      const payload = await this.jwtService.verifyAsync<{ sub: string }>(token);
-      const user = await this.usersService.findById(payload.sub);
-      if (!user) throw new UnauthorizedException('User no longer exists');
-      return { user: this.toClientUser(user) };
-    } catch (error) {
-      if (error instanceof UnauthorizedException) throw error;
-      throw new UnauthorizedException('Invalid or expired token');
+    const payload = this.verifyToken(token);
+    if (payload.purpose === '2fa-pending') {
+      throw new UnauthorizedException('Two-factor verification required.');
     }
+
+    const user = await this.usersService.findById(payload.sub);
+    if (!user) throw new NotFoundException('User not found.');
+
+    return { user };
   }
+
+  async refreshToken(refreshToken: string) {
+    const payload = this.verifyToken(refreshToken);
+    if (payload.type !== 'refresh') {
+      throw new UnauthorizedException('Invalid refresh token.');
+    }
+
+    const stored = await this.getStoredRefreshHash(payload.sub);
+    if (!stored || Date.now() > stored.expiresAt) {
+      throw new UnauthorizedException('Refresh token expired. Please log in again.');
+    }
+
+    const matches = await bcrypt.compare(refreshToken, stored.hash);
+    if (!matches) {
+      throw new UnauthorizedException('Refresh token has been revoked.');
+    }
+
+    const user = await this.usersService.findById(payload.sub);
+    if (!user) throw new UnauthorizedException('User not found.');
+
+    const tokens = await this.issueTokens(user);
+    return { success: true, ...tokens };
+  }
+
+  async logout(userId: string, email?: string, ip?: string, userAgent?: string) {
+    await this.clearRefreshToken(userId);
+    
+    if (email) {
+      this.activityLogService.logEvent({
+        userId,
+        email,
+        eventType: EventType.LOGOUT,
+        ipAddress: ip,
+        userAgent: userAgent,
+      });
+    }
+    
+    return { success: true, message: 'Logged out successfully.' };
+  }
+
+  // ─── Email OTP / Password Reset ─────────────────────────────────────────
+
+  async sendEmailOtp(email: string, ip?: string, userAgent?: string) {
+    if (!email?.trim()) throw new BadRequestException('Email is required.');
+    const normalizedEmail = email.toLowerCase().trim();
+
+    const user = await this.usersService.findByEmail(normalizedEmail);
+    if (!user) {
+      // Do not reveal whether the account exists
+      return { success: true, message: 'If the account exists, an OTP has been sent.' };
+    }
+
+    const code = await this.otpStore.generate(`email:${normalizedEmail}`);
+    await this.mailService.sendOtp(user.firstName, normalizedEmail, code);
+
+    this.activityLogService.logEvent({
+      userId: user.id || (user as any)._id?.toString(),
+      email: normalizedEmail,
+      userName: user.name,
+      eventType: EventType.PASSWORD_RESET_REQUESTED,
+      ipAddress: ip,
+      userAgent: userAgent,
+    });
+
+    return { success: true, message: 'If the account exists, an OTP has been sent.' };
+  }
+
+  async verifyEmailOtp(email: string, code: string, ip?: string, userAgent?: string) {
+    if (!email?.trim() || !code?.trim()) {
+      throw new BadRequestException('Email and OTP code are required.');
+    }
+    const normalizedEmail = email.toLowerCase().trim();
+
+    const isValid = await this.otpStore.verify(`email:${normalizedEmail}`, code.trim());
+    if (!isValid) throw new BadRequestException('Invalid or expired OTP.');
+
+    await this.otpStore.markVerified(`email_verified:${normalizedEmail}`);
+
+    return { success: true, message: 'OTP verified.' };
+  }
+
+  async resetPassword(email: string, password: string, ip?: string, userAgent?: string) {
+    if (!email?.trim()) throw new BadRequestException('Email is required.');
+    const normalizedEmail = email.toLowerCase().trim();
+
+    const isAuthorized = await this.otpStore.isVerified(`email_verified:${normalizedEmail}`);
+    if (!isAuthorized) {
+      throw new ForbiddenException('Email verification is required before resetting password.');
+    }
+
+    const passwordCheck = validatePassword(password);
+    if (!passwordCheck.valid) {
+      throw new BadRequestException(passwordCheck.message);
+    }
+
+    const user = await this.usersService.findByEmail(normalizedEmail);
+    if (!user) throw new NotFoundException('User not found.');
+
+    await this.usersService.updatePassword(user.id, password);
+    await this.otpStore.invalidate(`email_verified:${normalizedEmail}`);
+    await this.clearRefreshToken(user.id);
+
+    this.logger.log(`[RESET_PASSWORD] Password reset for email=${normalizedEmail}.`);
+    
+    this.activityLogService.logEvent({
+      userId: user.id || (user as any)._id?.toString(),
+      email: normalizedEmail,
+      userName: user.name,
+      eventType: EventType.PASSWORD_RESET_COMPLETED,
+      ipAddress: ip,
+      userAgent: userAgent,
+    });
+
+    return { success: true, message: 'Password reset successfully. Please log in again.' };
+  }
+
+  // ─── Two-Factor Setup ───────────────────────────────────────────────────
 
   async generate2FA(userId: string, email: string) {
     const secret = authenticator.generateSecret();
-    const cleanEmail = (email || 'user@autotrade.com').trim();
-    const otpauthUrl = `otpauth://totp/AutoTrade:${encodeURIComponent(cleanEmail)}?secret=${secret}&issuer=AutoTrade`;
-    const qrCodeUrl = await qrcode.toDataURL(otpauthUrl);
-    return { secret, qrCodeUrl };
+    const otpauth = authenticator.keyuri(email, 'AutoTrade', secret);
+    const qrCode = await qrcode.toDataURL(otpauth);
+
+    return { secret, qrCode };
   }
 
   async enable2FA(userId: string, secret: string, code: string) {
-    authenticator.options = { window: 2 };
-    const cleanCode = (code || '').trim().replace(/\s+/g, '');
-    const isValid = authenticator.check(cleanCode, secret);
-    if (!isValid) {
-      throw new BadRequestException('Invalid 2FA code. Make sure your phone device time is synchronized and try again.');
+    if (!secret?.trim() || !code?.trim()) {
+      throw new BadRequestException('Secret and authentication code are required.');
     }
-    const user = await this.usersService.findByIdWithSecret(userId);
-    if (!user) throw new NotFoundException('User not found');
+    const cleanSecret = secret.trim().replace(/\s+/g, '');
+    const cleanCode = code.trim().replace(/\D/g, '');
 
-    user.isTwoFactorEnabled = true;
-    user.twoFactorSecret = secret;
-    await user.save();
+    if (cleanCode.length !== 6) {
+      throw new BadRequestException('Please enter a valid 6-digit authentication code.');
+    }
 
-    return { message: 'Two-Factor Authentication enabled successfully' };
+    authenticator.options = { window: 2 };
+    const isValid =
+      authenticator.check(cleanCode, cleanSecret) ||
+      authenticator.verify({ token: cleanCode, secret: cleanSecret });
+
+    if (!isValid) {
+      throw new BadRequestException('Invalid authentication code. Please check your authenticator app code and try again.');
+    }
+
+    const userDoc = await this.usersService.findByIdWithSecret(userId);
+    if (!userDoc) throw new NotFoundException('User not found.');
+
+    userDoc.twoFactorSecret = cleanSecret;
+    userDoc.isTwoFactorEnabled = true;
+    await userDoc.save();
+
+    return { success: true, message: 'Two-factor authentication enabled successfully.' };
   }
 
   async disable2FA(userId: string) {
-    const user = await this.usersService.findByIdWithSecret(userId);
-    if (!user) throw new NotFoundException('User not found');
+    const userDoc = await this.usersService.findByIdWithSecret(userId);
+    if (!userDoc) throw new NotFoundException('User not found.');
 
-    user.isTwoFactorEnabled = false;
-    user.twoFactorSecret = undefined;
-    await user.save();
+    userDoc.twoFactorSecret = undefined;
+    userDoc.isTwoFactorEnabled = false;
+    await userDoc.save();
 
-    return { message: 'Two-Factor Authentication disabled successfully' };
-  }
-
-  private authResponse(user: SafeUser) {
-    return {
-      user: this.toClientUser(user),
-      accessToken: this.jwtService.sign({ sub: user.id, email: user.email }),
-    };
-  }
-
-  private toClientUser(user: SafeUser) {
-    return {
-      _id: user.id,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      email: user.email,
-      phone: user.phone,
-      role: user.role,
-    };
+    return { success: true, message: 'Two-factor authentication disabled.' };
   }
 }
+

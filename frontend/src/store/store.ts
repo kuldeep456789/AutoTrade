@@ -1,4 +1,5 @@
 import { configureStore, combineReducers } from '@reduxjs/toolkit';
+import { rtkQueryErrorLogger } from './middleware/errorMiddleware';
 import { apiSlice } from './slices/apiSlice';
 import cartReducer from './slices/cartSlice';
 import wishlistReducer from './slices/wishlistSlice';
@@ -14,8 +15,7 @@ const appReducer = combineReducers({
 });
 
 const rootReducer = (state: any, action: any) => {
-  if (action.type === 'auth/logout' || action.type === 'auth/setCredentials') {
-    // Purge session items from localStorage
+  if (action.type === 'auth/logout') {
     localStorage.removeItem('cartItems');
     localStorage.removeItem('shippingAddress');
     localStorage.removeItem('appliedCoupon');
@@ -23,11 +23,8 @@ const rootReducer = (state: any, action: any) => {
     localStorage.removeItem('wishlistItems');
     localStorage.removeItem('savedAddresses_undefined');
 
-    if (action.type === 'auth/logout') {
-      localStorage.removeItem('userInfo');
-    }
+    localStorage.removeItem('userInfo');
 
-    // Force complete reset of RTK Query cache and Redux slices for fresh user session
     state = undefined;
   }
   return appReducer(state, action);
@@ -36,7 +33,7 @@ const rootReducer = (state: any, action: any) => {
 const store = configureStore({
   reducer: rootReducer,
   middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware({ serializableCheck: false }).concat(apiSlice.middleware),
+    getDefaultMiddleware({ serializableCheck: false }).concat(apiSlice.middleware, rtkQueryErrorLogger),
   devTools: true,
 });
 

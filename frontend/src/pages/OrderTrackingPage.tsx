@@ -3,8 +3,7 @@ import { useSelector } from 'react-redux';
 import type { RootState } from '../store/store';
 import {
   useGetOrderDetailsQuery,
-  useCreateRazorpayOrderMutation,
-  useVerifyRazorpayPaymentMutation,
+  useCreateCheckoutSessionMutation,
   useCancelOrderMutation,
 } from '../store/slices/orderApiSlice';
 import toast from 'react-hot-toast';
@@ -22,7 +21,6 @@ const TIMELINE_STEPS = [
   { key: 'confirmed', label: 'Confirmed', icon: CheckCircle, desc: 'Order has been confirmed' },
   { key: 'packed', label: 'Packed', icon: ShoppingBag, desc: 'Item has been packed' },
   { key: 'shipped', label: 'Shipped', icon: Truck, desc: 'Item has been shipped' },
-  { key: 'out_for_delivery', label: 'Out For Delivery', icon: Truck, desc: 'Out for delivery' },
   { key: 'delivered', label: 'Delivered', icon: CheckCircle, desc: 'Package delivered' },
 ];
 
@@ -31,8 +29,7 @@ const STEP_INDEX: Record<string, number> = {
   confirmed: 1,
   packed: 2,
   shipped: 3,
-  out_for_delivery: 4,
-  delivered: 5,
+  delivered: 4,
 };
 
 const statusConfig: Record<string, { label: string; className: string }> = {
@@ -41,7 +38,6 @@ const statusConfig: Record<string, { label: string; className: string }> = {
   confirmed: { label: 'Confirmed', className: 'bg-blue-50 dark:bg-blue-950/20 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800' },
   packed: { label: 'Packed', className: 'bg-indigo-50 dark:bg-indigo-950/20 text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800' },
   shipped: { label: 'Shipped', className: 'bg-purple-50 dark:bg-purple-950/20 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800' },
-  out_for_delivery: { label: 'Out For Delivery', className: 'bg-orange-50 dark:bg-orange-950/20 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-800' },
   delivered: { label: 'Delivered', className: 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800' },
   cancelled: { label: 'Cancelled', className: 'bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800' },
   refunded: { label: 'Refunded', className: 'bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800' },
@@ -58,13 +54,16 @@ const orderDate = (dateStr: string) => {
   return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
 };
 
-const OrderItemRow = ({ productId, quantity, formatCurrency }: { productId: string; quantity: number; formatCurrency: (p: number) => string }) => {
-  const { data: product } = useGetProductDetailsQuery(productId);
-  const name = product?.name || product?.title || `Product`;
-  const image = product?.images?.[0];
-  const price = product?.discountPrice || product?.price || 0;
-  const color = product?.colors?.[0] || 'Black';
-  const size = product?.sizes?.[0] || 'M';
+const OrderItemRow = ({ item, formatCurrency }: { item: any; formatCurrency: (p: number) => string }) => {
+  const productId = item.productId;
+  const hasHydratedData = !!(item.productName || item.image || item.price);
+  const { data: product } = useGetProductDetailsQuery(productId, { skip: hasHydratedData });
+
+  const name = item.productName || product?.name || product?.title || `Product`;
+  const image = item.image || product?.images?.[0];
+  const price = item.price || product?.discountPrice || product?.price || 0;
+  const color = item.color || product?.colors?.[0] || 'Black';
+  const size = item.size || product?.sizes?.[0] || 'M';
 
   return (
     <div className="flex items-start gap-4 py-4">
@@ -80,7 +79,7 @@ const OrderItemRow = ({ productId, quantity, formatCurrency }: { productId: stri
           <span className="w-px h-3 bg-zinc-200 dark:bg-zinc-700" />
           <span>Size: {size}</span>
           <span className="w-px h-3 bg-zinc-200 dark:bg-zinc-700" />
-          <span>Qty: {quantity}</span>
+          <span>Qty: {item.quantity}</span>
         </div>
         <p className="text-[15px] font-bold text-zinc-900 dark:text-white mt-2">{formatCurrency(price)}</p>
       </div>
@@ -118,49 +117,18 @@ const OrderTrackingPage = () => {
   const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const { formatCurrency, currency } = useCurrency();
-  const [createRazorpayOrder] = useCreateRazorpayOrderMutation();
-  const [verifyRazorpayPayment] = useVerifyRazorpayPaymentMutation();
+  const [createCheckoutSession] = useCreateCheckoutSessionMutation();
   const [cancelOrder] = useCancelOrderMutation();
 
   const handlePayNow = async () => {
     if (!order?._id) return;
     try {
-      const razorpayRes = await createRazorpayOrder({ orderId: order._id, currency }).unwrap();
-      const loadRazorpayScript = () => new Promise((resolve) => {
-        const script = document.createElement('script');
-        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-        script.onload = () => resolve(true);
-        script.onerror = () => resolve(false);
-        document.body.appendChild(script);
-      });
-      const loadedScript = await loadRazorpayScript();
-      if (!loadedScript) {
-        toast.error('Failed to load Razorpay checkout script');
+      const res = await createCheckoutSession({ orderId: order._id, currency }).unwrap();
+      if (!res?.checkoutUrl) {
+        toast.error('Payment session could not be created');
         return;
       }
-      const options = {
-        key: razorpayRes.keyId,
-        amount: razorpayRes.gatewayOrder.amount,
-        currency: razorpayRes.gatewayOrder.currency || currency || 'INR',
-        name: 'AutoTrade',
-        description: `Order #${order._id}`,
-        order_id: razorpayRes.gatewayOrder.id,
-        handler: async (response: any) => {
-          try {
-            await verifyRazorpayPayment({
-              orderId: order._id,
-              razorpayOrderId: response.razorpay_order_id,
-              razorpayPaymentId: response.razorpay_payment_id,
-              razorpaySignature: response.razorpay_signature,
-            }).unwrap();
-            toast.success('Payment completed successfully!');
-          } catch (err: any) {
-            toast.error(err?.data?.message || 'Payment verification failed');
-          }
-        },
-      };
-      const rzp = new (window as any).Razorpay(options);
-      rzp.open();
+      window.location.href = res.checkoutUrl;
     } catch (err: any) {
       toast.error(err?.data?.message || 'Failed to initiate payment');
     }
@@ -237,14 +205,14 @@ const OrderTrackingPage = () => {
       ? String(currentReturn.status).toLowerCase()
       : (order.status || 'pending').toLowerCase();
 
-  const paymentLabel = 'Razorpay Secure';
+  const paymentLabel = 'Stripe Secure';
   const totalItemsPrice = order?.totalAmount || 0;
 
   const timelineSteps = isOrderRefunded
     ? [
-        ...TIMELINE_STEPS,
-        { key: 'refunded', label: 'Refund Completed', icon: RotateCcw, desc: 'Amount refunded to original payment method' },
-      ]
+      ...TIMELINE_STEPS,
+      { key: 'refunded', label: 'Refund Completed', icon: RotateCcw, desc: 'Amount refunded to original payment method' },
+    ]
     : TIMELINE_STEPS;
 
   const currentStepIndex = isOrderRefunded
@@ -268,7 +236,7 @@ const OrderTrackingPage = () => {
           <ChevronRight size={12} strokeWidth={2.5} />
           <Link to="/account" className="hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors">My Orders</Link>
           <ChevronRight size={12} strokeWidth={2.5} />
-          <span className="text-zinc-700 dark:text-zinc-300">Track Order</span>
+          {/* <span className="text-zinc-700 dark:text-zinc-300">Track Order</span> */}
         </nav>
 
         {/* Page Header */}
@@ -371,36 +339,33 @@ const OrderTrackingPage = () => {
                   const isRefundStep = step.key === 'refunded';
                   const dateStr = isComplete || isCurrent
                     ? (isRefundStep && currentReturn?.updatedAt
-                        ? new Date(currentReturn.updatedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) + ' • ' + new Date(currentReturn.updatedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
-                        : new Date(order.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) + ' • ' + new Date(order.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
-                      )
+                      ? new Date(currentReturn.updatedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) + ' • ' + new Date(currentReturn.updatedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+                      : new Date(order.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) + ' • ' + new Date(order.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+                    )
                     : '';
 
                   return (
                     <div key={step.key} className="flex gap-5 relative pb-8 last:pb-0">
                       {/* Timeline line */}
                       {idx < timelineSteps.length - 1 && (
-                        <div className={`absolute left-[17px] top-10 w-[2px] h-[calc(100%-32px)] rounded-full ${
-                          isComplete ? 'bg-emerald-400' : 'bg-zinc-200 dark:bg-zinc-700'
-                        }`} />
+                        <div className={`absolute left-[17px] top-10 w-[2px] h-[calc(100%-32px)] rounded-full ${isComplete ? 'bg-emerald-400' : 'bg-zinc-200 dark:bg-zinc-700'
+                          }`} />
                       )}
                       {/* Icon */}
-                      <div className={`relative flex items-center justify-center w-[36px] h-[36px] rounded-full border-2 shrink-0 transition-all duration-300 ${
-                        isRefundStep
+                      <div className={`relative flex items-center justify-center w-[36px] h-[36px] rounded-full border-2 shrink-0 transition-all duration-300 ${isRefundStep
                           ? 'bg-amber-500 border-amber-500 text-white shadow-[0_0_12px_rgba(245,158,11,0.3)] scale-105'
                           : isComplete
-                          ? 'bg-emerald-500 border-emerald-500 text-white shadow-[0_0_12px_rgba(16,185,129,0.3)]'
-                          : isCurrent
-                          ? 'bg-blue-500 border-blue-500 text-white shadow-[0_0_12px_rgba(59,130,246,0.3)] scale-105'
-                          : 'bg-zinc-50 dark:bg-zinc-800/50 border-zinc-200 dark:border-zinc-700 text-zinc-300 dark:text-zinc-600'
-                      }`}>
+                            ? 'bg-emerald-500 border-emerald-500 text-white shadow-[0_0_12px_rgba(16,185,129,0.3)]'
+                            : isCurrent
+                              ? 'bg-blue-500 border-blue-500 text-white shadow-[0_0_12px_rgba(59,130,246,0.3)] scale-105'
+                              : 'bg-zinc-50 dark:bg-zinc-800/50 border-zinc-200 dark:border-zinc-700 text-zinc-300 dark:text-zinc-600'
+                        }`}>
                         {isRefundStep ? <RotateCcw size={16} strokeWidth={2.5} /> : isComplete || isCurrent ? <CheckCircle size={16} strokeWidth={2.5} /> : <Icon size={14} strokeWidth={1.5} />}
                       </div>
                       {/* Content */}
                       <div className="flex-1 min-w-0 pt-1">
-                        <p className={`text-[14px] font-bold transition-colors ${
-                          isRefundStep ? 'text-amber-600 dark:text-amber-400' : isComplete ? 'text-emerald-600 dark:text-emerald-400' : isCurrent ? 'text-blue-600 dark:text-blue-400' : 'text-zinc-400 dark:text-zinc-500'
-                        }`}>
+                        <p className={`text-[14px] font-bold transition-colors ${isRefundStep ? 'text-amber-600 dark:text-amber-400' : isComplete ? 'text-emerald-600 dark:text-emerald-400' : isCurrent ? 'text-blue-600 dark:text-blue-400' : 'text-zinc-400 dark:text-zinc-500'
+                          }`}>
                           {step.label}
                         </p>
                         <p className="text-[12px] text-zinc-500 dark:text-zinc-500 mt-0.5">{step.desc}</p>
@@ -426,7 +391,7 @@ const OrderTrackingPage = () => {
               </div>
             </motion.div>
 
-            </div>
+          </div>
 
           {/* Right Column - 35% */}
           <div className="w-full lg:w-[35%] space-y-6">
@@ -448,7 +413,7 @@ const OrderTrackingPage = () => {
               {/* Items */}
               <div className="px-6 divide-y divide-zinc-100 dark:divide-zinc-800">
                 {order.items?.map((item: any, i: number) => (
-                  <OrderItemRow key={i} productId={item.productId} quantity={item.quantity} formatCurrency={formatCurrency} />
+                  <OrderItemRow key={i} item={item} formatCurrency={formatCurrency} />
                 ))}
               </div>
 
@@ -487,7 +452,7 @@ const OrderTrackingPage = () => {
                 <HelpCircle size={17} strokeWidth={1.5} />
                 Need Help?
               </Link>
-              
+
               {/* Return UI */}
               {order.status === 'delivered' && !hasReturn && (
                 <button

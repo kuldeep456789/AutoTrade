@@ -1,11 +1,22 @@
 import { useState, useRef, useEffect } from 'react';
-import { ChevronDown, Check } from 'lucide-react';
+import { ChevronDown, Check, IndianRupee, DollarSign, Euro, Coins } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   useCurrency,
   CURRENCIES,
   type CurrencyCode,
 } from '../../context/CurrencyContext';
+
+
+const CURRENCY_ICON_MAP: Record<string, { icon: LucideIcon; color: string }> = {
+  INR: { icon: IndianRupee, color: 'text-emerald-400' },
+  USD: { icon: DollarSign, color: 'text-sky-400' },
+  EUR: { icon: Euro, color: 'text-amber-400' },
+};
+
+const getCurrencyIcon = (code: string) =>
+  CURRENCY_ICON_MAP[code] ?? { icon: Coins, color: 'text-zinc-400' };
 
 const CurrencySelector = () => {
   const { currency, setCurrency, currencyConfig } = useCurrency();
@@ -27,6 +38,9 @@ const CurrencySelector = () => {
     };
   }, []);
 
+  const ButtonIcon = getCurrencyIcon(currencyConfig.code).icon;
+  const buttonIconColor = getCurrencyIcon(currencyConfig.code).color;
+
   return (
     <div ref={ref} className="relative shrink-0 z-30">
       {/* Button */}
@@ -34,9 +48,11 @@ const CurrencySelector = () => {
         type="button"
         onClick={() => setOpen(!open)}
         aria-label="Select Currency"
-        className="flex items-center gap-2 px-4 h-12 rounded-xl border border-zinc-700 bg-zinc-900 hover:bg-zinc-800 text-white text-sm font-semibold transition-all duration-300 shadow-lg hover:shadow-orange-500/10"
+        className="flex items-center gap-2 px-3.5 h-[42px] rounded-lg border border-zinc-700 bg-zinc-900 hover:bg-zinc-800 text-white text-sm font-semibold transition-all duration-300 shadow-lg hover:shadow-orange-500/10"
       >
-        <span className="text-lg">{currencyConfig.flag}</span>
+        <span className="w-6 h-6 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center shrink-0">
+          <ButtonIcon size={13} strokeWidth={2.25} className={buttonIconColor} />
+        </span>
 
         <span>
           {currencyConfig.code} ({currencyConfig.symbol})
@@ -85,6 +101,7 @@ const CurrencySelector = () => {
               {(Object.keys(CURRENCIES) as CurrencyCode[]).map((code) => {
                 const item = CURRENCIES[code];
                 const selected = currency === code;
+                const { icon: ItemIcon, color: itemColor } = getCurrencyIcon(item.code);
 
                 return (
                   <button
@@ -95,24 +112,35 @@ const CurrencySelector = () => {
                       setOpen(false);
                     }}
                     className={`w-full flex items-center justify-between px-5 py-3 transition-all duration-200 cursor-pointer group ${selected
-                        ? 'bg-orange-500/10 border-l-4 border-orange-500'
-                        : 'hover:bg-zinc-900'
+                      ? 'bg-orange-500/10 border-l-4 border-orange-500'
+                      : 'hover:bg-zinc-900'
                       }`}
                   >
                     <div className="flex items-center gap-3">
-                      <span className="text-xl">{item.flag}</span>
+                      <span
+                        className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 border transition-colors duration-200 ${selected
+                          ? 'bg-orange-500/15 border-orange-500/40'
+                          : 'bg-zinc-800/80 border-zinc-700/50 group-hover:border-zinc-600'
+                          }`}
+                      >
+                        <ItemIcon
+                          size={16}
+                          strokeWidth={2.25}
+                          className={selected ? 'text-orange-400' : itemColor}
+                        />
+                      </span>
 
                       <div className="flex flex-col items-start">
                         <span
                           className={`text-sm font-semibold ${selected
-                              ? 'text-orange-400'
-                              : 'text-white'
+                            ? 'text-orange-400'
+                            : 'text-white'
                             }`}
                         >
                           {item.code}
                         </span>
 
-                        <span className="text-xs text-zinc-500">
+                        <span className="text-sm text-zinc-400">
                           Symbol: {item.symbol}
                         </span>
                       </div>

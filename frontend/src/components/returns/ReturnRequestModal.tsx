@@ -11,19 +11,23 @@ interface ReturnRequestModalProps {
 }
 
 interface ProductDetails {
-  id: string;
-  name: string;
-  image: string;
-  size: string;
-  color: string;
+  productId: string;
+  productName: string;
+  productImage: string;
+  productSize: string;
+  productColor: string;
+  price: number;
+  quantity: number;
 }
 
 const ProductOption = ({
   productId,
+  quantity,
   selected,
   onToggle,
 }: {
   productId: string;
+  quantity: number;
   selected: boolean;
   onToggle: (details: ProductDetails) => void;
 }) => {
@@ -32,13 +36,23 @@ const ProductOption = ({
   const image = product?.images?.[0] || '';
   const size = product?.sizes?.[0] || 'M';
   const color = product?.colors?.[0] || 'Black';
+  const price = Number(product?.price ?? 0);
 
   return (
     <div
-      onClick={() => onToggle({ id: productId, name, image, size, color })}
-      className={`p-3.5 border rounded-xl flex items-center gap-4 cursor-pointer transition-all ${
-        selected ? 'border-[#0050cb] bg-blue-50/60 shadow-sm' : 'border-gray-200 hover:bg-gray-50'
-      }`}
+      onClick={() =>
+        onToggle({
+          productId,
+          productName: name,
+          productImage: image,
+          productSize: size,
+          productColor: color,
+          price,
+          quantity,
+        })
+      }
+      className={`p-3.5 border rounded-xl flex items-center gap-4 cursor-pointer transition-all ${selected ? 'border-[#0050cb] bg-blue-50/60 shadow-sm' : 'border-gray-200 hover:bg-gray-50'
+        }`}
     >
       <div className="w-12 h-12 bg-gray-100 rounded-lg overflow-hidden shrink-0 border border-gray-200">
         {image ? (
@@ -50,7 +64,7 @@ const ProductOption = ({
       <div className="flex-1 min-w-0">
         <p className={`text-sm font-semibold truncate ${selected ? 'text-[#0050cb]' : 'text-gray-900'}`}>{name}</p>
         <p className="text-xs text-gray-500 mt-0.5">
-          Size: {size} | Color: {color}
+          Size: {size} | Color: {color} | Qty: {quantity}
         </p>
       </div>
       <div className={`w-6 h-6 rounded-md border flex items-center justify-center transition-colors ${selected ? 'border-[#0050cb] bg-[#0050cb] text-white' : 'border-gray-300 bg-white'}`}>
@@ -79,9 +93,9 @@ export default function ReturnRequestModal({ orderId, items, onClose, onSuccess 
 
   const handleToggleProduct = (details: ProductDetails) => {
     setSelectedProducts((prev) => {
-      const exists = prev.some((p) => p.id === details.id);
+      const exists = prev.some((p) => p.productId === details.productId);
       if (exists) {
-        return prev.filter((p) => p.id !== details.id);
+        return prev.filter((p) => p.productId !== details.productId);
       } else {
         return [...prev, details];
       }
@@ -102,20 +116,13 @@ export default function ReturnRequestModal({ orderId, items, onClose, onSuccess 
     }
 
     try {
-      await Promise.all(
-        selectedProducts.map((product) =>
-          createReturn({
-            orderId,
-            productId: product.id,
-            productName: product.name,
-            productImage: product.image,
-            productSize: product.size,
-            productColor: product.color,
-            reason,
-            description,
-          }).unwrap()
-        )
-      );
+
+      await createReturn({
+        orderId,
+        reason,
+        description,
+        items: selectedProducts,
+      }).unwrap();
 
       setSuccess(true);
       setTimeout(() => {
@@ -145,13 +152,13 @@ export default function ReturnRequestModal({ orderId, items, onClose, onSuccess 
             <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-6">
               <CheckCircle2 className="w-8 h-8" />
             </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">Requests Submitted!</h3>
-            <p className="text-gray-500 text-sm">Return requests for {selectedProducts.length} item(s) have been submitted to our team for review.</p>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">Request Submitted!</h3>
+            <p className="text-gray-500 text-sm">Your return request for {selectedProducts.length} item(s) has been submitted to our team for review.</p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col overflow-hidden">
             <div className="p-6 overflow-y-auto space-y-6">
-              
+
               {error && (
                 <div className="p-4 bg-red-50 text-red-700 rounded-xl flex items-start gap-3 text-sm">
                   <AlertCircle className="w-5 h-5 shrink-0" />
@@ -167,11 +174,12 @@ export default function ReturnRequestModal({ orderId, items, onClose, onSuccess 
                 </div>
                 <div className="space-y-2">
                   {items.map((item) => {
-                    const isSelected = selectedProducts.some((p) => p.id === item.productId);
+                    const isSelected = selectedProducts.some((p) => p.productId === item.productId);
                     return (
                       <ProductOption
                         key={item.productId}
                         productId={item.productId}
+                        quantity={item.quantity}
                         selected={isSelected}
                         onToggle={handleToggleProduct}
                       />

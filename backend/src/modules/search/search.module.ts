@@ -17,6 +17,6 @@ import { SearchService } from './search.service';
     ]),
   ],
   providers: [SearchIndexService, SearchRepository, SearchService],
-  exports: [SearchIndexService, SearchService],
+  exports: [SearchIndexService, SearchRepository, SearchService],
 })
 export class SearchModule {}

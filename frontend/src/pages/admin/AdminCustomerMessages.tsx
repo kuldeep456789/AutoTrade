@@ -88,41 +88,47 @@ export default function AdminCustomerMessages() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white dark:bg-zinc-900/90 p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xl backdrop-blur-md transition-colors duration-200">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Total Messages</span>
-            <MessageSquare className="h-5 w-5 text-orange-500" />
+        <div className="bg-white dark:bg-zinc-900/90 px-5 py-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider block mb-1">Total Messages</span>
+            <p className="text-2xl font-extrabold text-zinc-900 dark:text-white leading-none">{messages.length}</p>
           </div>
-          <p className="text-3xl font-extrabold text-zinc-900 dark:text-white mt-2">{messages.length}</p>
+          <div className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
+            <MessageSquare className="h-4 w-4 text-zinc-500" />
+          </div>
         </div>
-        <div className="bg-white dark:bg-zinc-900/90 p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xl backdrop-blur-md transition-colors duration-200">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-orange-500 uppercase tracking-wider">Pending Queries</span>
-            <Clock className="h-5 w-5 text-orange-500" />
+        <div className="bg-white dark:bg-zinc-900/90 px-5 py-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold text-orange-500 uppercase tracking-wider block mb-1">Pending Queries</span>
+            <p className="text-2xl font-extrabold text-orange-500 leading-none">{pendingCount}</p>
           </div>
-          <p className="text-3xl font-extrabold text-orange-500 mt-2">{pendingCount}</p>
+          <div className="w-10 h-10 rounded-full bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center">
+            <Clock className="h-4 w-4 text-orange-500" />
+          </div>
         </div>
-        <div className="bg-white dark:bg-zinc-900/90 p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xl backdrop-blur-md transition-colors duration-200">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-emerald-500 uppercase tracking-wider">Resolved Queries</span>
-            <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+        <div className="bg-white dark:bg-zinc-900/90 px-5 py-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold text-emerald-500 uppercase tracking-wider block mb-1">Resolved Queries</span>
+            <p className="text-2xl font-extrabold text-emerald-500 leading-none">{resolvedCount}</p>
           </div>
-          <p className="text-3xl font-extrabold text-emerald-500 mt-2">{resolvedCount}</p>
+          <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center">
+            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+          </div>
         </div>
       </div>
 
-      <div className="bg-white dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xl overflow-hidden backdrop-blur-md transition-colors duration-200">
+      <div className="bg-white dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm overflow-hidden">
         {/* Filters */}
-        <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-zinc-50 dark:bg-zinc-950">
-          <div className="flex bg-zinc-200/60 dark:bg-zinc-900 p-1 rounded-xl w-full md:w-auto">
+        <div className="p-3 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-center sm:justify-start bg-zinc-50/50 dark:bg-zinc-950/50">
+          <div className="inline-flex bg-zinc-200/50 dark:bg-zinc-900/50 p-1 rounded-xl w-full sm:w-auto">
             {(['all', 'pending', 'resolved'] as const).map((status) => (
               <button
                 key={status}
                 onClick={() => setFilter(status)}
-                className={`flex-1 md:flex-none px-4 py-1.5 rounded-lg text-xs font-semibold capitalize transition-all cursor-pointer ${
+                className={`flex-1 sm:flex-none px-5 py-1.5 rounded-lg text-[13px] font-semibold capitalize transition-all cursor-pointer ${
                   filter === status 
-                    ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20' 
-                    : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
+                    ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm ring-1 ring-zinc-200/50 dark:ring-zinc-700/50' 
+                    : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200'
                 }`}
               >
                 {status} ({status === 'all' ? messages.length : status === 'pending' ? pendingCount : resolvedCount})
@@ -146,92 +152,87 @@ export default function AdminCustomerMessages() {
               const isResolved = msg.status === 'resolved';
               const isReplying = replyingId === msg._id;
               return (
-                <div key={msg._id} className="p-5 hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
-                    <div className="flex items-center gap-3">
-                      <span className="font-bold text-zinc-900 dark:text-white text-base">{msg.name}</span>
+                <div key={msg._id} className="p-4 hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-zinc-900 dark:text-white text-[13px]">{msg.name}</span>
+                      <span className="text-zinc-300 dark:text-zinc-700">•</span>
                       <a
                         href={`mailto:${msg.email}?subject=Re: ${encodeURIComponent(msg.subject)}`}
-                        className="text-xs text-orange-500 hover:underline flex items-center gap-1 font-semibold"
+                        className="text-[12px] text-zinc-500 hover:text-orange-500 hover:underline flex items-center gap-1 font-medium"
                       >
-                        <Mail className="h-3.5 w-3.5" />
+                        <Mail className="h-3 w-3" />
                         {msg.email}
                       </a>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs text-zinc-400">
-                        {new Date(msg.createdAt).toLocaleString(undefined, {
-                          dateStyle: 'medium',
-                          timeStyle: 'short',
-                        })}
-                      </span>
+                    <div className="flex items-center gap-2">
                       <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider border ${
+                        className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest border ${
                           isResolved
-                            ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
-                            : 'bg-orange-500/10 text-orange-500 border-orange-500/20'
+                            ? 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20'
+                            : 'bg-orange-50 text-orange-600 border-orange-200 dark:bg-orange-500/10 dark:text-orange-400 dark:border-orange-500/20'
                         }`}
                       >
                         {isResolved ? 'Resolved' : 'Pending'}
                       </span>
+                      <span className="text-[11px] text-zinc-400 font-mono">
+                        {new Date(msg.createdAt).toLocaleDateString()}
+                      </span>
                     </div>
                   </div>
 
-                  <h4 className="text-sm font-bold text-zinc-800 dark:text-zinc-200 mb-1.5">{msg.subject}</h4>
-                  <p className="text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed bg-zinc-50 dark:bg-zinc-950 p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 mb-4 whitespace-pre-wrap">
+                  <h4 className="text-[13px] font-bold text-zinc-800 dark:text-zinc-200 mb-1">{msg.subject}</h4>
+                  <p className="text-[13px] text-zinc-600 dark:text-zinc-300 leading-relaxed bg-zinc-50/50 dark:bg-zinc-950/50 px-3 py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 mb-3 whitespace-pre-wrap">
                     {msg.message}
                   </p>
 
                   {/* Existing Admin Reply */}
                   {msg.adminReply && (
-                    <div className="mb-4 p-4 rounded-xl bg-orange-500/10 border border-orange-500/20 text-zinc-900 dark:text-white text-sm">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="font-bold text-orange-500 text-xs flex items-center gap-1.5 uppercase tracking-wider">
-                          <MessageCircle className="h-4 w-4" />
-                          Admin Resolution Response:
+                    <div className="mb-3 px-3 py-2.5 rounded-lg bg-orange-50/50 dark:bg-orange-500/5 border border-orange-200 dark:border-orange-500/10 text-zinc-900 dark:text-white">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-bold text-orange-500 text-[10px] flex items-center gap-1 uppercase tracking-widest">
+                          <MessageCircle className="h-3 w-3" />
+                          Admin Reply
                         </span>
                         {msg.repliedAt && (
-                          <span className="text-[11px] text-zinc-400 font-mono">
-                            {new Date(msg.repliedAt).toLocaleString()}
+                          <span className="text-[10px] text-zinc-400 font-mono">
+                            {new Date(msg.repliedAt).toLocaleDateString()}
                           </span>
                         )}
                       </div>
-                      <p className="text-zinc-800 dark:text-zinc-200 text-sm whitespace-pre-wrap">{msg.adminReply}</p>
+                      <p className="text-zinc-700 dark:text-zinc-300 text-[13px] whitespace-pre-wrap">{msg.adminReply}</p>
                     </div>
                   )}
 
                   {/* Reply Input Box */}
                   {isReplying ? (
-                    <div className="space-y-3 bg-zinc-50 dark:bg-zinc-950 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 mb-3 animate-fade-in">
-                      <label className="block text-xs font-bold uppercase text-zinc-600 dark:text-zinc-400 tracking-wider">
-                        Resolution Reply for {msg.email}:
-                      </label>
+                    <div className="mt-2 flex flex-col gap-2 animate-fade-in">
                       <textarea
-                        rows={3}
-                        placeholder="Type your response / resolution here..."
+                        rows={2}
+                        placeholder="Type your resolution reply here..."
                         value={replyText[msg._id] ?? msg.adminReply ?? ''}
                         onChange={(e) => setReplyText({ ...replyText, [msg._id]: e.target.value })}
-                        className="w-full p-3 text-sm bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:border-orange-500"
+                        className="w-full px-3 py-2 text-[13px] bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white border border-zinc-200 dark:border-zinc-800 rounded-lg focus:outline-none focus:border-orange-500 shadow-sm transition-colors"
                       />
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleSendReply(msg._id)}
                           disabled={updatingId === msg._id}
-                          className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-md shadow-orange-500/20"
+                          className="px-3 py-1.5 bg-zinc-900 dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-100 text-white dark:text-zinc-900 rounded-md text-[11px] font-bold flex items-center gap-1.5 cursor-pointer shadow-sm transition-colors"
                         >
-                          <Send className="h-3.5 w-3.5" />
-                          {updatingId === msg._id ? 'Saving...' : 'Send Reply & Resolve'}
+                          <Send className="h-3 w-3" />
+                          {updatingId === msg._id ? 'Saving...' : 'Send Reply'}
                         </button>
                         <button
                           onClick={() => setReplyingId(null)}
-                          className="px-4 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 rounded-xl text-xs font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+                          className="px-3 py-1.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 rounded-md text-[11px] font-semibold hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer transition-colors"
                         >
                           Cancel
                         </button>
                       </div>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-3 pt-1">
+                    <div className="flex items-center mt-1">
                       <button
                         onClick={() => {
                           setReplyingId(msg._id);
@@ -239,10 +240,10 @@ export default function AdminCustomerMessages() {
                             setReplyText({ ...replyText, [msg._id]: msg.adminReply });
                           }
                         }}
-                        className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-orange-500 text-white hover:bg-orange-600 cursor-pointer transition-all flex items-center gap-1.5 shadow-md shadow-orange-500/20"
+                        className="text-[11px] font-bold text-zinc-500 hover:text-orange-500 flex items-center gap-1 cursor-pointer transition-colors"
                       >
-                        <MessageCircle className="h-3.5 w-3.5" />
-                        {msg.adminReply ? 'Edit Reply' : 'Reply & Resolve'}
+                        <MessageCircle className="h-3 w-3" />
+                        {msg.adminReply ? 'Edit Reply' : 'Reply to Customer'}
                       </button>
                     </div>
                   )}

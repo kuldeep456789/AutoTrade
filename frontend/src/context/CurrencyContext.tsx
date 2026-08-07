@@ -1,4 +1,5 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useMemo, type ReactNode } from 'react';
+import { useGetSettingsQuery } from '../store/slices/settingsApiSlice';
 
 export type CurrencyCode = 'INR' | 'USD' | 'EUR';
 
@@ -16,21 +17,21 @@ export const CURRENCIES: Record<CurrencyCode, CurrencyConfig> = {
     symbol: '₹',
     label: 'INR (₹)',
     flag: '🇮🇳',
-    rate: 1.0,
+    rate: 1.0, // Indian RS
   },
   USD: {
     code: 'USD',
     symbol: '$',
     label: 'USD ($)',
     flag: '🇺🇸',
-    rate: 0.01198, // Market rate: 1 USD = 83.50 INR
+    rate: 0.0105, // Market rate: 1 USD = 83.50 INR
   },
   EUR: {
     code: 'EUR',
     symbol: '€',
     label: 'EUR (€)',
     flag: '🇪🇺',
-    rate: 0.01105, // Market rate: 1 EUR = 90.50 INR
+    rate: 0.0090, // Market rate: 1 EUR = 90.50 INR
   },
 };
 
@@ -43,7 +44,7 @@ interface CurrencyContextType {
 
 const CurrencyContext = createContext<CurrencyContextType>({
   currency: 'INR',
-  setCurrency: () => {},
+  setCurrency: () => { },
   formatCurrency: (priceInINR: number) => `₹${Math.round(priceInINR).toLocaleString('en-IN')}`,
   currencyConfig: CURRENCIES.INR,
 });
@@ -54,16 +55,23 @@ const STORAGE_KEY = 'autotrade_currency';
 
 export const CurrencyProvider = ({ children }: { children: ReactNode }) => {
   const [currency, setCurrencyState] = useState<CurrencyCode>('INR');
+  const { data: settings } = useGetSettingsQuery(undefined);
+
+  const dynamicCurrencies = useMemo(() => ({
+    INR: { ...CURRENCIES.INR, rate: settings?.currencyRateINR ?? CURRENCIES.INR.rate },
+    USD: { ...CURRENCIES.USD, rate: settings?.currencyRateUSD ?? CURRENCIES.USD.rate },
+    EUR: { ...CURRENCIES.EUR, rate: settings?.currencyRateEUR ?? CURRENCIES.EUR.rate },
+  }), [settings]);
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY) as CurrencyCode | null;
-    if (stored && CURRENCIES[stored]) {
+    if (stored && dynamicCurrencies[stored]) {
       setCurrencyState(stored);
     }
-  }, []);
+  }, [dynamicCurrencies]);
 
   const setCurrency = (code: CurrencyCode) => {
-    if (CURRENCIES[code]) {
+    if (dynamicCurrencies[code]) {
       setCurrencyState(code);
       localStorage.setItem(STORAGE_KEY, code);
     }
@@ -71,9 +79,9 @@ export const CurrencyProvider = ({ children }: { children: ReactNode }) => {
 
   const formatCurrency = (priceInINR: number): string => {
     const num = Number(priceInINR);
-    if (isNaN(num) || num <= 0) return `${CURRENCIES[currency].symbol}0`;
+    if (isNaN(num) || num <= 0) return `${dynamicCurrencies[currency].symbol}0`;
 
-    const config = CURRENCIES[currency];
+    const config = dynamicCurrencies[currency];
     const converted = num * config.rate;
 
     if (currency === 'INR') {
@@ -88,7 +96,7 @@ export const CurrencyProvider = ({ children }: { children: ReactNode }) => {
         currency,
         setCurrency,
         formatCurrency,
-        currencyConfig: CURRENCIES[currency],
+        currencyConfig: dynamicCurrencies[currency],
       }}
     >
       {children}

@@ -1,4 +1,8 @@
-import { BadRequestException, ForbiddenException, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
 import * as bcrypt from 'bcrypt';
@@ -6,6 +10,8 @@ import { UsersService } from '../users/users.service';
 import { AuthService } from './auth.service';
 import { MailService } from '../mail/mail.service';
 import { OtpStoreService } from './services/otp-store.service';
+import { UserActivityLogService } from '../users/user-activity-log.service';
+import { RedisService } from '../redis/redis.service';
 
 describe('AuthService', () => {
   let authService: AuthService;
@@ -46,6 +52,8 @@ describe('AuthService', () => {
         { provide: JwtService, useValue: jwtService },
         { provide: MailService, useValue: mailService },
         { provide: OtpStoreService, useValue: otpStore },
+        { provide: UserActivityLogService, useValue: { logEvent: jest.fn() } },
+        { provide: RedisService, useValue: { get: jest.fn(), set: jest.fn(), del: jest.fn() } },
       ],
     }).compile();
 
@@ -54,11 +62,14 @@ describe('AuthService', () => {
 
   describe('sendRegisterOtp', () => {
     it('throws ForbiddenException (403) when invalid admin secret is provided, without generating OTP or sending email', async () => {
+      const email = 'test@example.com';
+      const password = 'ValidPassword123!';
+      const firstName = 'Test';
       await expect(
         authService.sendRegisterOtp({
-          firstName: 'John',
-          email: 'john@example.com',
-          password: 'password123',
+          firstName,
+          email,
+          password,
           adminSecret: 'wrong_secret',
         }),
       ).rejects.toThrow(ForbiddenException);
@@ -74,12 +85,18 @@ describe('AuthService', () => {
       const result = await authService.sendRegisterOtp({
         firstName: 'John',
         email: 'john@example.com',
-        password: 'password123',
+        password: 'ValidPassword123!',
       });
 
       expect(result.success).toBe(true);
-      expect(otpStore.generate).toHaveBeenCalledWith('register:john@example.com');
-      expect(mailService.sendOtp).toHaveBeenCalledWith('John', 'john@example.com', '123456');
+      expect(otpStore.generate).toHaveBeenCalledWith(
+        'register:john@example.com',
+      );
+      expect(mailService.sendOtp).toHaveBeenCalledWith(
+        'John',
+        'john@example.com',
+        '123456',
+      );
     });
   });
 

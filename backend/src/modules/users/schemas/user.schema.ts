@@ -31,6 +31,9 @@ export class User {
 
   @Prop({ default: false })
   isTwoFactorEnabled: boolean;
+
+  @Prop({ enum: ['INR', 'USD', 'EUR', 'GBP'], default: 'INR' })
+  adminCurrencyPreference: string;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

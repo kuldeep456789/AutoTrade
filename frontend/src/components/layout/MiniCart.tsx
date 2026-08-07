@@ -47,7 +47,7 @@ const MiniCart = ({ isOpen, onClose }: MiniCartProps) => {
   const updateQty = (item: CartItem, delta: number) => {
     const newQty = item.qty + delta;
     if (newQty < 1) {
-      dispatch(removeFromCart({ id: item._id, size: item.variant.size, color: item.variant.color }));
+      dispatch(removeFromCart({ id: item._id, size: item.variant?.size || 'Standard', color: item.variant?.color || 'Default' }));
     } else {
       dispatch(addToCart({ ...item, qty: newQty }));
     }
@@ -58,7 +58,7 @@ const MiniCart = ({ isOpen, onClose }: MiniCartProps) => {
   };
 
   const removeItem = (item: CartItem) => {
-    dispatch(removeFromCart({ id: item._id, size: item.variant.size, color: item.variant.color }));
+    dispatch(removeFromCart({ id: item._id, size: item.variant?.size || 'Standard', color: item.variant?.color || 'Default' }));
   };
 
   return (
@@ -131,7 +131,7 @@ const MiniCart = ({ isOpen, onClose }: MiniCartProps) => {
 
                 return (
                   <div
-                    key={`${item._id}-${item.variant.size}-${item.variant.color}-${idx}`}
+                    key={`${item._id || idx}-${item.variant?.size || 'std'}-${item.variant?.color || 'def'}-${idx}`}
                     className="flex gap-4 p-3.5 rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-zinc-900/40 hover:border-zinc-300 dark:hover:border-zinc-700 transition-all group"
                   >
                     {/* Product Image */}
@@ -159,10 +159,10 @@ const MiniCart = ({ isOpen, onClose }: MiniCartProps) => {
                         </Link>
                         <div className="flex items-center gap-1.5 mt-2">
                           <span className="px-2 py-0.5 rounded-md bg-zinc-200/70 dark:bg-zinc-800 text-[10px] font-bold text-zinc-700 dark:text-zinc-300 uppercase">
-                            Size: {item.variant.size}
+                            Size: {item.variant?.size || 'Standard'}
                           </span>
                           <span className="px-2 py-0.5 rounded-md bg-zinc-200/70 dark:bg-zinc-800 text-[10px] font-bold text-zinc-700 dark:text-zinc-300 uppercase truncate max-w-[100px]">
-                            {item.variant.color}
+                            {item.variant?.color || 'Default'}
                           </span>
                         </div>
                       </div>
@@ -223,7 +223,7 @@ const MiniCart = ({ isOpen, onClose }: MiniCartProps) => {
             {/* Minimum Order Warning Banner if under 50k */}
             {calculatedSubtotal < 50000 && (
               <div className="px-3 py-2 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 text-[11px] font-medium text-amber-700 dark:text-amber-400 flex items-center justify-between">
-                <span>Minimum order amount is ₹50,000</span>
+                <span>Minimum order amount is {formatCurrency(50000)}</span>
                 <span className="font-bold">Add {formatCurrency(50000 - calculatedSubtotal)}</span>
               </div>
             )}

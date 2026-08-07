@@ -66,7 +66,7 @@ export class MailService {
     }
   }
 
-  private getTemplatePath(templateName: string): string {
+  getTemplatePath(templateName: string): string {
     return path.join(
       process.cwd(),
       'src',
@@ -77,7 +77,7 @@ export class MailService {
     );
   }
 
-  private loadTemplate(
+  loadTemplate(
     templateName: string,
     variables: Record<string, any>,
   ): string {
@@ -88,7 +88,6 @@ export class MailService {
       }
       return html;
     } catch (err) {
-      // Inline fallback template if template file is missing
       if (templateName === 'otp' || templateName === 'forgot-password') {
         return `
             <div style="font-family: Arial, sans-serif; padding: 24px; max-width: 480px; margin: 0 auto; border: 1px solid #e4e4e7; border-radius: 16px;">
@@ -107,7 +106,6 @@ export class MailService {
   }
 
   private async sendEmail(to: string, subject: string, html: string) {
-    // nodemailer
     if (this.transporter) {
       try {
         await this.transporter.sendMail({
@@ -117,9 +115,7 @@ export class MailService {
           html,
         });
 
-        this.logger.log(
-          `Nodemailer sent email to ${to} (Subject: ${subject})`,
-        );
+        this.logger.log(`Nodemailer sent email to ${to} (Subject: ${subject})`);
 
         return;
       } catch (err: any) {
@@ -133,6 +129,32 @@ export class MailService {
     this.logger.debug(html);
   }
 
+  private async sendEmailWithRetry(
+    to: string,
+    subject: string,
+    html: string,
+    maxRetries: number = 3,
+  ): Promise<void> {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        await this.sendEmail(to, subject, html);
+        this.logger.log(
+          `[EMAIL] Sent successfully to ${to} (attempt ${attempt}/${maxRetries})`,
+        );
+        return;
+      } catch (err: any) {
+        this.logger.warn(
+          `[EMAIL] Attempt ${attempt}/${maxRetries} failed for ${to}: ${err?.message}`,
+        );
+        if (attempt < maxRetries) {
+          const delay = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+      }
+    }
+    this.logger.error(`[EMAIL] All ${maxRetries} attempts failed for ${to}`);
+  }
+
   async sendOtp(
     name: string,
     email: string,
@@ -141,13 +163,13 @@ export class MailService {
   ) {
     const html = this.loadTemplate('otp', { name, otp, expiry });
     if (!html) return;
-    await this.sendEmail(email, 'Your AutoTrade Verification Code', html);
+    await this.sendEmailWithRetry(email, 'Your AutoTrade Verification Code', html);
   }
 
   async sendWelcome(name: string, email: string) {
     const html = this.loadTemplate('welcome', { name });
     if (!html) return;
-    await this.sendEmail(email, 'Welcome to AutoTrade!', html);
+    await this.sendEmailWithRetry(email, 'Welcome to AutoTrade!', html);
   }
 
   async sendForgotPassword(
@@ -158,7 +180,7 @@ export class MailService {
   ) {
     const html = this.loadTemplate('forgot-password', { name, otp, expiry });
     if (!html) return;
-    await this.sendEmail(email, 'Reset your AutoTrade password', html);
+    await this.sendEmailWithRetry(email, 'Reset your AutoTrade password', html);
   }
 
   async sendOrderConfirmation(
@@ -173,7 +195,11 @@ export class MailService {
       amount,
     });
     if (!html) return;
-    await this.sendEmail(email, `Order Confirmation - #${orderId}`, html);
+    await this.sendEmailWithRetry(
+      email,
+      `Order Confirmation - #${orderId}`,
+      html,
+    );
   }
 
   async sendPaymentSuccess(
@@ -188,7 +214,11 @@ export class MailService {
       amount,
     });
     if (!html) return;
-    await this.sendEmail(email, `Payment Received - #${orderId}`, html);
+    await this.sendEmailWithRetry(
+      email,
+      `Payment Received - #${orderId}`,
+      html,
+    );
   }
 
   async sendOrderShipped(
@@ -199,13 +229,17 @@ export class MailService {
   ) {
     const html = this.loadTemplate('shipped', { name, orderId, trackingLink });
     if (!html) return;
-    await this.sendEmail(email, `Your order #${orderId} has shipped!`, html);
+    await this.sendEmailWithRetry(
+      email,
+      `Your order #${orderId} has shipped!`,
+      html,
+    );
   }
 
   async sendOrderDelivered(name: string, email: string, orderId: string) {
     const html = this.loadTemplate('delivered', { name, orderId });
     if (!html) return;
-    await this.sendEmail(
+    await this.sendEmailWithRetry(
       email,
       `Your order #${orderId} has been delivered`,
       html,
@@ -220,11 +254,15 @@ export class MailService {
   ) {
     const html = this.loadTemplate('refund', { name, orderId, amount });
     if (!html) return;
-    await this.sendEmail(email, `Refund Processed - #${orderId}`, html);
+    await this.sendEmailWithRetry(
+      email,
+      `Refund Processed - #${orderId}`,
+      html,
+    );
   }
 
   async sendSystemAlert(subject: string, message: string) {
-    const to = process.env.ADMIN_ALERT_EMAIL || 'admin@autotrade.com';
+    const to = process.env.ADMIN_ALERT_EMAIL || 't00368258@gmail.com';
     const html = `
         <div style="font-family: Arial, sans-serif; padding: 24px; max-width: 600px; margin: 0 auto; border: 1px solid #fda4af; border-radius: 16px; background-color: #fff1f2;">
           <h2 style="color: #be123c; margin-bottom: 8px;">AutoTrade System Alert</h2>
@@ -234,6 +272,6 @@ export class MailService {
           <p style="color: #9f1239; font-size: 11px;">This is an automated alert generated by the AutoTrade Backend service.</p>
         </div>
       `;
-    await this.sendEmail(to, subject, html);
+    await this.sendEmailWithRetry(to, subject, html);
   }
 }

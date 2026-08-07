@@ -9,6 +9,15 @@ export class OrderItem {
   @Prop({ type: String })
   vid?: string;
 
+  @Prop({ type: String })
+  sku?: string;
+
+  @Prop({ type: String })
+  color?: string;
+
+  @Prop({ type: String })
+  size?: string;
+
   @Prop({ required: true })
   quantity: number;
 }
@@ -33,6 +42,9 @@ export class ShippingDetails {
   countryCode?: string;
 
   @Prop()
+  country?: string;
+
+  @Prop()
   zip?: string;
 
   @Prop()
@@ -53,16 +65,19 @@ export class Order {
   @Prop({ required: true, default: 0 })
   totalAmount: number;
 
+  @Prop({ required: true, enum: ['INR', 'USD', 'EUR'], default: 'INR' })
+  currency: string;
+
   @Prop({ required: true, default: 'pending' })
   status: string;
 
-  @Prop({ required: true, default: 'Razorpay' })
+  @Prop({ required: true, default: 'Stripe' })
   paymentProvider: string;
 
   @Prop({
     required: true,
-    enum: ['unpaid', 'paid', 'pending'],
-    default: 'unpaid',
+    enum: ['paid', 'pending', 'failed'],
+    default: 'pending',
   })
   paymentStatus: string;
 
@@ -70,16 +85,22 @@ export class Order {
   paymentReference?: string;
 
   @Prop()
-  razorpayOrderId?: string;
+  checkoutSessionId?: string;
 
   @Prop()
-  razorpayPaymentId?: string;
+  paymentIntentId?: string;
 
   @Prop()
-  razorpaySignature?: string;
+  receiptUrl?: string;
 
   @Prop()
   cjOrderId?: string;
+
+  @Prop({ type: [String], default: [] })
+  cjOrderIds?: string[];
+
+  @Prop()
+  cjSyncError?: string;
 
   @Prop({ type: ShippingDetailsSchema })
   shippingDetails?: ShippingDetails;

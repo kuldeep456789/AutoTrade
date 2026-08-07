@@ -12,7 +12,7 @@ export class SearchService {
   constructor(
     private readonly searchIndexService: SearchIndexService,
     private readonly searchRepository: SearchRepository,
-  ) {}
+  ) { }
 
   /**
    * High-performance inverted index search engine.
@@ -180,16 +180,7 @@ export class SearchService {
     }
   }
 
-  /**
-   * Ranking Engine:
-   * 1. Exact Title Match (+100)
-   * 2. Title Starts With Phrase (+60)
-   * 3. Title Token Match (+10 per matched query token)
-   * 4. Brand Match (+25)
-   * 5. Category / Subcategory Match (+15)
-   * 6. Description / Tags Match (+5)
-   * 7. Multi-word Token Match Multiplier (+20)
-   */
+
   private calculateRelevanceScore(
     product: any,
     queryStr: string,

@@ -10,7 +10,9 @@ const PrivateRoute = ({ children }: Props) => {
   const userInfo = useSelector((state: RootState) => state.auth.userInfo);
   const location = useLocation();
 
-  if (!userInfo || !userInfo.accessToken) {
+  const token = userInfo?.accessToken || (userInfo as any)?.token || localStorage.getItem('token') || localStorage.getItem('accessToken');
+
+  if (!userInfo || !token) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 

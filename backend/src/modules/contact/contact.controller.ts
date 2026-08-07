@@ -42,34 +42,28 @@ export class ContactController {
     return this.contactService.findAll();
   }
 
-  @Get('user/:email')
-  async getUserMessages(
+  @Get('me')
+  async getMyMessages(
     @Headers('authorization') authorization: string | undefined,
-    @Param('email') email: string,
   ) {
-    if (!email) {
-      throw new BadRequestException('Email is required');
-    }
     const token = authorization?.replace(/^Bearer\s+/i, '');
-    if (token) {
-      try {
-        const payload = await this.jwtService.verifyAsync<{ sub: string }>(
-          token,
-        );
-        const user = await this.usersService.findById(payload.sub);
-        if (
-          user &&
-          user.role !== 'admin' &&
-          user.email.toLowerCase().trim() !== email.toLowerCase().trim()
-        ) {
-          throw new UnauthorizedException('Access denied');
-        }
-      } catch (e: any) {
-        if (e instanceof UnauthorizedException) throw e;
-        // Ignore expired tokens gracefully for own user email lookup
-      }
+    if (!token) {
+      throw new UnauthorizedException('Bearer token is required');
     }
-    return this.contactService.findByEmail(email);
+
+    let user;
+    try {
+      const payload = await this.jwtService.verifyAsync<{ sub: string }>(token);
+      user = await this.usersService.findById(payload.sub);
+    } catch {
+      throw new UnauthorizedException('Invalid or expired token');
+    }
+
+    if (!user) {
+      throw new UnauthorizedException('User no longer exists');
+    }
+
+    return this.contactService.findByEmail(user.email);
   }
 
   @Patch(':id/status')

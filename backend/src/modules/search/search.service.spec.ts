@@ -60,8 +60,12 @@ describe('Search Engine Unit Tests', () => {
       mockIndexService.getTokenPids.mockResolvedValue(['PID1', 'PID2']);
       mockIndexService.getPrefixPids.mockResolvedValue(['PID1']);
       mockRepository.findProductsByPids.mockResolvedValue([
-        { pid: 'PID1', productName: 'Black Cotton Oversized Shirt', price: 29.99 },
-        { pid: 'PID2', productName: 'White Basic Tee', price: 15.00 },
+        {
+          pid: 'PID1',
+          productName: 'Black Cotton Oversized Shirt',
+          price: 29.99,
+        },
+        { pid: 'PID2', productName: 'White Basic Tee', price: 15.0 },
       ]);
 
       const res = await searchService.search({ q: 'black shirt' });

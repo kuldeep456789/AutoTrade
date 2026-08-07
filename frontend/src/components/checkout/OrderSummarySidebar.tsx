@@ -69,8 +69,8 @@ const OrderSummarySidebar = ({ buttonText, buttonAction, disableButton }: OrderS
 
       {/* Items */}
       <div className="px-6 py-4 max-h-64 overflow-y-auto space-y-4 scrollbar-thin">
-        {cartItems.map((item) => (
-          <div key={`${item._id}-${item.variant.size}-${item.variant.color}`} className="flex gap-3 items-start">
+        {cartItems.map((item, idx) => (
+          <div key={`${item._id || idx}-${item.variant?.size || 'std'}-${item.variant?.color || 'default'}`} className="flex gap-3 items-start">
             <div className="relative w-16 h-[72px] flex-shrink-0 rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
               <img src={item.image || undefined} alt={item.name} className="w-full h-full object-cover" />
               <span className="absolute -top-1.5 -right-1.5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-[9px] font-bold w-[18px] h-[18px] rounded-full flex items-center justify-center shadow-sm border border-white dark:border-[#18181B]">
@@ -80,7 +80,7 @@ const OrderSummarySidebar = ({ buttonText, buttonAction, disableButton }: OrderS
             <div className="flex-1 min-w-0">
               <p className="text-[13px] font-semibold leading-snug text-zinc-900 dark:text-white line-clamp-2">{item.name}</p>
               <p className="text-[11px] text-zinc-400 dark:text-zinc-500 mt-0.5 uppercase tracking-wider">
-                {item.variant.color} &middot; {item.variant.size}
+                {item.variant?.color || 'Default'} &middot; {item.variant?.size || 'One Size'}
               </p>
               <p className="text-[13px] font-bold text-zinc-900 dark:text-white mt-1">{formatCurrency(item.price)}</p>
             </div>

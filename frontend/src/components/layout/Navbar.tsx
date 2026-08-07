@@ -68,21 +68,27 @@ const Navbar = () => {
   const [unreadNotifications, setUnreadNotifications] = useState(0);
 
   useEffect(() => {
-    if (!userInfo?.email) {
+    if (!userInfo?.accessToken && !(userInfo as any)?.token) {
       setUnreadNotifications(0);
       return;
     }
     const fetchNotifications = () => {
-      const email = userInfo.email.trim().toLowerCase();
       const token = userInfo?.accessToken || (userInfo as any)?.token || localStorage.getItem('token') || localStorage.getItem('accessToken') || '';
-      fetch(`/api/contact/user/${encodeURIComponent(email)}`, {
+      fetch(`/api/contact/me`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       })
-        .then((res) => res.json())
+        .then((res) => {
+          if (res.status === 401) {
+            setUnreadNotifications(0);
+            return [];
+          }
+          return res.json();
+        })
         .then((data) => {
           if (Array.isArray(data)) {
-            const count = data.filter((m: any) => (m.email || '').trim().toLowerCase() === email).length;
-            setUnreadNotifications(count);
+            setUnreadNotifications(data.length);
+          } else {
+            setUnreadNotifications(0);
           }
         })
         .catch(() => { });
@@ -151,12 +157,8 @@ const Navbar = () => {
     return () => window.removeEventListener('keydown', handler);
   }, [searchFocused, selectedSuggestionIdx, navigate]);
 
-  // Debounced live search
+
   const [debouncedQuery, setDebouncedQuery] = useState('');
-  // useEffect(() => {
-  //   debounceRef.current = setTimeout(() => setDebouncedQuery(searchQuery), 200);
-  //   return () => clearTimeout(debounceRef.current);
-  // }, [searchQuery]);
 
   useEffect(() => {
     debounceRef.current = setTimeout(() => {
@@ -180,11 +182,7 @@ const Navbar = () => {
     const qLower = debouncedQuery.toLowerCase();
     const qTokens = qLower.split(/\s+/).filter(Boolean);
 
-    /**
-     * Token-prefix match: every query token must match a word in the label.
-     * "men" matches label "Men's Shirts" (token "men") but NOT "Women's Tops"
-     * because "women".startsWith("men") === false.
-     */
+
     const tokenPrefixMatchAll = (label: string): boolean => {
       const labelTokens = label.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
       return qTokens.every((qt) =>
@@ -262,10 +260,11 @@ const Navbar = () => {
     if (!debouncedQuery || debouncedQuery.length < 2) return text;
     const idx = text.toLowerCase().indexOf(debouncedQuery.toLowerCase());
     if (idx === -1) return text;
+    const match = text.slice(idx, idx + debouncedQuery.length);
     return (
       <>
         {text.slice(0, idx)}
-        <mark className="bg-yellow-200 text-black px-0.5 rounded">{text.slice(idx, idx + debouncedQuery.length)}</mark>
+        {match && <mark className="bg-yellow-200 text-black px-0.5 rounded">{match}</mark>}
         {text.slice(idx + debouncedQuery.length)}
       </>
     );
@@ -332,7 +331,7 @@ const Navbar = () => {
                     exit={{ opacity: 0, y: -8, scaleY: 0.95 }}
                     transition={{ duration: 0.15 }}
                     className="absolute top-full mt-2 left-0 right-0 bg-zinc-950 rounded-xl shadow-2xl border border-zinc-800 overflow-hidden z-50"
-                    style={{ transformOrigin: 'top center' }}
+                    style={{ transformOrigin: 'top center' } as React.CSSProperties}
                   >
                     <div className="py-2">
                       {/* Loading */}
@@ -395,9 +394,7 @@ const Navbar = () => {
                       {/* Empty */}
                       {!isSearchFetching && products.length === 0 && debouncedQuery.length >= 2 && (
                         <div className="px-4 py-8 text-center">
-                          <Search className="h-6 w-6 mx-auto mb-2 text-zinc-500" strokeWidth={1.5} />
                           <p className="text-sm text-zinc-400">No products found for "{debouncedQuery}"</p>
-                          <p className="text-xs text-zinc-500 mt-1">Try a different search term</p>
                         </div>
                       )}
                     </div>
@@ -414,8 +411,8 @@ const Navbar = () => {
           <div className="flex items-center gap-0.5 sm:gap-1 lg:gap-1.5 shrink-0">
 
             {/* 1. Wishlist */}
-            <Link to="/wishlist" className="hidden md:flex relative items-center justify-center w-10 h-10 hover:bg-zinc-800 rounded-full transition-colors group text-zinc-300 hover:text-white">
-              <Heart className="h-5.5 w-5.5 group-hover:scale-105 transition-transform duration-200" strokeWidth={1.5} />
+            <Link to="/wishlist" className="hidden md:flex relative items-center justify-center w-11 h-11 hover:bg-zinc-800 rounded-full transition-colors group text-zinc-300 hover:text-white">
+              <Heart className="h-6 w-6 group-hover:scale-105 transition-transform duration-200" strokeWidth={1.5} />
               {wishlistCount > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 h-[18px] w-[18px] bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full shadow-sm">
                   {wishlistCount}
@@ -426,10 +423,10 @@ const Navbar = () => {
             {/* 2. Cart */}
             <button
               onClick={() => setMiniCartOpen(true)}
-              className="relative flex items-center justify-center w-10 h-10 hover:bg-zinc-800 rounded-full transition-colors group cursor-pointer text-zinc-300 hover:text-white"
+              className="relative flex items-center justify-center w-11 h-11 hover:bg-zinc-800 rounded-full transition-colors group cursor-pointer text-zinc-300 hover:text-white"
               aria-label="Open cart"
             >
-              <ShoppingBag className="h-5.5 w-5.5 group-hover:scale-105 transition-transform duration-200" strokeWidth={1.5} />
+              <ShoppingBag className="h-6 w-6 group-hover:scale-105 transition-transform duration-200" strokeWidth={1.5} />
               {cartCount > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 min-w-[18px] px-1 h-[18px] bg-[#f97316] text-white text-[10px] font-bold flex items-center justify-center rounded-full shadow-sm">
                   {cartCount > 99 ? '99+' : cartCount}
@@ -441,10 +438,10 @@ const Navbar = () => {
             {userInfo && (
               <Link
                 to="/account?tab=notifications"
-                className="relative flex items-center justify-center w-10 h-10 hover:bg-zinc-800 rounded-full transition-colors group text-zinc-300 hover:text-white"
+                className="relative flex items-center justify-center w-11 h-11 hover:bg-zinc-800 rounded-full transition-colors group text-zinc-300 hover:text-white"
                 aria-label="Notifications"
               >
-                <Bell className="h-5.5 w-5.5 group-hover:scale-105 transition-transform duration-200" strokeWidth={1.5} />
+                <Bell className="h-6 w-6 group-hover:scale-105 transition-transform duration-200" strokeWidth={1.5} />
                 {unreadNotifications > 0 && (
                   <span className="absolute -top-0.5 -right-0.5 min-w-[18px] px-1 h-[18px] bg-[#f97316] text-white text-[10px] font-bold flex items-center justify-center rounded-full shadow-sm animate-pulse">
                     {unreadNotifications}
@@ -457,10 +454,11 @@ const Navbar = () => {
             <div className="relative" ref={profileRef}>
               <button
                 onClick={() => setProfileOpen(!profileOpen)}
-                className="flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200 cursor-pointer hover:bg-zinc-800 text-zinc-300 hover:text-white group"
-                aria-label="Settings & Account"
+                className={`flex items-center justify-center w-11 h-11 rounded-full transition-all duration-200 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-zinc-600 group ${profileOpen ? 'bg-zinc-800 text-white' : 'text-zinc-300 hover:bg-zinc-800 hover:text-white'
+                  }`}
+                aria-label="Account"
               >
-                <Settings className="h-5.5 w-5.5 group-hover:rotate-45 transition-transform duration-300" strokeWidth={1.5} />
+                <UserRound className="h-6 w-6 group-hover:scale-105 transition-transform duration-200" strokeWidth={1.5} />
               </button>
 
               <AnimatePresence>
@@ -471,7 +469,7 @@ const Navbar = () => {
                     exit={{ opacity: 0, y: -12, scale: 0.95 }}
                     transition={{ duration: 0.2, ease: 'easeOut' }}
                     className="absolute right-0 top-full mt-2 w-96 bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-700 overflow-hidden z-50 text-left"
-                    style={{ transformOrigin: 'top right' }}
+                    style={{ transformOrigin: 'top right' } as React.CSSProperties}
                   >
                     {/* Account Info Header */}
                     {userInfo ? (
@@ -511,7 +509,6 @@ const Navbar = () => {
                     <div className="px-4 py-4 border-b border-zinc-100 dark:border-zinc-800">
                       <p className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider px-1 mb-3">Appearance</p>
                       <div
-                        onClick={toggleTheme}
                         className="flex items-center justify-between px-4 py-3 rounded-xl bg-zinc-100 dark:bg-zinc-800/80 hover:bg-zinc-200 dark:hover:bg-zinc-700/80 transition-colors cursor-pointer"
                       >
                         <span className="text-[14px] font-semibold text-zinc-800 dark:text-zinc-100">
@@ -893,3 +890,8 @@ const Navbar = () => {
 };
 
 export default Navbar;
+
+
+
+
+

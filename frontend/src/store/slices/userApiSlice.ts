@@ -33,9 +33,6 @@ export const userApiSlice = apiSlice.injectEndpoints({
       query: (data) => ({ url: `/api/users/profile`, method: 'PUT', body: data }),
       invalidatesTags: ['User'],
     }),
-    changePassword: builder.mutation({
-      query: (data) => ({ url: `/api/users/change-password`, method: 'PUT', body: data }),
-    }),
     verify2FALogin: builder.mutation({
       query: (data) => ({ url: `${AUTH_URL}/login/2fa`, method: 'POST', body: data }),
     }),
@@ -63,7 +60,6 @@ export const {
   useResetPasswordMutation,
   useGetMeQuery,
   useUpdateProfileMutation,
-  useChangePasswordMutation,
   useVerify2FALoginMutation,
   useGenerate2FAMutation,
   useEnable2FAMutation,

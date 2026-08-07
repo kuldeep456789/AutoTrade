@@ -3,6 +3,7 @@ import { AppModule } from './app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { apiReference } from '@scalar/nestjs-api-reference';
 import { ValidationPipe } from '@nestjs/common';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import helmet from 'helmet';
 import compression from 'compression';
 import * as express from 'express';
@@ -22,6 +23,12 @@ export async function bootstrap() {
   app.use(compression());
 
   // Parse request payloads
+  // Stripe webhook requires the raw JSON body to verify its signature, so it
+  // must be parsed (as raw) BEFORE the global JSON parser consumes the stream.
+  app.use(
+    '/api/payments/webhook',
+    express.raw({ type: 'application/json' }),
+  );
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
@@ -30,15 +37,19 @@ export async function bootstrap() {
   // Enforce DTO validation globally
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: false,
+      whitelist: true,
+      forbidNonWhitelisted: false,
       transform: true,
     }),
   );
 
+  // Global Exception Filter
+  app.useGlobalFilters(new HttpExceptionFilter());
+
   // CORS Configuration
-  const frontendUrl = process.env.FRONTEND_URL;
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
   app.enableCors({
-    origin: frontendUrl ? [frontendUrl, /\.vercel\.app$/] : true,
+    origin: process.env.NODE_ENV === 'production' ? [frontendUrl, /\.vercel\.app$/] : true,
     credentials: true,
   });
 

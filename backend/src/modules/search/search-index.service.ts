@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { RedisService } from '../redis/redis.service';
-import { tokenizeText, generatePrefixes } from './utils/tokenizer';
+import { tokenizeText } from './utils/tokenizer';
 import { IndexStats } from './interfaces/search-result.interface';
 
 @Injectable()
@@ -13,19 +13,10 @@ export class SearchIndexService {
   public static readonly KEY_PRODUCT_TOKENS = 'search:product_tokens:';
   public static readonly KEY_META_STATS = 'search:meta:stats';
 
-  constructor(private readonly redisService: RedisService) {}
+  constructor(private readonly redisService: RedisService) { }
 
-  /**
-   * Extract all searchable tokens for a given product across all specified fields:
-   * - Product Name / Title
-   * - Brand
-   * - Category
-   * - Subcategory
-   * - Tags
-   * - Description
-   * - Keywords / SKU
-   */
-  public extractProductTokens(product: any): { tokens: string[]; prefixes: string[] } {
+
+  public extractProductTokens(product: any): string[] {
     const fieldsToTokenize = [
       product.name,
       product.title,
@@ -39,7 +30,9 @@ export class SearchIndexService {
       product.description,
       product.sku,
       Array.isArray(product.tags) ? product.tags.join(' ') : product.tags,
-      Array.isArray(product.keywords) ? product.keywords.join(' ') : product.keywords,
+      Array.isArray(product.keywords)
+        ? product.keywords.join(' ')
+        : product.keywords,
     ];
 
     const tokenSet = new Set<string>();
@@ -53,20 +46,7 @@ export class SearchIndexService {
       }
     }
 
-    const tokens = Array.from(tokenSet);
-    const prefixSet = new Set<string>();
-
-    for (const token of tokens) {
-      const generated = generatePrefixes(token);
-      for (const p of generated) {
-        prefixSet.add(p);
-      }
-    }
-
-    return {
-      tokens,
-      prefixes: Array.from(prefixSet),
-    };
+    return Array.from(tokenSet);
   }
 
   /**
@@ -74,7 +54,9 @@ export class SearchIndexService {
    */
   async buildFullIndex(products: any[]): Promise<IndexStats> {
     const startTime = Date.now();
-    this.logger.log(`[SearchIndex] Starting full index build for ${products.length} products...`);
+    this.logger.log(
+      `[SearchIndex] Starting full index build for ${products.length} products...`,
+    );
 
     const tokenMap = new Map<string, Set<string>>();
     const prefixMap = new Map<string, Set<string>>();
@@ -84,7 +66,7 @@ export class SearchIndexService {
       const pid = String(product.pid || product.id || product._id || '');
       if (!pid) continue;
 
-      const { tokens, prefixes } = this.extractProductTokens(product);
+      const tokens = this.extractProductTokens(product);
       productTokenMap.set(pid, tokens);
 
       for (const token of tokens) {
@@ -92,13 +74,15 @@ export class SearchIndexService {
           tokenMap.set(token, new Set());
         }
         tokenMap.get(token)!.add(pid);
-      }
 
-      for (const prefix of prefixes) {
-        if (!prefixMap.has(prefix)) {
-          prefixMap.set(prefix, new Set());
+        // Generate prefixes for autocomplete (min length 2)
+        for (let i = 2; i <= token.length; i++) {
+          const prefix = token.substring(0, i);
+          if (!prefixMap.has(prefix)) {
+            prefixMap.set(prefix, new Set());
+          }
+          prefixMap.get(prefix)!.add(pid);
         }
-        prefixMap.get(prefix)!.add(pid);
       }
     }
 
@@ -139,7 +123,11 @@ export class SearchIndexService {
       lastUpdated: new Date().toISOString(),
     };
 
-    await this.redisService.setJson(SearchIndexService.KEY_META_STATS, stats, 86400 * 30);
+    await this.redisService.setJson(
+      SearchIndexService.KEY_META_STATS,
+      stats,
+      86400 * 30,
+    );
 
     this.logger.log(
       `[SearchIndex] Full index build complete in ${buildTimeMs}ms. Indexed ${stats.indexedProductsCount} products, ${stats.uniqueTokensCount} unique tokens.`,
@@ -157,7 +145,7 @@ export class SearchIndexService {
 
     await this.removeProduct(pid);
 
-    const { tokens, prefixes } = this.extractProductTokens(product);
+    const tokens = this.extractProductTokens(product);
 
     await this.redisService.setJson(
       `${SearchIndexService.KEY_PRODUCT_TOKENS}${pid}`,
@@ -171,14 +159,15 @@ export class SearchIndexService {
         existing.push(pid);
         await this.redisService.setJson(key, existing);
       }
-    }
 
-    for (const prefix of prefixes) {
-      const key = `${SearchIndexService.KEY_PREFIX_MAP}${prefix}`;
-      const existing = (await this.redisService.getJson<string[]>(key)) || [];
-      if (!existing.includes(pid)) {
-        existing.push(pid);
-        await this.redisService.setJson(key, existing);
+      for (let i = 2; i <= token.length; i++) {
+        const prefix = token.substring(0, i);
+        const pKey = `${SearchIndexService.KEY_PREFIX_MAP}${prefix}`;
+        const pExisting = (await this.redisService.getJson<string[]>(pKey)) || [];
+        if (!pExisting.includes(pid)) {
+          pExisting.push(pid);
+          await this.redisService.setJson(pKey, pExisting);
+        }
       }
     }
   }
@@ -204,16 +193,16 @@ export class SearchIndexService {
           await this.redisService.del(key);
         }
 
-        const prefixes = generatePrefixes(token);
-        for (const prefix of prefixes) {
-          const prefKey = `${SearchIndexService.KEY_PREFIX_MAP}${prefix}`;
-          const prefExisting = (await this.redisService.getJson<string[]>(prefKey)) || [];
-          const prefFiltered = prefExisting.filter((id) => id !== pid);
+        for (let i = 2; i <= token.length; i++) {
+          const prefix = token.substring(0, i);
+          const pKey = `${SearchIndexService.KEY_PREFIX_MAP}${prefix}`;
+          const pExisting = (await this.redisService.getJson<string[]>(pKey)) || [];
+          const pFiltered = pExisting.filter((id) => id !== pid);
 
-          if (prefFiltered.length > 0) {
-            await this.redisService.setJson(prefKey, prefFiltered);
+          if (pFiltered.length > 0) {
+            await this.redisService.setJson(pKey, pFiltered);
           } else {
-            await this.redisService.del(prefKey);
+            await this.redisService.del(pKey);
           }
         }
       }
@@ -242,7 +231,9 @@ export class SearchIndexService {
    * Get metadata stats of the inverted index.
    */
   async getStats(): Promise<IndexStats | null> {
-    return await this.redisService.getJson<IndexStats>(SearchIndexService.KEY_META_STATS);
+    return await this.redisService.getJson<IndexStats>(
+      SearchIndexService.KEY_META_STATS,
+    );
   }
 
   private async batchWrite(operations: { key: string; value: any }[]) {

@@ -43,16 +43,16 @@ const ContactPage = () => {
     e.preventDefault();
     setLoading(true);
     setError('');
-    
+
     try {
       const res = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form)
       });
-      
+
       if (!res.ok) throw new Error('Failed to send message');
-      
+
       setSent(true);
       setForm({
         name: userInfo?.name || '',
@@ -82,7 +82,7 @@ const ContactPage = () => {
       {/* Main Content Grid */}
       <div className="max-w-[1400px] mx-auto px-6 sm:px-10 py-10 sm:py-16">
         <div className="flex flex-col lg:flex-row gap-8 sm:gap-12 items-start">
-          
+
           {/* ── Left Column: Contact Cards ── */}
           <div className="w-full lg:w-[42%] space-y-6">
             <div className="bg-white dark:bg-[#141416] border border-zinc-200/80 dark:border-zinc-800/80 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">

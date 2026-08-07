@@ -5,7 +5,7 @@ import type { RootState } from '../store/store';
 import { addToCart, removeFromCart, applyCoupon, removeCoupon, COUPONS } from '../store/slices/cartSlice';
 import type { CartItem } from '../store/slices/cartSlice';
 import { toggleWishlist } from '../store/slices/wishlistSlice';
-import { useGetRelatedProductsQuery } from '../store/slices/productApiSlice';
+import { useGetRelatedProductsQuery, useGetProductsQuery } from '../store/slices/productApiSlice';
 import ProductCard from '../components/product/ProductCard';
 import { Trash2, ShoppingBag, Heart, Percent, Truck, X, ChevronRight, Star } from 'lucide-react';
 import QuantitySelector from '../components/QuantitySelector';
@@ -43,9 +43,12 @@ const CartPage = () => {
 
   const firstCartItemId = cartItems[0]?._id;
   const { data: relatedData } = useGetRelatedProductsQuery(firstCartItemId, { skip: !firstCartItemId });
-  const recommendedProducts = relatedData?.products
-    ?.filter((p: any) => !cartItems.some((c: any) => c._id === (p.pid || p._id)))
-    ?.slice(0, 4) || [];
+  const { data: catalogData } = useGetProductsQuery({ pageNum: 1, pageSize: 8 });
+
+  const rawRecommended = (relatedData?.products?.length ? relatedData.products : catalogData?.products) || [];
+  const recommendedProducts = rawRecommended
+    .filter((p: any) => !cartItems.some((c: any) => c._id === (p.pid || p._id)))
+    .slice(0, 4);
 
   const addToCartHandler = (item: CartItem, qty: number) => {
     dispatch(addToCart({ ...item, qty }));
@@ -65,27 +68,42 @@ const CartPage = () => {
         image: item.image,
       }));
     }
-    dispatch(removeFromCart({ id: item._id, size: item.variant.size, color: item.variant.color }));
+    dispatch(removeFromCart({ id: item._id, size: item.variant?.size || 'Standard', color: item.variant?.color || 'Default' }));
     setCouponMsg({ text: 'Moved item to wishlist.', isError: false });
     setTimeout(() => setCouponMsg(null), 3000);
   };
 
-  const handleApplyCoupon = (code: string) => {
+  const handleApplyCoupon = async (code: string) => {
     const cleanCode = code.toUpperCase().trim();
     if (!cleanCode) return;
 
-    const couponDef = COUPONS[cleanCode];
-    if (!couponDef) {
-      setCouponMsg({ text: `Invalid coupon. Try: ${Object.keys(COUPONS).join(', ')}.`, isError: true });
-      return;
+    try {
+      const res = await fetch('/api/coupons/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: cleanCode, orderAmount: itemsPrice }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || 'Invalid coupon code');
+      }
+
+      dispatch(applyCoupon({ code: cleanCode, discountAmount: data.discountAmount }));
+      setCouponMsg({ text: data.message || `Coupon "${cleanCode}" applied!`, isError: false });
+    } catch (err: any) {
+      const couponDef = COUPONS[cleanCode];
+      if (!couponDef) {
+        setCouponMsg({ text: err?.message || `Invalid coupon. Try: ${Object.keys(COUPONS).join(', ')}.`, isError: true });
+        return;
+      }
+      if (itemsPrice < couponDef.min) {
+        setCouponMsg({ text: `Min. cart value of ${formatCurrency(couponDef.min)} required for ${cleanCode}.`, isError: true });
+        return;
+      }
+      const savings = couponDef.discount(itemsPrice);
+      dispatch(applyCoupon({ code: cleanCode, discountAmount: savings }));
+      setCouponMsg({ text: `"${cleanCode}" applied! You save ${formatCurrency(savings)}.`, isError: false });
     }
-    if (itemsPrice < couponDef.min) {
-      setCouponMsg({ text: `Min. cart value of ${formatCurrency(couponDef.min)} required for ${cleanCode}.`, isError: true });
-      return;
-    }
-    dispatch(applyCoupon(cleanCode));
-    const savings = couponDef.discount(itemsPrice);
-    setCouponMsg({ text: `"${cleanCode}" applied! You save ${formatCurrency(savings)}.`, isError: false });
   };
 
   const handleRemoveCoupon = () => {
@@ -96,8 +114,8 @@ const CartPage = () => {
   };
 
   const checkoutHandler = () => {
-    if (itemsPrice < 50000) {
-      setIsMinOrderModalOpen(true);
+    if (cartItems.length === 0 || itemsPrice <= 0) {
+      setCouponMsg({ text: 'Your cart is empty.', isError: true });
       return;
     }
     navigate('/shipping');
@@ -151,9 +169,9 @@ const CartPage = () => {
               {/* Left Column — Cart Items (70%) */}
               <div className="w-full lg:w-[70%] space-y-4">
                 <AnimatePresence>
-                  {cartItems.map((item) => (
+                  {cartItems.map((item, idx) => (
                     <motion.div
-                      key={`${item._id}-${item.variant.size}-${item.variant.color}`}
+                      key={`${item._id || idx}-${item.variant?.size || 'std'}-${item.variant?.color || 'def'}`}
                       layout
                       initial={{ opacity: 0, y: 16 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -220,7 +238,7 @@ const CartPage = () => {
                               <span>Wishlist</span>
                             </button>
                             <button
-                              onClick={() => removeFromCartHandler(item._id, item.variant.size, item.variant.color)}
+                              onClick={() => removeFromCartHandler(item._id, item.variant?.size || 'Standard', item.variant?.color || 'Default')}
                               className="w-9 h-9 rounded-full flex items-center justify-center text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all duration-200 cursor-pointer"
                               title="Remove item"
                             >
@@ -234,57 +252,26 @@ const CartPage = () => {
                 </AnimatePresence>
 
                 {/* Recommended */}
-                {recommendedProducts.length > 0 && (
-                  <div className="mt-10 pt-8 border-t border-zinc-200 dark:border-zinc-800">
-                    <h2 className="text-[18px] font-bold tracking-tight mb-5">You May Also Like</h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
-                      {recommendedProducts.map((product: any, idx: number) => (
-                        <ProductCard key={`${product._id || product.pid || product.id || 'rec'}-${idx}`} product={product} />
-                      ))}
-                    </div>
+                <div className="mt-10 pt-8 border-t border-zinc-200 dark:border-zinc-800">
+                  <h2 className="text-[18px] font-bold tracking-tight mb-5">You May Also Like</h2>
+                  <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-5 lg:gap-6">
+                    {recommendedProducts.map((product: any, idx: number) => (
+                      <ProductCard key={`${product._id || product.pid || product.id || 'rec'}-${idx}`} product={product} />
+                    ))}
                   </div>
-                )}
+                </div>
               </div>
 
               {/* Right Column — Order Summary (30%) */}
               <div className="w-full lg:w-[30%] lg:sticky lg:top-[130px] space-y-5">
-                {/* Coupon Section */}
-                <div className="bg-[hsl(var(--card))] border border-zinc-200 dark:border-zinc-800 rounded-xl p-5">
-                  <h3 className="text-[14px] font-bold tracking-wide mb-4 flex items-center gap-2">
-                    <Percent size={16} strokeWidth={1.5} className="text-zinc-500" /> Offers & Coupons
-                  </h3>
-
-
-
-                  {/* Coupon Input */}
-                  <div className="flex gap-2 mb-3">
-                    <input
-                      type="text"
-                      placeholder="Enter coupon code"
-                      value={couponCode}
-                      onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                      disabled={!!cart.appliedCoupon}
-                      className="flex-1 h-[44px] px-3 rounded-lg border border-zinc-300 dark:border-zinc-600 text-[13px] focus:outline-none focus:border-[hsl(var(--foreground))] disabled:bg-zinc-100 dark:disabled:bg-zinc-800 bg-transparent text-[hsl(var(--foreground))] placeholder:text-zinc-400 uppercase font-semibold"
-                    />
-                    {cart.appliedCoupon ? (
-                      <button onClick={handleRemoveCoupon} className="h-[44px] px-4 rounded-lg border border-red-500 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 text-[12px] font-bold transition-colors cursor-pointer whitespace-nowrap">
-                        REMOVE
-                      </button>
-                    ) : (
-                      <button onClick={() => handleApplyCoupon(couponCode)} disabled={!couponCode} className="h-[44px] px-5 rounded-lg bg-[hsl(var(--foreground))] text-[hsl(var(--background))] hover:opacity-90 text-[12px] font-bold transition-all disabled:opacity-40 cursor-pointer whitespace-nowrap">
-                        APPLY
-                      </button>
-                    )}
+                {couponMsg && (
+                  <div className={`p-2.5 rounded-lg text-[12px] font-semibold mb-3 ${couponMsg.isError ? 'bg-red-50 text-red-600 border border-red-100 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30' : 'bg-green-50 text-green-700 border border-green-100 dark:bg-green-950/20 dark:text-green-400 dark:border-green-900/30'}`}>
+                    {couponMsg.text}
                   </div>
-
-                  {couponMsg && (
-                    <div className={`p-2.5 rounded-lg text-[12px] font-semibold mb-3 ${couponMsg.isError ? 'bg-red-50 text-red-600 border border-red-100 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30' : 'bg-green-50 text-green-700 border border-green-100 dark:bg-green-950/20 dark:text-green-400 dark:border-green-900/30'}`}>
-                      {couponMsg.text}
-                    </div>
-                  )}
+                )}
 
 
-                </div>
+                {/* </div>  */}
 
                 {/* Order Summary */}
                 <div className="bg-[hsl(var(--card))] border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm">

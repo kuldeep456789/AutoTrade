@@ -5,6 +5,7 @@ import { CjService } from './cj.service';
 import { CjCronService } from './cj.cron.service';
 import { RedisModule } from '../redis/redis.module';
 import { Order, OrderSchema } from '../orders/schemas/order.schema';
+import { Product, ProductSchema } from '../products/schemas/product.schema';
 
 import { CjClient } from './cj.client';
 
@@ -14,7 +15,10 @@ import { SearchModule } from '../search/search.module';
   imports: [
     RedisModule,
     SearchModule,
-    MongooseModule.forFeature([{ name: Order.name, schema: OrderSchema }]),
+    MongooseModule.forFeature([
+      { name: Order.name, schema: OrderSchema },
+      { name: Product.name, schema: ProductSchema },
+    ]),
   ],
   controllers: [CjController],
   providers: [CjClient, CjService, CjCronService],

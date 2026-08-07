@@ -11,6 +11,8 @@ export interface CartItem {
     color: string;
     size: string;
   };
+  vid?: string;
+  sku?: string;
   increment?: boolean;
 }
 
@@ -36,7 +38,7 @@ const initialState: CartState = {
   shippingAddress: localStorage.getItem('shippingAddress') 
     ? JSON.parse(localStorage.getItem('shippingAddress') as string) 
     : {},
-  paymentMethod: 'Razorpay',
+  paymentMethod: 'Stripe',
   itemsPrice: 0,
   shippingPrice: 0,
   taxPrice: 0,
@@ -103,11 +105,11 @@ const updateCart = (state: CartState) => {
     return acc + price * item.qty;
   }, 0);
 
-  // Calculate coupon discount
+  // Calculate coupon discount if using hardcoded fallback dictionary
   const couponDef = COUPONS[state.appliedCoupon];
   if (couponDef && state.itemsPrice >= couponDef.min) {
     state.couponDiscount = couponDef.discount(state.itemsPrice);
-  } else {
+  } else if (!state.couponDiscount) {
     state.couponDiscount = 0;
     if (state.appliedCoupon && !couponDef) {
       state.appliedCoupon = ''; // reset invalid coupons
@@ -148,43 +150,78 @@ const cartSlice = createSlice({
             : x
         );
       } else {
-        state.cartItems = [...state.cartItems, itemData as CartItem];
+        state.cartItems = [...state.cartItems, itemData];
       }
+
       updateCart(state);
     },
-    removeFromCart: (state, action: PayloadAction<{id: string, size: string, color: string}>) => {
+
+    removeFromCart: (state, action: PayloadAction<{ id: string; size: string; color: string }>) => {
       state.cartItems = state.cartItems.filter(
         (x) => !(x._id === action.payload.id && x.variant.size === action.payload.size && x.variant.color === action.payload.color)
       );
       updateCart(state);
     },
-    saveShippingAddress: (state, action) => {
+
+    saveShippingAddress: (state, action: PayloadAction<any>) => {
       state.shippingAddress = action.payload;
       localStorage.setItem('shippingAddress', JSON.stringify(action.payload));
     },
-    savePaymentMethod: (state, action) => {
+
+    savePaymentMethod: (state, action: PayloadAction<string>) => {
       state.paymentMethod = action.payload;
-      localStorage.setItem('paymentMethod', JSON.stringify(action.payload));
     },
+
     clearCartItems: (state) => {
       state.cartItems = [];
-      state.appliedCoupon = '';
       state.couponDiscount = 0;
+      state.appliedCoupon = '';
+      localStorage.removeItem('cartItems');
       localStorage.removeItem('appliedCoupon');
       localStorage.removeItem('couponDiscount');
       updateCart(state);
     },
+
     clearShippingAddress: (state) => {
       state.shippingAddress = {};
       localStorage.removeItem('shippingAddress');
     },
-    applyCoupon: (state, action: PayloadAction<string>) => {
-      state.appliedCoupon = action.payload;
+
+    applyCoupon: (state, action: PayloadAction<string | { code: string; discountAmount?: number }>) => {
+      if (typeof action.payload === 'string') {
+        state.appliedCoupon = action.payload;
+      } else {
+        state.appliedCoupon = action.payload.code;
+        if (action.payload.discountAmount !== undefined) {
+          state.couponDiscount = action.payload.discountAmount;
+        }
+      }
       updateCart(state);
     },
+
     removeCoupon: (state) => {
       state.appliedCoupon = '';
       state.couponDiscount = 0;
+      updateCart(state);
+    },
+
+    syncFromStorage: (state) => {
+      const raw = localStorage.getItem('cartItems');
+      state.cartItems = raw
+        ? JSON.parse(raw).map((item: any) => {
+            const { increment: _increment, ...rest } = item;
+            return rest;
+          })
+        : [];
+      state.shippingAddress = localStorage.getItem('shippingAddress')
+        ? JSON.parse(localStorage.getItem('shippingAddress') as string)
+        : {};
+      state.couponDiscount = localStorage.getItem('couponDiscount')
+        ? Number(localStorage.getItem('couponDiscount'))
+        : 0;
+      state.appliedCoupon = localStorage.getItem('appliedCoupon')
+        ? (localStorage.getItem('appliedCoupon') as string)
+        : '';
       updateCart(state);
     },
   },
@@ -198,7 +235,8 @@ export const {
   clearCartItems,
   clearShippingAddress,
   applyCoupon,
-  removeCoupon
+  removeCoupon,
+  syncFromStorage
 } = cartSlice.actions;
 
 export default cartSlice.reducer;

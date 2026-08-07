@@ -2,6 +2,8 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   ArrowRight,
+  ChevronLeft,
+  ChevronRight,
   Car,
   Armchair,
   Wrench,
@@ -12,14 +14,13 @@ import {
   Truck,
   RotateCcw,
   ShieldCheck,
+  Sparkles,
 } from 'lucide-react';
-import { useSelector } from 'react-redux';
-import type { RootState } from '../store/store';
-
 import { useGetProductsQuery, useGetCatalogStatsQuery } from '../store/slices/productApiSlice';
 import ProductCard from '../components/product/ProductCard';
 import { getProductId } from '../lib/product';
 import TrustBadgesBar from '../components/layout/TrustBadgesBar';
+import { useCurrency } from '../context/CurrencyContext';
 
 const heroCategories = [
   {
@@ -37,7 +38,7 @@ const heroCategories = [
     icon: Armchair,
   },
   {
-    title: 'Tools & Maintenance',
+    title: 'Tools, Maintenance & Care',
     description: 'Professional tools and care products for every maintenance need.',
     to: '/collections/tools-maintenance-care',
     bgImage: '/img/categories/tools_maintenance.png',
@@ -109,8 +110,8 @@ function useTypewriter(phrases: string[]) {
 
 const HomePage = () => {
   const location = useLocation();
-  const userInfo = useSelector((state: RootState) => state.auth.userInfo);
   const typedText = useTypewriter(TYPED_PHRASES);
+  const { formatCurrency } = useCurrency();
 
   // Hero slideshow
   const [heroSlide, setHeroSlide] = useState(0);
@@ -130,10 +131,7 @@ const HomePage = () => {
     }
   }, [location.state]);
 
-  /**
-   * Fetch automotive products for the homepage carousel.
-   * RTK Query caches this for 10 minutes.
-   */
+
   const { data: autoData } = useGetProductsQuery({
     pageNum: 1,
     pageSize: 200,
@@ -165,26 +163,14 @@ const HomePage = () => {
 
   const latestArrivalRef = useRef<HTMLDivElement>(null);
 
-  const [showLoginPopup, setShowLoginPopup] = useState(false);
-  const [countdown, setCountdown] = useState(10);
-
-  useEffect(() => {
-    if (!userInfo) {
-      const popupTimer = setTimeout(() => setShowLoginPopup(true), 10000);
-      return () => clearTimeout(popupTimer);
+  const scrollRef = (ref: React.RefObject<HTMLDivElement | null>, direction: 'left' | 'right') => {
+    if (ref.current) {
+      const scrollAmount = direction === 'left' ? -340 : 340;
+      ref.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
     }
-  }, [userInfo]);
+  };
 
-  useEffect(() => {
-    if (showLoginPopup) setCountdown(10);
-  }, [showLoginPopup]);
-
-  useEffect(() => {
-    if (!showLoginPopup) return;
-    if (countdown <= 0) return;
-    const t = setTimeout(() => setCountdown((c) => c - 1), 1000);
-    return () => clearTimeout(t);
-  }, [showLoginPopup, countdown]);
+  const [youMayLikeLimit, setYouMayLikeLimit] = useState(10);
 
   // Deal of the Day Countdown Timer
   const [timeLeft, setTimeLeft] = useState({
@@ -226,6 +212,8 @@ const HomePage = () => {
     const brakeProduct = brakes.length > 0
       ? brakes[hourSeed % brakes.length]
       : autoProducts[(hourSeed + 1) % autoProducts.length];
+
+
 
     // 3. Light product (hourly rotation over products containing 'light'/'lamp'/'bulb')
     const lights = autoProducts.filter((p: any) =>
@@ -287,48 +275,48 @@ const HomePage = () => {
   return (
     <div className="w-full bg-[hsl(var(--background))] text-[hsl(var(--foreground))] font-sans">
       {/* ───────── HERO VIDEO BANNER ───────── */}
-      <section className="relative h-[550px] sm:h-[650px] lg:h-[720px] overflow-hidden bg-black text-white">
-        {/* Slideshow images with crossfade */}
+      <section className="relative min-h-[380px] sm:h-[500px] lg:h-[660px] overflow-hidden bg-black text-white">
         {['/img/car2.png', '/img/car1.png'].map((src, idx) => (
           <img
             key={src}
             src={src}
             alt={`AutoTrade Hero ${idx + 1}`}
-            className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out"
+            className="absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-1000 ease-in-out"
             style={{ opacity: heroSlide === idx ? 1 : 0 }}
           />
         ))}
-        {/* Soft vignette overlay */}
-        <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/45 to-transparent" />
-        <div className="absolute inset-0 bg-black/25" />
+        {/* Soft vignette overlay — kept light so the product stays visible */}
+        <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/45 to-black/10" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
 
         {/* Slide indicators */}
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex gap-2">
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2.5">
           {[0, 1].map((idx) => (
             <button
               key={idx}
               onClick={() => setHeroSlide(idx)}
-              className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${heroSlide === idx ? 'w-8 bg-[#FF7A00]' : 'w-4 bg-white/30 hover:bg-white/50'
+              aria-label={`Go to slide ${idx + 1}`}
+              className={`h-2 rounded-full transition-all duration-300 cursor-pointer ${heroSlide === idx ? 'w-9 bg-[#FF7A00] shadow-[0_0_12px_rgba(255,122,0,0.6)]' : 'w-2 bg-white/40 hover:bg-white/70'
                 }`}
             />
           ))}
         </div>
 
         {/* Hero Content Overlay */}
-        <div className="relative z-10 h-full max-w-[1920px] mx-auto px-6 sm:px-10 lg:px-16 flex items-center">
-          <div className="max-w-2xl text-left space-y-6 sm:space-y-7">
+        <div className="relative z-10 h-full max-w-[1920px] mx-auto px-6 sm:px-10 lg:px-16 flex flex-col justify-center pb-10 sm:pb-0">
+          <div className="max-w-[320px] xs:max-w-[360px] sm:max-w-2xl text-left space-y-6 sm:space-y-7 reveal-rise">
 
-            <h1 className="text-5xl sm:text-7xl lg:text-7xl font-semibold tracking-tight leading-[1.1] uppercase">
+            <h1 className="text-[34px] leading-[1.08] xs:text-[38px] sm:text-7xl lg:text-7xl font-semibold tracking-tight uppercase">
               Performance Starts <br className="hidden sm:inline" />
               With <span className="text-[#FF7A00]">{typedText}<span className="inline-block w-[3px] h-[0.85em] bg-[#FF7A00] ml-1 align-middle" style={{ animation: 'blink-cursor 0.8s steps(1) infinite' }} /></span>
             </h1>
-            <p className="text-sm sm:text-base text-zinc-300 font-medium normal-case max-w-lg leading-relaxed">
+            <p className="text-[15px] sm:text-base text-zinc-300 font-medium normal-case max-w-md leading-relaxed">
               Explore {formattedCatalogCount}+ genuine automotive parts and accessories for every make and model. Engineered for excellence.
             </p>
-            <div className="pt-2 flex flex-wrap gap-4 items-center">
+            <div className="pt-2 sm:pt-4 flex flex-col xs:flex-row gap-3 sm:gap-4 items-stretch sm:items-center">
               <Link
                 to="/collections/exterior-accessories"
-                className="px-7 py-4 rounded-xl bg-gradient-to-r from-[#FF7A00] to-[#FF9E00] hover:from-[#FF9E00] hover:to-[#FF7A00] text-white text-xs sm:text-sm font-bold tracking-wider uppercase transition-all duration-300 shadow-[0_4px_20px_rgba(255,122,0,0.3)] hover:shadow-[0_4px_25px_rgba(255,122,0,0.45)] active:scale-95 flex items-center gap-2 cursor-pointer"
+                className="w-full xs:w-auto px-8 h-14 sm:h-13 rounded-2xl bg-gradient-to-r from-[#FF7A00] to-[#FF9E00] hover:from-[#FF9E00] hover:to-[#FF7A00] text-white text-[13px] font-bold tracking-wider uppercase transition-all duration-300 shadow-[0_8px_24px_rgba(255,122,0,0.35)] hover:shadow-[0_8px_30px_rgba(255,122,0,0.5)] active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer"
               >
                 <span>Shop Now</span>
                 <ArrowRight size={16} />
@@ -338,7 +326,7 @@ const HomePage = () => {
                   const el = document.getElementById('collections-showcase');
                   if (el) el.scrollIntoView({ behavior: 'smooth' });
                 }}
-                className="px-7 py-4 rounded-xl border border-white/20 hover:border-white/50 bg-white/5 hover:bg-white/10 text-white text-xs sm:text-sm font-bold tracking-wider uppercase transition-all duration-300 active:scale-95 cursor-pointer backdrop-blur-md"
+                className="w-full xs:w-auto px-8 h-14 sm:h-13 rounded-2xl border border-white/25 hover:border-white/60 bg-white/10 hover:bg-white/15 text-white text-[13px] font-bold tracking-wider uppercase transition-all duration-300 active:scale-[0.98] cursor-pointer backdrop-blur-md flex items-center justify-center"
               >
                 Explore Categories
               </button>
@@ -352,8 +340,8 @@ const HomePage = () => {
 
       {/* ───────── CATEGORY SHOWCASE ───────── */}
       <section id="collections-showcase" className="bg-zinc-50 dark:bg-zinc-950 py-12 sm:py-16 border-b border-zinc-200 dark:border-zinc-800 transition-colors duration-200">
-        <div className="max-w-[1920px] mx-auto px-6 sm:px-10 lg:px-16">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 sm:mb-10 gap-4">
+        <div className="max-w-[1920px] mx-auto px-4 xs:px-6 sm:px-10 lg:px-16">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-6 sm:mb-10 gap-4 reveal-fade-up">
             <div>
               <h3 className="text-2xl sm:text-2xl lg:text-3xl font-semibold tracking-tight text-zinc-600 dark:text-white uppercase">
                 Popular Categories
@@ -363,20 +351,21 @@ const HomePage = () => {
           </div>
 
           {/* 6 Category Cards Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 xs:gap-4 sm:gap-5">
             {heroCategories.map((cat, idx) => {
               const Icon = cat.icon;
               return (
                 <Link
                   key={idx}
                   to={cat.to}
-                  className="group relative rounded-2xl bg-white dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 hover:border-orange-500/50 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden text-left p-3.5 sm:p-4"
+                  className="group relative rounded-2xl bg-white dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 hover:border-orange-500/50 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden text-left p-3 xs:p-3.5 active:scale-[0.98]"
                 >
                   {/* Top Image Box */}
-                  <div className="relative w-full h-32 sm:h-36 rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/60 dark:border-zinc-800/80 shrink-0">
+                  <div className="relative w-full h-28 xs:h-32 sm:h-36 rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/60 dark:border-zinc-800/80 shrink-0">
                     <img
                       src={cat.bgImage}
                       alt={cat.title}
+                      loading="lazy"
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 ease-out"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity" />
@@ -386,9 +375,9 @@ const HomePage = () => {
                   </div>
 
                   {/* Body Content */}
-                  <div className="flex-1 flex flex-col justify-between pt-3.5">
+                  <div className="flex-1 flex flex-col justify-between pt-3">
                     <div>
-                      <h3 className="text-xs sm:text-[13px] font-extrabold tracking-tight text-zinc-900 dark:text-white uppercase group-hover:text-orange-500 transition-colors leading-tight line-clamp-1">
+                      <h3 className="text-xs xs:text-[13px] font-extrabold tracking-tight text-zinc-900 dark:text-white uppercase group-hover:text-orange-500 transition-colors leading-tight line-clamp-1">
                         {cat.title}
                       </h3>
                       <p className="text-[11px] text-zinc-500 dark:text-zinc-400 font-normal leading-relaxed line-clamp-2 mt-1">
@@ -398,7 +387,7 @@ const HomePage = () => {
 
                     {/* Explore Button */}
                     <div className="mt-3 pt-2">
-                      <span className="w-full py-1.5 px-3 rounded-full border border-orange-500/30 bg-orange-500/10 text-[10px] font-extrabold text-orange-600 dark:text-orange-400 group-hover:bg-orange-500 group-hover:text-white transition-all flex items-center justify-center gap-1 uppercase tracking-wider shadow-2xs">
+                      <span className="w-full h-8 py-1.5 px-3 rounded-full border border-orange-500/30 bg-orange-500/10 text-[10px] font-extrabold text-orange-600 dark:text-orange-400 group-hover:bg-orange-500 group-hover:text-white transition-all flex items-center justify-center gap-1 uppercase tracking-wider shadow-2xs">
                         <span>Explore</span>
                         <ArrowRight size={12} className="transform group-hover:translate-x-0.5 transition-transform" />
                       </span>
@@ -411,26 +400,47 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* ───────── FEATURED COLLECTION CAROUSEL ───────── */}
-      {carouselProducts.length > 0 && (
+      {/* ───────── LATEST ARRIVAL CAROUSEL ───────── */}
+      {latestArrivalProducts.length > 0 && (
         <section className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-100/50 dark:bg-zinc-950/80 transition-colors duration-200">
-          <div className="max-w-[1920px] mx-auto px-6 sm:px-10 lg:px-16 py-8 sm:py-10 lg:py-12">
-            <div className="flex items-end justify-between mb-6 sm:mb-8">
+          <div className="max-w-[1920px] mx-auto px-4 xs:px-6 sm:px-10 lg:px-16 py-12 sm:py-14 lg:py-16">
+            <div className="flex items-end justify-between mb-6 sm:mb-8 reveal-fade-up">
               <div>
-
+                <span className="text-xs font-black text-orange-500 uppercase tracking-widest block mb-1">
+                  Just Arrived
+                </span>
                 <h2 className="text-2xl sm:text-2xl lg:text-3xl font-semibold tracking-tight text-zinc-600 dark:text-white uppercase">
-                  Trending Accessories
+                  Latest Arrival
                 </h2>
               </div>
+
+              {/* Scroll Controls */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => scrollRef(latestArrivalRef, 'left')}
+                  className="w-10 h-10 rounded-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-orange-500 text-zinc-700 dark:text-zinc-300 hover:text-orange-500 flex items-center justify-center transition-all shadow-xs cursor-pointer active:scale-95"
+                  aria-label="Previous Latest Arrivals"
+                >
+                  <ChevronLeft size={18} />
+                </button>
+                <button
+                  onClick={() => scrollRef(latestArrivalRef, 'right')}
+                  className="w-10 h-10 rounded-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-orange-500 text-zinc-700 dark:text-zinc-300 hover:text-orange-500 flex items-center justify-center transition-all shadow-xs cursor-pointer active:scale-95"
+                  aria-label="Next Latest Arrivals"
+                >
+                  <ChevronRight size={18} />
+                </button>
+              </div>
             </div>
-            <div className="relative">
+
+            <div className="relative -mx-4 xs:-mx-6 sm:mx-0">
               <div
-                ref={carouselRef}
-                className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2"
+                ref={latestArrivalRef}
+                className="flex gap-3 sm:gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide px-4 xs:px-6 sm:px-0 pb-3"
                 style={{ scrollBehavior: 'smooth', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
               >
-                {carouselProducts.map((product: any, index: number) => (
-                  <div key={`${product.pid || product._id || product.id}-${index}`} className="flex-shrink-0 w-[240px] sm:w-[280px] md:w-[300px] lg:w-[320px] snap-start">
+                {latestArrivalProducts.map((product: any, index: number) => (
+                  <div key={`latest-${product.pid || product._id || product.id}-${index}`} className="flex-shrink-0 w-[220px] xs:w-[250px] sm:w-[280px] md:w-[300px] lg:w-[320px] snap-start">
                     <ProductCard product={product} />
                   </div>
                 ))}
@@ -440,25 +450,47 @@ const HomePage = () => {
         </section>
       )}
 
-      {/* ───────── LATEST ARRIVAL CAROUSEL ───────── */}
-      {latestArrivalProducts.length > 0 && (
+      {/* ───────── FEATURED COLLECTION CAROUSEL ───────── */}
+      {carouselProducts.length > 0 && (
         <section className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-100/50 dark:bg-zinc-950/80 transition-colors duration-200">
-          <div className="max-w-[1920px] mx-auto px-6 sm:px-10 lg:px-16 py-8 sm:py-10 lg:py-12">
-            <div className="flex items-end justify-between mb-6 sm:mb-8">
+          <div className="max-w-[1920px] mx-auto px-4 xs:px-6 sm:px-10 lg:px-16 py-12 sm:py-14 lg:py-16">
+            <div className="flex items-end justify-between mb-6 sm:mb-8 reveal-fade-up">
               <div>
+                <span className="text-xs font-black text-orange-500 uppercase tracking-widest block mb-1">
+                  Handpicked Collection
+                </span>
                 <h2 className="text-2xl sm:text-2xl lg:text-3xl font-semibold tracking-tight text-zinc-600 dark:text-white uppercase">
-                  Latest Arrival
+                  Trending Accessories
                 </h2>
               </div>
+
+              {/* Scroll Controls */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => scrollRef(carouselRef, 'left')}
+                  className="w-10 h-10 rounded-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-orange-500 text-zinc-700 dark:text-zinc-300 hover:text-orange-500 flex items-center justify-center transition-all shadow-xs cursor-pointer active:scale-95"
+                  aria-label="Previous Trending Accessories"
+                >
+                  <ChevronLeft size={18} />
+                </button>
+                <button
+                  onClick={() => scrollRef(carouselRef, 'right')}
+                  className="w-10 h-10 rounded-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-orange-500 text-zinc-700 dark:text-zinc-300 hover:text-orange-500 flex items-center justify-center transition-all shadow-xs cursor-pointer active:scale-95"
+                  aria-label="Next Trending Accessories"
+                >
+                  <ChevronRight size={18} />
+                </button>
+              </div>
             </div>
-            <div className="relative">
+
+            <div className="relative -mx-4 xs:-mx-6 sm:mx-0">
               <div
-                ref={latestArrivalRef}
-                className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2"
+                ref={carouselRef}
+                className="flex gap-3 sm:gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide px-4 xs:px-6 sm:px-0 pb-3"
                 style={{ scrollBehavior: 'smooth', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
               >
-                {latestArrivalProducts.map((product: any, index: number) => (
-                  <div key={`latest-${product.pid || product._id || product.id}-${index}`} className="flex-shrink-0 w-[240px] sm:w-[280px] md:w-[300px] lg:w-[320px] snap-start">
+                {carouselProducts.map((product: any, index: number) => (
+                  <div key={`${product.pid || product._id || product.id}-${index}`} className="flex-shrink-0 w-[220px] xs:w-[250px] sm:w-[280px] md:w-[300px] lg:w-[320px] snap-start">
                     <ProductCard product={product} />
                   </div>
                 ))}
@@ -470,11 +502,11 @@ const HomePage = () => {
 
       {/* ───────── DEAL OF THE DAY & INTERACTIVE CAR EXPLORER ───────── */}
       <section className="bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white py-12 sm:py-16 border-b border-zinc-200 dark:border-zinc-900 transition-colors duration-200">
-        <div className="max-w-[1920px] mx-auto px-6 sm:px-10 lg:px-16">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-10">
+        <div className="max-w-[1920px] mx-auto px-4 xs:px-6 sm:px-10 lg:px-16">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 xs:gap-6 sm:gap-8">
 
             {/* Left Box: Deal of the Day */}
-            <div className="relative rounded-2xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 sm:p-8 flex flex-col justify-between overflow-hidden shadow-xl">
+            <div className="relative rounded-3xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-4 xs:p-5 sm:p-8 flex flex-col justify-between overflow-hidden shadow-xl">
               {/* Background glows */}
               <div className="absolute top-0 right-0 w-80 h-80 bg-orange-500/5 rounded-full blur-[100px] pointer-events-none" />
 
@@ -482,26 +514,26 @@ const HomePage = () => {
               <div>
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-[#FF7A00] flex items-center justify-center font-bold text-sm text-white shrink-0">5</div>
+                    <div className="w-10 h-10 rounded-full bg-[#FF7A00] flex items-center justify-center font-bold text-sm text-white shrink-0">5</div>
                     <div>
-                      <h3 className="text-lg font-bold tracking-wider uppercase text-[#FF7A00]">DEAL OF THE DAY</h3>
+                      <h3 className="text-base xs:text-lg font-bold tracking-wider uppercase text-[#FF7A00]">DEAL OF THE DAY</h3>
                       <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Limited time offer. Grab it before it's gone!</p>
                     </div>
                   </div>
 
                   {/* Countdown Timer */}
-                  <div className="flex items-center gap-1.5 shrink-0 self-start sm:self-auto">
+                  <div className="flex items-center gap-1.5 xs:gap-2 shrink-0 self-start sm:self-auto">
                     {[
                       { val: timeLeft.days, label: 'DAYS' },
                       { val: timeLeft.hours, label: 'HRS' },
                       { val: timeLeft.minutes, label: 'MINS' },
                       { val: timeLeft.seconds, label: 'SECS' }
                     ].map((box, bIdx) => (
-                      <div key={bIdx} className="flex flex-col items-center justify-center bg-zinc-200 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-lg w-12 h-13">
-                        <span className="text-sm font-black tracking-tight text-zinc-900 dark:text-white leading-none">
+                      <div key={bIdx} className="flex flex-col items-center justify-center bg-zinc-200 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-xl w-11 xs:w-12 h-14 xs:h-16">
+                        <span className="text-base xs:text-lg font-black tracking-tight text-zinc-900 dark:text-white leading-none tabular-nums">
                           {String(box.val).padStart(2, '0')}
                         </span>
-                        <span className="text-[7.5px] font-bold text-zinc-500 tracking-wider uppercase mt-1">
+                        <span className="text-[8px] xs:text-[9px] font-bold text-zinc-500 tracking-wider uppercase mt-1">
                           {box.label}
                         </span>
                       </div>
@@ -510,7 +542,7 @@ const HomePage = () => {
                 </div>
 
                 {/* 4 Deals Stacked Vertically */}
-                <div className="mt-8 space-y-4">
+                <div className="mt-5 xs:mt-6 space-y-2.5 xs:space-y-3">
                   {dealProducts.slice(0, 4).map((prod, idx) => {
                     const price = prod.discountPrice && prod.discountPrice < prod.price ? prod.discountPrice : prod.price;
                     const originalPrice = prod.price;
@@ -519,51 +551,51 @@ const HomePage = () => {
                     return (
                       <div
                         key={idx}
-                        className="group/deal relative flex flex-col sm:flex-row items-center gap-5 p-4 rounded-xl bg-white dark:bg-zinc-950/45 hover:bg-zinc-50 dark:hover:bg-zinc-950/80 border border-zinc-200 dark:border-zinc-800/80 hover:border-[#FF7A00]/40 transition-all duration-300 shadow-md hover:shadow-[#FF7A00]/5"
+                        className="group/deal relative flex items-center gap-3.5 p-3 sm:p-3.5 rounded-2xl bg-white dark:bg-zinc-950/70 border border-zinc-200/80 dark:border-zinc-800/80 hover:border-[#FF7A00]/50 transition-all duration-300 shadow-sm"
                       >
                         {/* Image */}
                         <Link
                           to={`/product/${getProductId(prod)}`}
-                          className="relative w-28 h-28 sm:w-32 sm:h-32 flex items-center justify-center shrink-0 cursor-pointer block group/img bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden p-1.5"
+                          className="relative w-16 h-16 sm:w-20 sm:h-20 shrink-0 flex items-center justify-center rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 overflow-hidden p-1.5"
                         >
                           <img
                             src={prod.images?.[0] || '/img/placeholder.png'}
                             alt={prod.name}
-                            className="w-full h-full object-contain filter drop-shadow-[0_10px_25px_rgba(255,122,0,0.15)] group-hover/img:scale-105 transition-transform duration-300"
+                            loading="lazy"
+                            className="w-full h-full object-contain filter drop-shadow-[0_4px_12px_rgba(255,122,0,0.15)] group-hover/deal:scale-110 transition-transform duration-300"
                           />
+                          {discountPercent > 0 && (
+                            <span className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-[#FF7A00] text-white text-[9px] font-black uppercase tracking-wider shadow-md">
+                              {discountPercent}% OFF
+                            </span>
+                          )}
                         </Link>
 
                         {/* Details */}
-                        <div className="flex-1 min-w-0 space-y-2">
-                          <div>
-                            <span className="text-[9px] text-[#FF7A00] font-black uppercase tracking-widest block mb-0.5">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2 mb-0.5">
+                            <span className="text-[10px] text-[#FF7A00] font-black uppercase tracking-widest truncate">
                               {idx === 0
                                 ? 'Featured Deal'
                                 : idx === 1
-                                  ? 'Brakes System Special'
+                                  ? 'Brakes Special'
                                   : idx === 2
                                     ? 'Lighting Special'
-                                    : 'Interior Styling Special'}
+                                    : 'Interior Styling'}
                             </span>
-                            <Link to={`/product/${getProductId(prod)}`}>
-                              <h4 className="text-sm font-medium text-zinc-800 dark:text-zinc-100 group-hover/deal:text-[#FF7A00] transition-colors line-clamp-2 leading-snug">
-                                {prod.name}
-                              </h4>
-                            </Link>
-                            <p className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wider mt-1 block">
+                            <span className="text-[10px] text-zinc-400 font-semibold uppercase tracking-wider shrink-0 hidden sm:inline-block">
                               {prod.subcategoryName}
-                            </p>
+                            </span>
                           </div>
-
-                          <div className="flex items-baseline gap-2.5">
-                            <span className="text-sm font-semibold text-[#FF7A00]">₹{price}</span>
+                          <Link to={`/product/${getProductId(prod)}`}>
+                            <h4 className="text-xs sm:text-sm font-bold text-zinc-800 dark:text-zinc-100 group-hover/deal:text-[#FF7A00] transition-colors line-clamp-1">
+                              {prod.name}
+                            </h4>
+                          </Link>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-sm sm:text-base font-extrabold text-[#FF7A00] tabular-nums">{formatCurrency(price)}</span>
                             {discountPercent > 0 && (
-                              <>
-                                <span className="text-xs text-zinc-400 dark:text-zinc-500 line-through">₹{originalPrice}</span>
-                                <span className="px-1.5 py-0.5 rounded bg-red-500/10 text-red-500 text-[9px] font-black uppercase tracking-wider">
-                                  {discountPercent}% OFF
-                                </span>
-                              </>
+                              <span className="text-xs text-zinc-400 dark:text-zinc-500 line-through">{formatCurrency(originalPrice)}</span>
                             )}
                           </div>
                         </div>
@@ -572,37 +604,40 @@ const HomePage = () => {
                   })}
                 </div>
               </div>
-
+              {/* Bottom footer to fill remaining space + match right box's border-top badges */}
+              <div className="mt-5 pt-4 border-t border-zinc-200 dark:border-zinc-800/80">
+                <Link
+                  to="/collections/auto-replacement-parts"
+                  className="w-full h-11 rounded-xl bg-[#FF7A00]/10 border border-[#FF7A00]/30 hover:bg-[#FF7A00] hover:text-white text-[#FF7A00] text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2"
+                >
+                  View All Deals <ArrowRight size={14} />
+                </Link>
+              </div>
 
             </div>
 
             {/* Right Box: Interactive Car Explorer */}
-            <div className="relative rounded-2xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 sm:p-8 flex flex-col justify-between overflow-hidden shadow-xl">
+            <div className="relative rounded-3xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-4 xs:p-5 sm:p-8 flex flex-col justify-between overflow-hidden shadow-xl">
 
               {/* Heading */}
               <div>
                 <div className="flex items-center justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800/80 pb-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-[#FF7A00] flex items-center justify-center font-bold text-sm text-white shrink-0">6</div>
+                    <div className="w-10 h-10 rounded-full bg-[#FF7A00] flex items-center justify-center font-bold text-sm text-white shrink-0">6</div>
                     <div>
-                      <h3 className="text-lg font-bold tracking-wider uppercase text-[#FF7A00]">INTERACTIVE CAR EXPLORER</h3>
+                      <h3 className="text-base xs:text-lg font-bold tracking-wider uppercase text-[#FF7A00]">INTERACTIVE CAR EXPLORER</h3>
                       <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Explore parts by clicking on the hotspots</p>
                     </div>
                   </div>
-                  <Link
-                    to="/collections/exterior-accessories"
-                    className="text-xs font-bold text-[#FF7A00] hover:underline flex items-center gap-1 shrink-0 uppercase tracking-wider"
-                  >
-
-                  </Link>
                 </div>
 
                 {/* Car Hotspots Graphic Layout */}
-                <div className="relative mt-8 min-h-[220px] flex items-center justify-center bg-zinc-200/60 dark:bg-black/25 rounded-2xl border border-zinc-300/80 dark:border-zinc-800/60 p-4">
+                <div className="relative mt-5 h-[260px] sm:h-[280px] w-full flex items-center justify-center bg-zinc-950/80 rounded-2xl border border-zinc-300/80 dark:border-zinc-800/60 overflow-hidden p-2">
                   <img
                     src="/img/interactive_car_wireframe.png"
                     alt="Interactive Wireframe Sedan"
-                    className="w-full max-w-[420px] h-auto object-contain filter drop-shadow-[0_10px_20px_rgba(0,0,0,0.6)]"
+                    loading="lazy"
+                    className="w-full h-full object-cover filter drop-shadow-[0_10px_20px_rgba(0,0,0,0.6)]"
                   />
 
                   {/* Hotspots Overlay */}
@@ -675,7 +710,7 @@ const HomePage = () => {
                 </div>
 
                 {/* Hotspot Links Panel */}
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3.5 mt-6">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5 xs:gap-3 mt-5 xs:mt-6">
                   {[
                     { label: 'Exterior Accessories', img: '/img/one.jpeg', defaultLink: '/collections/exterior-accessories' },
                     { label: 'Interior Accessories', img: '/img/two.jpeg', defaultLink: '/collections/interior-accessories' },
@@ -692,16 +727,16 @@ const HomePage = () => {
                       <Link
                         key={pIdx}
                         to={productLink}
-                        className={`flex items-center gap-3 p-3 rounded-xl border transition-all text-left cursor-pointer ${selectedCategory === part.label
+                        className={`flex items-center gap-3 p-3 rounded-xl border transition-all text-left cursor-pointer active:scale-[0.98] ${selectedCategory === part.label
                           ? 'bg-zinc-200 dark:bg-zinc-900 border-[#FF7A00] shadow-[0_0_15px_rgba(255,122,0,0.15)]'
                           : 'bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-900/60'
                           }`}
                       >
                         <div className="w-10 h-10 rounded-lg border border-zinc-200 dark:border-zinc-800 overflow-hidden flex items-center justify-center bg-zinc-100 dark:bg-zinc-950 shrink-0">
-                          <img src={productImage} alt={part.label} className="w-full h-full object-cover" />
+                          <img src={productImage} alt={part.label} loading="lazy" className="w-full h-full object-cover" />
                         </div>
                         <div>
-                          <span className={`text-[11.5px] font-black uppercase transition-colors block ${selectedCategory === part.label ? 'text-zinc-900 dark:text-white' : 'text-zinc-700 dark:text-zinc-300'
+                          <span className={`text-[11px] xs:text-[11.5px] font-black uppercase transition-colors block ${selectedCategory === part.label ? 'text-zinc-900 dark:text-white' : 'text-zinc-700 dark:text-zinc-300'
                             }`}>
                             {part.label}
                           </span>
@@ -719,7 +754,7 @@ const HomePage = () => {
               </div>
 
               {/* Bottom 4 Badges */}
-              <div className="mt-8 pt-5 border-t border-zinc-200 dark:border-zinc-800/80 flex flex-wrap justify-between items-center gap-4 text-[10px] sm:text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+              <div className="mt-6 xs:mt-8 pt-4 xs:pt-5 border-t border-zinc-200 dark:border-zinc-800/80 grid grid-cols-2 sm:flex sm:flex-wrap sm:justify-between items-center gap-3 text-[10px] sm:text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                 <span className="flex items-center gap-1.5"><ShieldCheck size={14} className="text-[#FF7A00]" /> OEM Quality</span>
                 <span className="flex items-center gap-1.5"><Award size={14} className="text-[#FF7A00]" /> Precision Fit</span>
                 <span className="flex items-center gap-1.5"><RotateCcw size={14} className="text-[#FF7A00]" /> High Durability</span>
@@ -731,17 +766,68 @@ const HomePage = () => {
         </div>
       </section>
 
+
+
+      {/* ────── "You May Also Like" Recommendation Section ────── */}
+      <section className="py-12 sm:py-16 bg-zinc-50 dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-900 transition-colors duration-200">
+        <div className="max-w-[1920px] mx-auto px-4 xs:px-6 sm:px-10 lg:px-16">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <span className="text-xs font-black text-orange-500 uppercase tracking-widest flex items-center gap-1.5 mb-1.5">
+                <Sparkles className="w-4 h-4 text-orange-500" /> Personalized Selection
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-zinc-900 dark:text-white tracking-tight uppercase">
+                You May Also Like
+              </h2>
+            </div>
+
+            <Link
+              to="/collections/exterior-accessories"
+              className="text-xs font-bold text-orange-500 hover:text-orange-600 transition-colors flex items-center gap-1 uppercase tracking-wider"
+            >
+              Explore All <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          {autoProducts.length > 0 ? (
+            <>
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 xs:gap-4 sm:gap-5 lg:gap-6">
+                {autoProducts.slice(0, youMayLikeLimit).map((product: any, idx: number) => (
+                  <ProductCard key={`you-may-like-${product._id || getProductId(product) || idx}`} product={product} />
+                ))}
+              </div>
+
+              {autoProducts.length > youMayLikeLimit && (
+                <div className="mt-10 text-center">
+                  <button
+                    onClick={() => setYouMayLikeLimit((prev) => prev + 10)}
+                    className="inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-orange-500 text-zinc-900 dark:text-white text-xs font-black uppercase tracking-wider shadow-sm hover:shadow-md transition-all active:scale-[0.98] cursor-pointer"
+                  >
+                    <span>Show More Products</span>
+                    <ArrowRight size={14} className="text-orange-500" />
+                  </button>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="py-16 text-center bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800">
+              <p className="text-sm font-semibold text-zinc-400">No recommended products available at the moment.</p>
+            </div>
+          )}
+        </div>
+      </section>
+
       {/* Brand Logos Section (Static & Centered - No Duplicates, No Scroll) */}
-      <section className="bg-zinc-50 dark:bg-zinc-950 py-12 border-b border-zinc-200 dark:border-zinc-900 relative">
-        <div className="max-w-[1920px] mx-auto px-6 sm:px-10 lg:px-16 mb-8 text-center sm:text-left">
-          <p className="text-xs font-black text-[#FF7A00] uppercase tracking-widest flex items-center justify-center sm:justify-start gap-2 mb-1">
+      <section className="bg-zinc-50 dark:bg-zinc-950 py-12 sm:py-16 border-b border-zinc-200 dark:border-zinc-900 relative">
+        <div className="max-w-[1920px] mx-auto px-4 xs:px-6 sm:px-10 lg:px-16 mb-6 sm:mb-10 text-center reveal-fade-up">
+          <p className="text-xs font-black text-[#FF7A00] uppercase tracking-widest flex items-center justify-center gap-2 mb-2">
             Direct Brand Partnerships
           </p>
           <h2 className="text-2xl sm:text-2xl lg:text-3xl font-semibold tracking-tight text-zinc-600 dark:text-white uppercase">
             Verified Manufacturer Brands
           </h2>
         </div>
-        <div className="max-w-[1920px] mx-auto px-6 sm:px-10 lg:px-16 flex flex-wrap items-center justify-center gap-6 sm:gap-10">
+        <div className="max-w-[1920px] mx-auto px-4 xs:px-6 sm:px-10 lg:px-16 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 xs:gap-4 sm:gap-5">
           {[
             { src: '/img/CONTINENTAL_minimalist_vector_logo_2K_202607301318.jpeg', name: 'Continental' },
             { src: '/img/Minimalist_vector_logo_CASTROL_2K_202607301318.jpeg', name: 'Castrol' },
@@ -749,12 +835,17 @@ const HomePage = () => {
             { src: '/img/Premium_minimalist_vector_logo_MANN_202607301318.jpeg', name: 'Mann Filter' },
             { src: '/img/one.jpeg', name: 'AutoTrade Partner' }
           ].map((logo, lIdx) => (
-            <img
+            <div
               key={`logo-static-${lIdx}`}
-              src={logo.src}
-              alt={logo.name}
-              className="h-20 sm:h-28 w-auto object-contain shrink-0 opacity-90 hover:opacity-100 transition-opacity"
-            />
+              className="flex items-center justify-center h-24 xs:h-28 sm:h-32 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm hover:shadow-lg transition-all duration-300 p-4 sm:p-5"
+            >
+              <img
+                src={logo.src}
+                alt={logo.name}
+                loading="lazy"
+                className="max-h-full max-w-full w-auto object-contain opacity-90 hover:opacity-100 transition-opacity"
+              />
+            </div>
           ))}
         </div>
       </section>

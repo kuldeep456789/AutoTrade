@@ -30,7 +30,11 @@ export function tokenizeText(text: string): string[] {
  * Minimum prefix length defaults to 2.
  * Maximum prefix length defaults to 8.
  */
-export function generatePrefixes(token: string, minLen = 2, maxLen = 8): string[] {
+export function generatePrefixes(
+  token: string,
+  minLen = 2,
+  maxLen = 8,
+): string[] {
   if (!token || token.length < minLen) return [];
 
   const prefixes: string[] = [];

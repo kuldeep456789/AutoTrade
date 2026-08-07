@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -13,18 +14,28 @@ import { Order } from '../orders/schemas/order.schema';
 
 @Injectable()
 export class ReturnsService {
+
+  private readonly ACTIVE_STATUSES = [
+    'requested',
+    'approved',
+    'item_received',
+  ];
+
   constructor(
     @InjectModel(ReturnRequest.name)
     private readonly returnModel: Model<ReturnRequest>,
     @InjectModel(Order.name) private readonly orderModel: Model<Order>,
     private readonly jwtService: JwtService,
     private readonly usersService: UsersService,
-  ) {}
+  ) { }
 
   async create(token: string, dto: CreateReturnDto) {
     const user = await this.resolveUser(token);
     if (!dto.orderId || !dto.reason) {
       throw new BadRequestException('orderId and reason are required');
+    }
+    if (!dto.items || dto.items.length === 0) {
+      throw new BadRequestException('At least one item is required');
     }
 
     const cleanOrderId = dto.orderId
@@ -59,20 +70,63 @@ export class ReturnsService {
         'You can only return orders that have been delivered',
       );
     }
-    const ret = await this.returnModel.create({
+
+
+    const activeReturnsForOrder = await this.returnModel
+      .find({
+        userId: new Types.ObjectId(user.id),
+        orderId: order._id.toString(),
+        status: { $in: this.ACTIVE_STATUSES },
+      })
+      .exec();
+
+    if (activeReturnsForOrder.length > 0) {
+      const incomingProductIds = new Set(
+        dto.items.map((item) => item.productId),
+      );
+
+      const alreadyRequestedProductIds = new Set<string>();
+      for (const activeReturn of activeReturnsForOrder) {
+        for (const item of activeReturn.items || []) {
+          if (incomingProductIds.has(item.productId)) {
+            alreadyRequestedProductIds.add(item.productId);
+          }
+        }
+      }
+
+      if (alreadyRequestedProductIds.size > 0) {
+        throw new ConflictException(
+          `A return request is already in progress for: ${Array.from(
+            alreadyRequestedProductIds,
+          ).join(', ')}`,
+        );
+      }
+    }
+
+    console.log('DTO =====================');
+    console.log(JSON.stringify(dto, null, 2));
+
+    console.log('CREATE OBJECT =====================');
+
+    const payload = {
       userId: new Types.ObjectId(user.id),
       orderId: order._id.toString(),
-      productId: dto.productId,
-      productName: dto.productName,
-      productImage: dto.productImage,
-      productSize: dto.productSize,
-      productColor: dto.productColor,
+      items: dto.items,
+      totalItems: dto.items.length,
+      totalReturnAmount: dto.items.reduce(
+        (sum, item) => sum + ((item.price || 0) * item.quantity),
+        0,
+      ),
       reason: dto.reason,
       description: dto.description,
       images: dto.images || [],
       exchangeSize: dto.exchangeSize,
       pickupAddress: dto.pickupAddress,
-    });
+    };
+
+    console.log(JSON.stringify(payload, null, 2));
+
+    const ret = await this.returnModel.create(payload);
     return { return: ret };
   }
 
@@ -101,8 +155,10 @@ export class ReturnsService {
     }
     const returns = await this.returnModel
       .find()
+      .populate('userId', 'name email')
       .sort({ createdAt: -1 })
       .exec();
+
     return { returns };
   }
 

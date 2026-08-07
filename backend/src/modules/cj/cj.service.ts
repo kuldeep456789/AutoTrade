@@ -8,7 +8,9 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { RedisService } from '../redis/redis.service';
+import { REDIS_TTL } from '../redis/redis.constants';
 import { Order } from '../orders/schemas/order.schema';
+import { Product, ProductDocument } from '../products/schemas/product.schema';
 import {
   Automobiles,
   getAllSyncTargets,
@@ -35,7 +37,12 @@ function slugify(val: string): string {
 }
 
 function normalizeKey(val: string): string {
-  return val.trim().toLowerCase();
+  return val
+    .trim()
+    .toLowerCase()
+    .replace(/\s*&\s*/g, ' and ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 const categoryKey = (parentCat: string, subCat: string) =>
@@ -60,6 +67,8 @@ export class CjService {
     private readonly cjClient: CjClient,
     private readonly searchIndexService?: SearchIndexService,
     @InjectModel(Order.name) private readonly orderModel?: Model<Order>,
+    @InjectModel(Product.name)
+    private readonly productModel?: Model<ProductDocument>,
   ) { }
 
   /**
@@ -81,7 +90,6 @@ export class CjService {
     const headers = await this.cjClient.authHeaders();
     const body = {
       platform: 'Api',
-      logisticName: 'CJPacket',
       fromCountryCode: 'CN',
       ...payload,
     };
@@ -110,7 +118,178 @@ export class CjService {
   }
 
   /**
+   * Resolve the CJ variant id (vid) for an order item.
+   *
+   * 1. If the order item already carries a vid, validate it against the
+   *    product's variants (never trust it blindly — stale warehouse data can
+   *    contain removed vids).
+   * 2. Otherwise resolve by color/size, then by first variant.
+   * 3. If nothing matches, force-refresh the single product from the CJ API
+   *    (bypassing the stale warehouse cache) and retry once.
+   * 4. NEVER fall back to the product pid as a vid — CJ rejects that with
+   *    "Invalid products".
+   */
+  private async resolveOrderItemVid(item: any): Promise<string> {
+    const pid = item.productId;
+    if (!pid) {
+      throw new Error('Missing productId in order item');
+    }
+
+    const product = await this.getProductById(pid);
+    const variants: any[] = Array.isArray(product?.variants)
+      ? product.variants
+      : [];
+
+    const tryMatch = (): string | null => {
+      if (!variants.length) return null;
+
+      // Exact vid match (order item already snapshotted a vid).
+      if (item.vid != null && item.vid !== '') {
+        const match = variants.find(
+          (v: any) =>
+            String(v.vid) === String(item.vid) ||
+            String(v.variantId) === String(item.vid) ||
+            String(v.variantKey) === String(item.vid),
+        );
+        if (match?.vid) return String(match.vid);
+      }
+
+      if (item.color || item.size) {
+        const isGenericColor = !item.color || ['default', 'one size', 'standard'].includes(String(item.color).toLowerCase());
+        const isGenericSize = !item.size || ['default', 'one size', 'standard'].includes(String(item.size).toLowerCase());
+
+        const match = variants.find((v: any) => {
+          const colorOk =
+            isGenericColor ||
+            String(v.color).toLowerCase() === String(item.color).toLowerCase();
+          const sizeOk =
+            isGenericSize ||
+            String(v.size).toLowerCase() === String(item.size).toLowerCase();
+          return colorOk && sizeOk;
+        });
+        if (match?.vid) return String(match.vid);
+      }
+
+      if (variants.length > 0 && (variants[0]?.vid || variants[0]?.variantId)) {
+        return String(variants[0].vid || variants[0].variantId);
+      }
+
+      return null;
+    };
+
+    const direct = tryMatch();
+    if (direct) return direct;
+
+    // Stale cache: force-refresh this single product from the CJ API and retry.
+    try {
+      const freshProduct = await this.forceRefreshProduct(pid);
+      const freshVariants: any[] = Array.isArray(freshProduct?.variants)
+        ? freshProduct.variants
+        : [];
+
+      if (item.vid != null && item.vid !== '') {
+        const match = freshVariants.find(
+          (v: any) =>
+            String(v.vid) === String(item.vid) ||
+            String(v.variantId) === String(item.vid) ||
+            String(v.variantKey) === String(item.vid),
+        );
+        if (match?.vid) return String(match.vid);
+      }
+
+      if (item.color || item.size) {
+        const isGenericColor = !item.color || ['default', 'one size', 'standard'].includes(String(item.color).toLowerCase());
+        const isGenericSize = !item.size || ['default', 'one size', 'standard'].includes(String(item.size).toLowerCase());
+
+        const match = freshVariants.find((v: any) => {
+          const colorOk =
+            isGenericColor ||
+            String(v.color).toLowerCase() === String(item.color).toLowerCase();
+          const sizeOk =
+            isGenericSize ||
+            String(v.size).toLowerCase() === String(item.size).toLowerCase();
+          return colorOk && sizeOk;
+        });
+        if (match?.vid) return String(match.vid);
+      }
+
+      if (freshVariants.length > 0 && (freshVariants[0]?.vid || freshVariants[0]?.variantId)) {
+        return String(freshVariants[0].vid || freshVariants[0].variantId);
+      }
+    } catch (err: any) {
+      this.logger.warn(
+        `[CJ] Force-refresh for product ${pid} failed during vid resolution: ${err?.message ?? err}`,
+      );
+    }
+
+    throw new Error(
+      `Invalid products: no matching variant found for product ${pid}`,
+    );
+  }
+
+  /**
+   * Bypass all cache layers and re-fetch a single product (and its variants)
+   * from the CJ API, then rewrite both cache keys.
+   */
+  private async forceRefreshProduct(pid: string): Promise<any> {
+    const warehouseKey = `warehouse:product:${pid}`;
+    const legacyCacheKey = `product:${pid}`;
+
+    await this.redisService.del(warehouseKey);
+    await this.redisService.del(legacyCacheKey);
+
+    // Reset the in-memory warehouse cache so it doesn't serve the stale entry.
+    if (Array.isArray(this.warehouseCache)) {
+      this.warehouseCache = this.warehouseCache.filter(
+        (p: any) => String(p.pid || p.id || p._id) !== pid && p.sku !== pid,
+      );
+    }
+
+    const url = `/v1/product/list?pid=${pid}`;
+    const response = await this.cjClient.scheduleRequest(url, {
+      method: 'GET',
+      headers: await this.cjClient.authHeaders(),
+    });
+
+    if (response?.result === false) {
+      throw new NotFoundException(
+        `CJ API Error: ${response?.message || 'Product not found'}`,
+      );
+    }
+
+    const normalized = this.normalizeProductResponse(response);
+    const matchedProduct = normalized?.products?.[0] ?? null;
+    if (!matchedProduct) throw new NotFoundException('Product not found');
+
+    try {
+      const enriched = await this.enrichWithVariants(matchedProduct, pid);
+      await this.redisService.setJson(
+        legacyCacheKey,
+        enriched,
+        CJ_CONFIG.CACHE_TTL.PRODUCT_DETAIL,
+      );
+      await this.redisService.setJson(
+        warehouseKey,
+        enriched,
+        CJ_CONFIG.CACHE_TTL.PRODUCT_DETAIL,
+      );
+      return enriched;
+    } catch (err: any) {
+      this.logger.warn(
+        `[CJ] Variant enrichment failed for ${pid} during refresh: ${err?.message ?? err}`,
+      );
+      return matchedProduct;
+    }
+  }
+
+  /**
    * Sync Order details to CJ Dropshipping.
+   *
+   * Instead of hardcoding a logisticName, we first call the CJ Freight
+   * Calculate API to discover which logistics methods are actually available
+   * for this order (products + destination country), then pick one. If CJ
+   * reports the products cannot ship together (code 100230), we split them
+   * into separate CJ orders.
    */
   async syncOrderToCj(order: any): Promise<boolean> {
     const orderNumber = order._id
@@ -119,82 +298,338 @@ export class CjService {
     const shipping = order.shippingDetails || {};
 
     const mappedProducts: CjOrderProductItem[] = [];
+    const resolutionErrors: string[] = [];
+
     for (const item of order.items || []) {
-      let vid = item.vid;
-      if (!vid && item.productId) {
-        try {
-          const prod = await this.getProductById(item.productId);
-          vid =
-            prod?.variants?.[0]?.vid ||
-            prod?.variants?.[0]?.variantId ||
-            prod?.vid;
-        } catch (err: any) {
-          this.logger.warn(
-            `[CJ] Could not fetch product details to resolve vid for ${item.productId}`,
-          );
-        }
+      try {
+        const vid = await this.resolveOrderItemVid(item);
+        mappedProducts.push({
+          vid,
+          quantity: item.quantity || 1,
+        });
+      } catch (err: any) {
+        resolutionErrors.push(err?.message ?? String(err));
+        this.logger.error(
+          `[CJ] Could not resolve vid for order ${orderNumber}, product ${item.productId}: ${err?.message ?? err}`,
+        );
       }
-      mappedProducts.push({
-        vid: vid || item.productId,
-        quantity: item.quantity || 1,
-      });
+    }
+
+    if (mappedProducts.length === 0) {
+      const message = `CJ order sync rejected: no valid products. ${resolutionErrors.join('; ')}`;
+      order.cjSyncError = message;
+      if (typeof order.save === 'function') {
+        await order.save().catch(() => undefined);
+      }
+      this.logger.error(`[CJ] Order ${orderNumber} sync blocked. ${message}`);
+      return false;
+    }
+
+    if (resolutionErrors.length > 0) {
+      order.cjSyncError = resolutionErrors.join('; ');
+      if (typeof order.save === 'function') {
+        await order.save().catch(() => undefined);
+      }
+    }
+
+    const base = this.buildOrderBase(order, shipping);
+
+    try {
+      this.logger.log(
+        `[CJ] Syncing order ${orderNumber} to CJ Dropshipping... Products: ${JSON.stringify(mappedProducts)}`,
+      );
+      const cjOrderId = await this.createCjOrder(
+        order,
+        orderNumber,
+        base,
+        mappedProducts,
+      );
+
+      order.cjOrderId = cjOrderId;
+      order.cjOrderIds = [cjOrderId];
+      order.status = 'processing';
+      if (typeof order.save === 'function') {
+        await order.save();
+      }
+      this.logger.log(
+        `[CJ] Order ${orderNumber} successfully created on CJ! CJ Order ID: ${cjOrderId}`,
+      );
+      return true;
+    } catch (err: any) {
+      if (this.isProductsConflictError(err)) {
+        this.logger.warn(
+          `[CJ] Order ${orderNumber} products cannot ship together — splitting into per-product CJ orders.`,
+        );
+        return this.createSplitOrders(order, orderNumber, base, mappedProducts);
+      }
+
+      const errorMsg = err?.message ?? String(err);
+      this.logger.error(
+        `[CJ] Exception syncing order ${orderNumber} to CJ Dropshipping: ${errorMsg}. Retaining status 'confirmed'.`,
+        JSON.stringify({
+          payload: { ...base, products: mappedProducts },
+          errorResponse: err?.response ?? err?.data ?? null,
+        }),
+      );
+      order.cjSyncError = errorMsg;
+      if (typeof order.save === 'function') {
+        await order.save().catch(() => undefined);
+      }
+      return false;
+    }
+  }
+
+  /** Build the common order base (shipping fields) with sane fallbacks. */
+  private buildOrderBase(order: any, shipping: any) {
+    return {
+      shippingCustomerName: shipping.customerName || 'Customer',
+      shippingAddress: this.cleanAddress(shipping.address),
+      shippingCity: this.cleanSegment(shipping.city),
+      shippingProvince: this.cleanSegment(shipping.province),
+      shippingCountryCode: shipping.countryCode || 'IN',
+      shippingCountry: shipping.country || 'India',
+      shippingZip: shipping.zip || shipping.postalCode || '000000',
+      shippingPhone: shipping.phone || '0000000000',
+      fromCountryCode: order.fromCountryCode || 'CN',
+      platform: 'Api',
+    };
+  }
+
+  /** Collapse a free-text field into a single trimmed token (no newlines). */
+  private cleanSegment(val: any): string {
+    if (!val) return '';
+    return String(val).trim().replace(/\s+/g, ' ');
+  }
+
+  /** De-duplicate comma/line separated location fragments in the address. */
+  private cleanAddress(raw: any): string {
+    const text = String(raw || 'Address line 1').replace(/\s+/g, ' ');
+    const parts = text
+      .split(',')
+      .map((p) => p.trim())
+      .filter(Boolean);
+    const seen = new Set<string>();
+    const deduped: string[] = [];
+    for (const part of parts) {
+      const key = part.toLowerCase();
+      if (!seen.has(key)) {
+        seen.add(key);
+        deduped.push(part);
+      }
+    }
+    return deduped.join(', ');
+  }
+
+  /** Create one CJ order for a product group, picking real logistics via freight calculate. */
+  private async createCjOrder(
+    order: any,
+    orderNumber: string,
+    base: Record<string, any>,
+    products: CjOrderProductItem[],
+  ): Promise<string> {
+    const logistics = await this.calculateFreight(
+      products,
+      base.shippingCountryCode,
+      base.shippingZip,
+    );
+    const logisticName = this.pickLogisticName(logistics, order.logisticName);
+
+    if (!logisticName) {
+      throw new Error(
+        `No valid logistics found for order ${orderNumber} to ${base.shippingCountryCode}`,
+      );
     }
 
     const payload: CjCreateOrderDto = {
       orderNumber,
-      shippingCustomerName: shipping.customerName || 'Customer',
-      shippingAddress: shipping.address || 'Address line 1',
-      shippingCity: shipping.city || 'City',
-      shippingProvince: shipping.province || 'State',
-      shippingCountryCode: shipping.countryCode || 'IN',
-      shippingCountry: shipping.country || 'India',
-      shippingZip: shipping.zip || '000000',
-      shippingPhone: shipping.phone || '0000000000',
-      logisticName: order.logisticName || 'CJPacket',
-      fromCountryCode: order.fromCountryCode || 'CN',
+      shippingCustomerName: base.shippingCustomerName,
+      shippingAddress: base.shippingAddress,
+      shippingCity: base.shippingCity,
+      shippingProvince: base.shippingProvince,
+      shippingCountryCode: base.shippingCountryCode,
+      shippingCountry: base.shippingCountry,
+      shippingZip: base.shippingZip,
+      shippingPhone: base.shippingPhone,
+      logisticName,
+      fromCountryCode: base.fromCountryCode,
       platform: 'Api',
-      products: mappedProducts,
+      products,
     };
 
-    try {
-      this.logger.log(
-        `[CJ] Syncing order ${orderNumber} to CJ Dropshipping... Payload: ${JSON.stringify(payload)}`,
-      );
-      const response = await this.createOrderV2(payload);
+    this.logger.log(
+      `[CJ] Syncing order ${orderNumber} to CJ Dropshipping... Payload: ${JSON.stringify(payload)}`,
+    );
+    const response = await this.createOrderV2(payload);
 
-      const cjOrderId =
-        response?.data?.cjOrderId ||
-        response?.data?.orderId ||
-        response?.data ||
-        response?.cjOrderId;
+    const cjOrderId =
+      response?.data?.cjOrderId ||
+      response?.data?.orderId ||
+      response?.data ||
+      response?.cjOrderId;
 
-      if (response?.result !== false && cjOrderId) {
-        order.cjOrderId = String(cjOrderId);
-        order.status = 'processing';
-        if (typeof order.save === 'function') {
-          await order.save();
-        }
-        this.logger.log(
-          `[CJ] Order ${orderNumber} successfully created on CJ! CJ Order ID: ${cjOrderId}`,
-        );
-        return true;
-      } else {
-        this.logger.error(
-          `[CJ] Order ${orderNumber} sync failed with message: ${response?.message || 'Unknown error'}. Retaining status 'confirmed'.`,
-          JSON.stringify(payload),
-        );
-        return false;
-      }
-    } catch (err: any) {
-      this.logger.error(
-        `[CJ] Exception syncing order ${orderNumber} to CJ Dropshipping: ${err?.message ?? err}. Retaining status 'confirmed'.`,
-        JSON.stringify({
-          payload,
-          errorResponse: err?.response ?? err?.data ?? null,
-        }),
-      );
-      return false;
+    if (response?.result !== false && cjOrderId) {
+      return String(cjOrderId);
     }
+
+    const errorMsg = response?.message || 'Unknown error from CJ Dropshipping';
+    this.logger.error(
+      `[CJ] Order ${orderNumber} sync failed with message: ${errorMsg}.`,
+      JSON.stringify(payload),
+    );
+    throw new Error(errorMsg);
+  }
+
+  /** Split an incompatible product set into per-product CJ orders. */
+  private async createSplitOrders(
+    order: any,
+    orderNumber: string,
+    base: Record<string, any>,
+    products: CjOrderProductItem[],
+  ): Promise<boolean> {
+    const groups = this.groupProductsPerVid(products);
+    const createdIds: string[] = [];
+    const failures: string[] = [];
+
+    for (let i = 0; i < groups.length; i++) {
+      const subOrderNumber = `${orderNumber}-${i + 1}`.slice(0, 40);
+      try {
+        const cjOrderId = await this.createCjOrder(
+          order,
+          subOrderNumber,
+          base,
+          groups[i],
+        );
+        createdIds.push(cjOrderId);
+      } catch (err: any) {
+        failures.push(
+          `${groups[i].map((g) => g.vid).join(',')}: ${err?.message ?? String(err)}`,
+        );
+      }
+    }
+
+    if (createdIds.length > 0) {
+      order.cjOrderId = createdIds[0];
+      order.cjOrderIds = createdIds;
+      if (failures.length === 0) {
+        order.status = 'processing';
+        delete order.cjSyncError;
+      } else {
+        order.cjSyncError = failures.join('; ');
+      }
+      if (typeof order.save === 'function') {
+        await order.save().catch(() => undefined);
+      }
+      this.logger.log(
+        `[CJ] Order ${orderNumber} split into ${createdIds.length}/${groups.length} CJ orders: ${createdIds.join(', ')}`,
+      );
+      return failures.length === 0;
+    }
+
+    order.cjSyncError = failures.join('; ') || 'CJ split order creation failed';
+    if (typeof order.save === 'function') {
+      await order.save().catch(() => undefined);
+    }
+    return false;
+  }
+
+  /** Group products into per-vid batches so incompatible vids never mix. */
+  private groupProductsPerVid(
+    products: CjOrderProductItem[],
+  ): CjOrderProductItem[][] {
+    const byVid = new Map<string, CjOrderProductItem>();
+    for (const item of products) {
+      const key = String(item.vid);
+      const existing = byVid.get(key);
+      if (existing) {
+        existing.quantity += item.quantity;
+      } else {
+        byVid.set(key, { vid: item.vid, quantity: item.quantity });
+      }
+    }
+    return Array.from(byVid.values()).map((item) => [item]);
+  }
+
+  /** Detect CJ's "these products cannot be together" rejection (code 100230). */
+  private isProductsConflictError(err: any): boolean {
+    const haystack = [
+      err?.message,
+      err?.response?.message,
+      err?.data?.message,
+      err?.errorResponse?.message,
+    ]
+      .filter(Boolean)
+      .join(' | ');
+    return (
+      haystack.includes('100230') ||
+      /cannot be together|can't be together|not be together/i.test(haystack)
+    );
+  }
+
+  /**
+   * Call the CJ Freight Calculate API for a set of products to a destination
+   * and return the available logistics options.
+   */
+  private async calculateFreight(
+    products: CjOrderProductItem[],
+    endCountryCode: string,
+    zip?: string,
+  ): Promise<Array<{ logisticName: string; logisticPrice: number; logisticAging: string }>> {
+    if (!products.length) return [];
+    const headers = await this.cjClient.authHeaders();
+    const body: Record<string, any> = {
+      startCountryCode: 'CN',
+      endCountryCode,
+      products: products.map((p) => ({ vid: p.vid, quantity: p.quantity })),
+    };
+    if (zip && /^[A-Za-z0-9 -]{3,10}$/.test(zip)) {
+      body.zip = zip;
+    }
+    try {
+      const response = await this.cjClient.scheduleRequest(
+        '/v1/logistic/freightCalculate',
+        { method: 'POST', headers, data: body },
+      );
+      if (response?.result === false) {
+        this.logger.warn(
+          `[CJ] Freight calculate rejected: ${response?.message ?? 'unknown'}`,
+        );
+        return [];
+      }
+      return Array.isArray(response?.data) ? response.data : [];
+    } catch (err: any) {
+      this.logger.warn(
+        `[CJ] Freight calculate failed: ${err?.message ?? err}`,
+      );
+      return [];
+    }
+  }
+
+  /**
+   * Pick the logistics method for the order. Prefers the stored order
+   * logisticName when it's actually available, otherwise falls back to a
+   * CJPacket carrier if offered, otherwise the cheapest option.
+   */
+  private pickLogisticName(
+    options: Array<{ logisticName: string; logisticPrice: number }>,
+    preferred?: string,
+  ): string | null {
+    if (!options.length) return null;
+
+    if (preferred) {
+      const exact = options.find(
+        (o) => String(o.logisticName).toLowerCase() === preferred.toLowerCase(),
+      );
+      if (exact) return exact.logisticName;
+    }
+
+    const cjPacket = options.find((o) =>
+      /cjpacket/i.test(String(o.logisticName)),
+    );
+    if (cjPacket) return cjPacket.logisticName;
+
+    return [...options].sort(
+      (a, b) => (Number(a.logisticPrice) || 0) - (Number(b.logisticPrice) || 0),
+    )[0]?.logisticName ?? null;
   }
 
   /**
@@ -397,7 +832,10 @@ export class CjService {
          * but NOT "women" (since "women".startsWith("men") is false).
          */
         const tokenPrefixMatch = (term: string, text: string): boolean => {
-          const toks = text.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+          const toks = text
+            .toLowerCase()
+            .split(/[^a-z0-9]+/)
+            .filter(Boolean);
           return toks.some((tok) => tok === term || tok.startsWith(term));
         };
 
@@ -414,10 +852,11 @@ export class CjService {
             : '';
 
           // A product is a candidate if EVERY query token matches at least one field
-          return tokens.every((t) =>
-            tokenPrefixMatch(t, name) ||
-            tokenPrefixMatch(t, category) ||
-            tokenPrefixMatch(t, kwStr),
+          return tokens.every(
+            (t) =>
+              tokenPrefixMatch(t, name) ||
+              tokenPrefixMatch(t, category) ||
+              tokenPrefixMatch(t, kwStr),
           );
         });
 
@@ -485,24 +924,47 @@ export class CjService {
     if (warehouse && Array.isArray(warehouse) && warehouse.length > 0) {
       let filtered = warehouse;
 
+      // if (query.subcategoryName) {
+      //   const sub = query.subcategoryName.toLowerCase();
+      //   filtered = filtered.filter((p: any) =>
+      //     (p._category || p.subcategoryName || p.categoryName || '')
+      //       .toLowerCase()
+      //       .includes(sub),
+      //   );
+      // }
       if (query.subcategoryName) {
-        const sub = query.subcategoryName.toLowerCase();
+        const sub = normalizeKey(query.subcategoryName);
         filtered = filtered.filter((p: any) =>
-          (p._category || p.subcategoryName || p.categoryName || '')
-            .toLowerCase()
-            .includes(sub),
+          normalizeKey(
+            p._category || p.subcategoryName || p.categoryName || '',
+          ).includes(sub),
         );
       }
 
       if (query.collectionType) {
-        const cType = query.collectionType.toLowerCase();
+        const cType = normalizeKey(query.collectionType);
         filtered = filtered.filter((p: any) =>
-          (p._parentCategory || p._collectionType || p.collectionType || p.parentCategory || '')
-            .toLowerCase()
-            .includes(cType),
+          normalizeKey(
+            p._parentCategory ||
+            p._collectionType ||
+            p.collectionType ||
+            p.parentCategory ||
+            '',
+          ).includes(cType),
         );
       }
 
+      const STOPWORDS = new Set(['and', 'or', 'the', 'a', 'an', 'of', 'for']);
+
+      const tokens = keyword
+        .split(/\s+/)
+        .filter(Boolean)
+        .map((t) => slugify(t))
+        .filter((t) => t.length >= 1 && !STOPWORDS.has(t));
+
+      // const category = normalizeKey(
+      //   p.categoryName || p._category || p.subcategoryName || '',
+      // );
       const page = Number(query.pageNum || 1);
       const limit = Number(query.pageSize || CJ_CONFIG.PAGE_SIZE);
       const start = (page - 1) * limit;
@@ -676,7 +1138,11 @@ export class CjService {
       const norm = normalizeKey(subcategoryName);
       pool = pool.filter((p) => {
         const val = normalizeKey(
-          p.subcategoryName ?? p._category ?? p.category ?? p.categoryName ?? '',
+          p.subcategoryName ??
+          p._category ??
+          p.category ??
+          p.categoryName ??
+          '',
         );
         return val === norm || val.includes(norm) || norm.includes(val);
       });
@@ -699,7 +1165,9 @@ export class CjService {
           p.categoryName ??
           '',
         );
-        return val === normColl || val.includes(normColl) || normColl.includes(val);
+        return (
+          val === normColl || val.includes(normColl) || normColl.includes(val)
+        );
       });
     }
 
@@ -707,7 +1175,7 @@ export class CjService {
     pool = pool.filter((p) => Number(p.price ?? 0) > 1);
 
     const total = pool.length;
-    const effectivePageSize = Math.min(pageSize, 20);
+    const effectivePageSize = Math.min(pageSize, 500);
     const start = (pageNum - 1) * effectivePageSize;
     const products = pool.slice(start, start + effectivePageSize);
 
@@ -769,7 +1237,11 @@ export class CjService {
 
       const RETRY_DELAYS = [0, 30_000, 120_000];
       let lastError = '';
-      let allProducts: any[] | null = null;
+      let syncData: {
+        products: any[];
+        changedPids: Set<string>;
+        deletedPids: Set<string>;
+      } | null = null;
 
       for (let attempt = 0; attempt < RETRY_DELAYS.length; attempt++) {
         if (RETRY_DELAYS[attempt] > 0) {
@@ -780,7 +1252,7 @@ export class CjService {
         }
 
         try {
-          allProducts = await this.fetchCatalog();
+          syncData = await this.fetchCatalog();
           break; // success
         } catch (e: any) {
           lastError = e?.message ?? String(e);
@@ -790,12 +1262,14 @@ export class CjService {
         }
       }
 
-      if (!allProducts) {
+      if (!syncData) {
         this.logger.error(
           '[Cron] All sync attempts failed. Existing warehouse cache preserved.',
         );
         return { success: false, count: 0 };
       }
+
+      const { products: allProducts, changedPids, deletedPids } = syncData;
 
       if (allProducts.length < 500) {
         this.logger.warn(
@@ -898,8 +1372,14 @@ export class CjService {
       await this.batchWriteToRedis(writeOps);
       this.logger.log(`[Cron] Batch Redis writes completed.`);
 
+      // Verify per-product keys actually landed, and report any gaps.
+      await this.verifyWarehouseIntegrity(allProducts);
+
       // Automatically invalidate stale API response cache keys
       await this.clearApiCache();
+
+      // Build/refresh the search index + persist to MongoDB (non-fatal failures)
+      await this.maintainSearchAndStore(allProducts, changedPids, deletedPids);
 
       const durationMs = Date.now() - syncStart;
       this.logger.log(`[Cron] Redis Updated & API Cache Cleared`);
@@ -943,11 +1423,208 @@ export class CjService {
     return { cleared: keys.length };
   }
 
+  private async maintainSearchAndStore(
+    allProducts: any[],
+    changedPids: Set<string>,
+    deletedPids: Set<string>,
+  ): Promise<void> {
+    const globalPids = new Set(
+      allProducts.map((p: any) => String(p.pid || p.id || p._id || '')),
+    );
+
+    // A pid removed from one category may still exist in another.
+    const trulyDeleted = new Set(
+      Array.from(deletedPids).filter((pid) => pid && !globalPids.has(pid)),
+    );
+
+    // 1. Search index (full build when missing, incremental otherwise)
+    if (this.searchIndexService) {
+      try {
+        const stats = await this.searchIndexService.getStats();
+        if (!stats) {
+          this.logger.log(
+            '[Sync] Search index stats missing — building full inverted index...',
+          );
+          await this.clearSearchIndexKeys();
+          await this.searchIndexService.buildFullIndex(allProducts);
+        } else {
+          const productMap = new Map<string, any>();
+          for (const p of allProducts) {
+            productMap.set(String(p.pid || p.id || p._id || ''), p);
+          }
+
+          const changed = Array.from(changedPids);
+          const CHUNK = 20;
+          for (let i = 0; i < changed.length; i += CHUNK) {
+            await Promise.all(
+              changed.slice(i, i + CHUNK).map(async (pid) => {
+                const p = productMap.get(pid);
+                if (p) {
+                  await this.searchIndexService!.indexProduct(p);
+                }
+              }),
+            );
+          }
+
+          const deleted = Array.from(trulyDeleted);
+          for (let i = 0; i < deleted.length; i += CHUNK) {
+            await Promise.all(
+              deleted.slice(i, i + CHUNK).map(async (pid) => {
+                await this.searchIndexService!.removeProduct(pid);
+              }),
+            );
+          }
+
+          this.logger.log(
+            `[Sync] Search index incremental update: ${changed.length} changed, ${deleted.length} removed`,
+          );
+        }
+      } catch (err: any) {
+        this.logger.warn(
+          `[Sync] Search index maintenance failed: ${err?.message ?? err}`,
+        );
+      }
+    }
+
+    // 2. MongoDB durable persistence
+    if (this.productModel) {
+      try {
+        // Full backfill on first run (empty collection), incremental upsert after.
+        let docs: any[] = [];
+        if (changedPids.size > 0) {
+          const productMap = new Map<string, any>();
+          for (const p of allProducts) {
+            productMap.set(String(p.pid || p.id || p._id || ''), p);
+          }
+          docs = Array.from(changedPids)
+            .map((pid) => productMap.get(pid))
+            .filter(Boolean)
+            .map((p: any) => this.toProductDoc(p));
+        }
+
+        const existingCount =
+          (await this.productModel.estimatedDocumentCount().catch(() => 0)) ??
+          0;
+        if (existingCount === 0 && allProducts.length > 0) {
+          docs = allProducts.map((p: any) => this.toProductDoc(p));
+          this.logger.log(
+            `[Sync] MongoDB empty — backfilling all ${docs.length} products`,
+          );
+        }
+
+        if (docs.length > 0) {
+          const ops = docs.map((doc) => ({
+            updateOne: {
+              filter: { pid: doc.pid },
+              update: { $set: doc },
+              upsert: true,
+            },
+          }));
+
+          for (let i = 0; i < ops.length; i += 500) {
+            await this.productModel.bulkWrite(ops.slice(i, i + 500), {
+              ordered: false,
+            });
+          }
+          this.logger.log(`[Sync] MongoDB upserted ${docs.length} products`);
+        }
+
+        if (trulyDeleted.size > 0) {
+          const deletedArr = Array.from(trulyDeleted);
+          await this.productModel.deleteMany({ pid: { $in: deletedArr } });
+          this.logger.log(
+            `[Sync] MongoDB deleted ${deletedArr.length} removed products`,
+          );
+        }
+      } catch (err: any) {
+        this.logger.warn(
+          `[Sync] MongoDB persistence failed: ${err?.message ?? err}`,
+        );
+      }
+    }
+
+    // 3. Drop per-product cache keys for truly deleted products
+    if (trulyDeleted.size > 0) {
+      const deletedArr = Array.from(trulyDeleted);
+      for (let i = 0; i < deletedArr.length; i += 50) {
+        await Promise.all(
+          deletedArr.slice(i, i + 50).map(async (pid) => {
+            await this.redisService.del(`warehouse:product:${pid}`);
+            await this.redisService.del(`product:${pid}`);
+            await this.redisService.del(`search:product_tokens:${pid}`);
+          }),
+        );
+      }
+      this.logger.log(
+        `[Sync] Removed ${deletedArr.length} stale per-product cache keys`,
+      );
+    }
+  }
+
+  /**
+   * Delete every Redis key that makes up the inverted index so a full rebuild
+   * starts from a clean slate (no stale token/PID entries).
+   */
+  private async clearSearchIndexKeys(): Promise<void> {
+    const patterns = [
+      'search:index:*',
+      'search:prefix:*',
+      'search:product_tokens:*',
+    ];
+    for (const pattern of patterns) {
+      const keys = await this.redisService.keys(pattern);
+      if (keys && keys.length > 0) {
+        for (let i = 0; i < keys.length; i += 200) {
+          await Promise.all(
+            keys.slice(i, i + 200).map((k) => this.redisService.del(k)),
+          );
+        }
+        this.logger.log(
+          `[Sync] Cleared ${keys.length} stale "${pattern}" keys before index rebuild`,
+        );
+      }
+    }
+  }
+
+  /**
+   * Map a normalized CJ product into the durable MongoDB Product document shape.
+   */
+  private toProductDoc(p: any) {
+    const pid = String(p.pid || p.id || p._id || '');
+    const name = p.name || p.productName || p.title || '';
+    return {
+      pid,
+      name,
+      title: p.title || p.productName || name,
+      productName: p.productName || name,
+      brand: p.brand || p.productBrand || '',
+      collectionType: p._collectionType || p.collectionType || '',
+      categoryId: p.categoryId || '',
+      categoryName: p.categoryName || p._category || '',
+      subcategoryName: p.subcategoryName || p._category || p.categoryName || '',
+      subcategoryId: p.subcategoryId || '',
+      price: Number(p.price || p.sellPrice || 0),
+      discountPrice: Number(p.discountPrice || 0),
+      images: Array.isArray(p.images) ? p.images : [],
+      colors: Array.isArray(p.colors) ? p.colors : [],
+      sizes: Array.isArray(p.sizes) ? p.sizes : [],
+      variants: Array.isArray(p.variants) ? p.variants : [],
+      tags: Array.isArray(p.tags) ? p.tags : [],
+      description: p.description || '',
+    };
+  }
+
   // ─── Private Helpers ──────────────────────────────────────────────────────
 
-  private async fetchCatalog(): Promise<any[]> {
+  private async fetchCatalog(): Promise<{
+    products: any[];
+    changedPids: Set<string>;
+    deletedPids: Set<string>;
+  }> {
     const allProducts: any[] = [];
     const globalSeenPids = new Set<string>();
+    const changedPids = new Set<string>();
+    const deletedPids = new Set<string>();
     const uniqueTargets = getAllSyncTargets();
 
     this.logger.log(
@@ -980,6 +1657,12 @@ export class CjService {
       let updatedProductsCount = 0;
       let duplicatesRemovedCount = 0;
       let catApiCalls = 0;
+
+      // Whether we saw every product in this category. Only set to true when
+      // pagination ends naturally (a short/empty page). Offset-capped or errored
+      // categories are treated as incomplete so we never delete products that
+      // simply weren't fetched this cycle.
+      let catComplete = false;
 
       while (pageNum <= Math.min(CJ_CONFIG.MAX_PAGES_PER_CATEGORY, maxPage)) {
         const url = `/v1/product/list?categoryId=${categoryId}&pageNum=${pageNum}&pageSize=${pageSize}`;
@@ -1025,6 +1708,11 @@ export class CjService {
         const products: any[] = normalized?.products ?? [];
 
         if (products.length === 0) {
+          // Empty page only counts as "complete" if we already fetched data —
+          // an empty FIRST page could be a transient API response.
+          if (pageNum > 1) {
+            catComplete = true;
+          }
           break;
         }
 
@@ -1061,6 +1749,7 @@ export class CjService {
                 _category: categoryName,
                 _collectionType: parentCategory,
               });
+              changedPids.add(pid);
               updatedProductsCount++;
             } else {
               duplicatesRemovedCount++;
@@ -1072,16 +1761,30 @@ export class CjService {
               _category: categoryName,
               _collectionType: parentCategory,
             });
+            changedPids.add(pid);
             newProductsCount++;
           }
         }
 
         if (products.length < pageSize) {
+          catComplete = true;
           break;
         }
 
         pageNum++;
         await this.delay(200);
+      }
+
+      // Safe delete sweep: only when this category's pagination completed and
+      // a previously-known product is no longer present.
+      if (catComplete) {
+        const presentPids = new Set(productMap.keys());
+        for (const prev of existingCatProducts) {
+          const prevPid = String(prev.pid || prev.id || '');
+          if (prevPid && !presentPids.has(prevPid)) {
+            deletedPids.add(prevPid);
+          }
+        }
       }
 
       const mergedCatProducts = Array.from(productMap.values());
@@ -1117,17 +1820,99 @@ export class CjService {
     }
 
     this.logger.log(`Fetch -> Unique Products: ${allProducts.length}`);
-    return allProducts;
+
+    return { products: allProducts, changedPids, deletedPids };
   }
 
   private async batchWriteToRedis(
     operations: { key: string; value: any; ttl?: number }[],
   ) {
     const CHUNK_SIZE = 150;
+    // Warehouse content is fully rebuilt every sync, so a long TTL is safe and
+    // prevents premature eviction of per-product keys between syncs.
+    const defaultTtl = REDIS_TTL.WEEKLY;
     for (let i = 0; i < operations.length; i += CHUNK_SIZE) {
       const chunk = operations.slice(i, i + CHUNK_SIZE);
-      await Promise.all(
-        chunk.map((op) => this.redisService.setJson(op.key, op.value, op.ttl)),
+      const { ok, failed, failedKeys } =
+        await this.redisService.pipelineSetJson(
+          chunk.map((op) => ({
+            key: op.key,
+            value: op.value,
+            ttlSeconds: op.ttl ?? defaultTtl,
+          })),
+        );
+      if (failed > 0) {
+        this.logger.warn(
+          `[Cron] Redis batch chunk ${i / CHUNK_SIZE}: ${ok} ok, ${failed} failed (${failedKeys.slice(0, 10).join(', ')}...)`,
+        );
+      }
+    }
+  }
+
+  /**
+   * Post-sync integrity check: confirms per-product warehouse keys were
+   * written and reports any PIDs that are missing. If keys are missing, it
+   * re-writes them so the reader never falls back to a full warehouse scan.
+   */
+  private async verifyWarehouseIntegrity(products: any[]) {
+    try {
+      const pids = products
+        .map((p) => String(p.pid || p.id || ''))
+        .filter(Boolean);
+
+      const productKeys = await this.redisService.keys('warehouse:product:*');
+      const storedPids = new Set(
+        productKeys.map((key) => key.replace('warehouse:product:', '')),
+      );
+
+      const legacyProductKeys = await this.redisService.keys('product:*');
+
+      const missingPids = pids.filter((pid) => !storedPids.has(pid));
+
+      const warehouseAll = await this.redisService.getJson<any[]>(
+        WAREHOUSE_KEY_ALL,
+      );
+      const warehouseAllCount = Array.isArray(warehouseAll)
+        ? warehouseAll.length
+        : 0;
+
+      this.logger.log(
+        `[Integrity] Products Synced: ${pids.length} | warehouse:product keys: ${storedPids.size} | product keys: ${legacyProductKeys.length} | warehouse:all: ${warehouseAllCount} | Missing keys: ${missingPids.length}`,
+      );
+
+      if (missingPids.length > 0) {
+        this.logger.warn(
+          `[Integrity] Missing per-product keys (${missingPids.length}): ${missingPids.slice(0, 10).join(', ')}${missingPids.length > 10 ? '...' : ''}`,
+        );
+
+        const productMap = new Map(products.map((p) => [String(p.pid || p.id), p]));
+        const missingOps = missingPids
+          .map((pid) => {
+            const product = productMap.get(pid);
+            return product
+              ? [
+                { key: `warehouse:product:${pid}`, value: product },
+                { key: `product:${pid}`, value: product },
+              ]
+              : [];
+          })
+          .flat();
+
+        if (missingOps.length > 0) {
+          const { ok, failed } = await this.redisService.pipelineSetJson(
+            missingOps.map((op) => ({
+              ...op,
+              ttlSeconds: REDIS_TTL.WEEKLY,
+            })),
+          );
+          this.logger.log(
+            `[Integrity] Re-wrote ${ok} missing per-product keys${failed > 0 ? ` (${failed} still failed)` : ''}`,
+          );
+        }
+      }
+    } catch (err: any) {
+      this.logger.warn(
+        `[Integrity] Verification failed: ${err?.message ?? err}`,
       );
     }
   }
@@ -1479,4 +2264,3 @@ export class CjService {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }
-

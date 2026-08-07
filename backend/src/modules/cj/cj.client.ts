@@ -75,7 +75,7 @@ export class CjClient {
   private requestQueue: Promise<void> = Promise.resolve();
   public apiCallsThisSync = 0;
 
-  constructor(private readonly redisService: RedisService) { }
+  constructor(private readonly redisService: RedisService) {}
 
   async getAccessToken() {
     const apiKey = process.env.CJ_API_KEY;

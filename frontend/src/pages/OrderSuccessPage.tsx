@@ -1,6 +1,9 @@
 import { Link, useParams } from 'react-router-dom';
+import { useEffect } from 'react';
+import { useDispatch } from 'react-redux';
 import { useGetOrderDetailsQuery } from '../store/slices/orderApiSlice';
 import { useGetProductDetailsQuery } from '../store/slices/productApiSlice';
+import { clearCartItems } from '../store/slices/cartSlice';
 import { CheckCircle, Clock, CreditCard, Package, Truck, FileText, ShoppingBag } from 'lucide-react';
 import { useCurrency } from '../context/CurrencyContext';
 
@@ -10,11 +13,14 @@ const statusConfig: Record<string, { label: string; className: string }> = {
   cancelled: { label: 'Cancelled', className: 'bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800' },
 };
 
-const OrderItemRow = ({ productId, quantity, formatCurrency }: { productId: string; quantity: number; formatCurrency: (p: number) => string }) => {
-  const { data: product } = useGetProductDetailsQuery(productId);
-  const name = product?.name || product?.title || `Product ${productId}`;
-  const image = product?.images?.[0];
-  const price = product?.discountPrice || product?.price || 0;
+const OrderItemRow = ({ item, formatCurrency }: { item: any; formatCurrency: (p: number) => string }) => {
+  const productId = item.productId;
+  const hasHydratedData = !!(item.productName || item.image || item.price);
+  const { data: product } = useGetProductDetailsQuery(productId, { skip: hasHydratedData });
+
+  const name = item.productName || product?.name || product?.title || `Product ${productId}`;
+  const image = item.image || product?.images?.[0];
+  const price = item.price || product?.discountPrice || product?.price || 0;
 
   return (
     <div className="flex items-center gap-4 py-4">
@@ -28,7 +34,7 @@ const OrderItemRow = ({ productId, quantity, formatCurrency }: { productId: stri
       </div>
       <div className="text-right shrink-0">
         <p className="text-[15px] font-bold text-zinc-900 dark:text-white">{formatCurrency(price)}</p>
-        <p className="text-[11px] text-zinc-400 dark:text-zinc-500 font-medium">QTY: {quantity}</p>
+        <p className="text-[11px] text-zinc-400 dark:text-zinc-500 font-medium">QTY: {item.quantity}</p>
       </div>
     </div>
   );
@@ -38,6 +44,15 @@ const OrderSuccessPage = () => {
   const { id } = useParams();
   const { data: order, isLoading, error } = useGetOrderDetailsQuery(id);
   const { formatCurrency } = useCurrency();
+  const dispatch = useDispatch();
+
+  // A successful Stripe payment lands here via a full-page redirect, so the
+  // cart must be cleared client-side now that the order exists.
+  useEffect(() => {
+    if (order?._id) {
+      dispatch(clearCartItems());
+    }
+  }, [order?._id, dispatch]);
 
   if (isLoading) return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-50 dark:bg-[#0F0F10]">
@@ -53,7 +68,7 @@ const OrderSuccessPage = () => {
 
   const status = statusConfig[order.status] || statusConfig.pending;
   const isPaid = order.paymentStatus === 'paid';
-  const paymentMethodLabel = 'RAZORPAY SECURE';
+  const paymentMethodLabel = 'STRIPE SECURE';
   const paymentStatusLabel = isPaid ? 'PAYMENT CAPTURED' : 'PAYMENT PENDING';
 
   return (
@@ -110,8 +125,8 @@ const OrderSuccessPage = () => {
             <p className="text-[13px] text-zinc-500 dark:text-zinc-400 mb-1">Payment Method</p>
             <p className="text-[15px] font-semibold text-zinc-900 dark:text-white mb-2">{paymentMethodLabel}</p>
             <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold tracking-wider px-3.5 py-1.5 rounded-full border ${isPaid
-                ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
-                : 'bg-yellow-50 dark:bg-yellow-950/20 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800'
+              ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
+              : 'bg-yellow-50 dark:bg-yellow-950/20 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800'
               }`}>
               {isPaid ? <><CheckCircle size={12} strokeWidth={2.5} /> {paymentStatusLabel}</> : paymentStatusLabel}
             </span>
@@ -128,7 +143,7 @@ const OrderSuccessPage = () => {
           </div>
           <div className="px-6 sm:px-8 divide-y divide-zinc-100 dark:divide-zinc-800">
             {order.items.map((item: any, i: number) => (
-              <OrderItemRow key={i} productId={item.productId} quantity={item.quantity} formatCurrency={formatCurrency} />
+              <OrderItemRow key={i} item={item} formatCurrency={formatCurrency} />
             ))}
           </div>
           <div className="px-6 sm:px-8 py-5 bg-zinc-50 dark:bg-zinc-900/30 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
@@ -139,14 +154,14 @@ const OrderSuccessPage = () => {
 
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-          <Link
+          {/* <Link
             // to={`/orders/${order._id}`}
             to="/"
             className="inline-flex items-center gap-2.5 h-[52px] px-8 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-[15px] font-bold hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-all duration-200 shadow-md hover:shadow-lg active:scale-[0.98]"
-          >
-            <FileText size={18} strokeWidth={2} />
+          > */}
+          {/* <FileText size={18} strokeWidth={2} />
             Track Order
-          </Link>
+          </Link> */}
           <Link
             to="/"
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}

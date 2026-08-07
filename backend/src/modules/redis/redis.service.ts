@@ -122,6 +122,65 @@ export class RedisService {
     }
   }
 
+  /**
+   * Batch-write many keys via a single Upstash REST pipeline call per chunk.
+   * Required for large writes (e.g. the warehouse catalog): individual setJson
+   * calls fire one HTTP request per key, which exhausts Upstash's rate limit
+   * and silently drops the tail of the batch.
+   *
+   * Returns success/failure counts plus the failed keys so callers can detect
+   * partial writes instead of assuming the whole batch succeeded.
+   */
+  async pipelineSetJson(
+    operations: { key: string; value: unknown; ttlSeconds?: number }[],
+  ): Promise<{ ok: number; failed: number; failedKeys: string[] }> {
+    const result = { ok: 0, failed: 0, failedKeys: [] as string[] };
+
+    if (!this.isReady() || operations.length === 0) {
+      result.failed = operations.length;
+      result.failedKeys = operations.map((op) => op.key);
+      return result;
+    }
+
+    const CHUNK_SIZE = 100;
+    for (let i = 0; i < operations.length; i += CHUNK_SIZE) {
+      const chunk = operations.slice(i, i + CHUNK_SIZE);
+      try {
+        const pipe = this.client!.pipeline();
+        for (const op of chunk) {
+          const ttl = op.ttlSeconds ?? REDIS_TTL.MEDIUM;
+          pipe.setex(op.key, ttl, op.value as any);
+        }
+        const responses = await pipe.exec({ keepErrors: true });
+        responses.forEach((res, idx) => {
+          if (res.error) {
+            result.failed += 1;
+            result.failedKeys.push(chunk[idx].key);
+          } else {
+            result.ok += 1;
+          }
+        });
+      } catch (error: any) {
+        this.logger.warn(
+          `[UPSTASH ERROR] pipelineSetJson chunk failed: ${error?.message ?? error}`,
+        );
+        result.failed += chunk.length;
+        result.failedKeys.push(...chunk.map((op) => op.key));
+      }
+    }
+
+    if (result.failed > 0) {
+      this.logger.warn(
+        `[UPSTASH] pipelineSetJson: ${result.ok} ok, ${result.failed} failed (${result.failedKeys.slice(0, 5).join(', ')}...)`,
+      );
+    } else {
+      this.logger.log(
+        `[UPSTASH CACHE WRITE] pipeline batch: ${result.ok} keys`,
+      );
+    }
+    return result;
+  }
+
   async setnx(
     key: string,
     value: string,

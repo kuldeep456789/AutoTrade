@@ -15,7 +15,7 @@ export class CjCronService implements OnModuleInit {
     private readonly cjService: CjService,
     private readonly redisService: RedisService,
     private readonly mailService: MailService,
-  ) { }
+  ) {}
 
   async onModuleInit() {
     // Delay first execution on startup by 30 seconds to allow the application to fully boot
@@ -83,7 +83,6 @@ export class CjCronService implements OnModuleInit {
     }
   }
 
-
   private async executeSyncWithMetrics() {
     if (this.isSyncing) {
       this.logger.warn(
@@ -123,8 +122,7 @@ export class CjCronService implements OnModuleInit {
         skipped?: boolean;
       }>((_, reject) =>
         setTimeout(
-          () =>
-            reject(new Error('Sync execution timed out after 30 minutes')),
+          () => reject(new Error('Sync execution timed out after 30 minutes')),
           TIMEOUT_LIMIT,
         ),
       );

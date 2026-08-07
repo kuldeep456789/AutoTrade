@@ -15,9 +15,7 @@ export class OtpStoreService {
   private readonly logger = new Logger(OtpStoreService.name);
   private store = new Map<string, OtpEntry>();
 
-  constructor(
-    @Optional() private readonly redisService?: RedisService,
-  ) {}
+  constructor(@Optional() private readonly redisService?: RedisService) {}
 
   async generate(identifier: string): Promise<string> {
     const code = Math.floor(100000 + Math.random() * 900000).toString();
@@ -30,7 +28,11 @@ export class OtpStoreService {
     this.store.set(identifier, entry);
 
     if (this.redisService?.isReady()) {
-      await this.redisService.setJson(`otp:${identifier}`, entry, OTP_TTL_SECONDS);
+      await this.redisService.setJson(
+        `otp:${identifier}`,
+        entry,
+        OTP_TTL_SECONDS,
+      );
     }
 
     return code;
@@ -83,7 +85,11 @@ export class OtpStoreService {
     this.store.set(identifier, entry);
 
     if (this.redisService?.isReady()) {
-      await this.redisService.setJson(`otp:${identifier}`, entry, OTP_TTL_SECONDS);
+      await this.redisService.setJson(
+        `otp:${identifier}`,
+        entry,
+        OTP_TTL_SECONDS,
+      );
     }
   }
 

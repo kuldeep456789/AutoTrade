@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Lock, Mail, ArrowLeft, ShieldCheck, Award, Fingerprint, KeyRound } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
@@ -6,14 +6,19 @@ import type { RootState } from '../store/store';
 import { setCredentials } from '../store/slices/authSlice';
 import { apiSlice } from '../store/slices/apiSlice';
 import { clearCartItems } from '../store/slices/cartSlice';
-import { clearWishlist } from '../store/slices/wishlistSlice';
 import {
   useLoginMutation,
   useSendRegisterOtpMutation,
   useVerifyRegisterOtpMutation,
   useVerify2FALoginMutation,
 } from '../store/slices/userApiSlice';
+import OtpInput from '../components/OtpInput';
 import toast from 'react-hot-toast';
+import { validatePassword } from '../utils/password';
+import AuthCard from '../components/auth/ui/AuthCard';
+import AuthInput from '../components/auth/ui/AuthInput';
+import AuthButton from '../components/auth/ui/AuthButton';
+import PasswordStrengthMeter from '../components/auth/ui/PasswordStrengthMeter';
 
 
 const LoginPage = () => {
@@ -43,12 +48,14 @@ const LoginPage = () => {
   const [registerStep, setRegisterStep] = useState<'form' | 'otp'>('form');
   const [otpValues, setOtpValues] = useState(['', '', '', '', '', '']);
   const [countdown, setCountdown] = useState(0);
-  const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const [errorMessage, setErrorMessage] = useState('');
   const [requires2FA, setRequires2FA] = useState(false);
   const [tempToken, setTempToken] = useState('');
   const [twoFactorCode, setTwoFactorCode] = useState('');
+
+  const twoFactorDigits = twoFactorCode.split('').concat(Array(6).fill('')).slice(0, 6);
+  const setTwoFactorDigits = (digits: string[]) => setTwoFactorCode(digits.join(''));
 
   const [login, { isLoading: loginLoading }] = useLoginMutation();
   const [verify2FALogin, { isLoading: verifying2FA }] = useVerify2FALoginMutation();
@@ -86,16 +93,21 @@ const LoginPage = () => {
   const resetToFreshSession = () => {
     dispatch(apiSlice.util.resetApiState());
     dispatch(clearCartItems());
-    dispatch(clearWishlist());
   };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
-    if (!loginEmail.trim() || !loginPassword.trim()) { setErrorMessage('Email and password are required.'); return; }
+    
+    const emailStr = loginEmail.trim();
+    if (!emailStr || !loginPassword.trim()) { setErrorMessage('Email and password are required.'); return; }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailStr)) { setErrorMessage('Please enter a valid email address.'); return; }
+
     try {
       const payload = await login({
-        email: loginEmail.trim(),
+        email: emailStr,
         password: loginPassword,
       }).unwrap();
       if (payload.requires2FA) {
@@ -138,42 +150,38 @@ const LoginPage = () => {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
-    if (!fullName.trim()) { setErrorMessage('Full name is required.'); return; }
-    if (/\d/.test(fullName.trim())) { setErrorMessage('Full name should contain letters only, not numbers.'); return; }
-    if (!registerEmail.trim()) { setErrorMessage('Email is required.'); return; }
-    if (registerPassword.length < 6) { setErrorMessage('Password must be at least 6 characters.'); return; }
-    if (registerPassword !== confirmPassword) { setErrorMessage('Passwords do not match.'); return; }
+    const nameStr = fullName.trim();
+    if (!nameStr) { setErrorMessage('Full name is required.'); return; }
+    if (/\d/.test(nameStr)) { setErrorMessage('Full name should contain letters only, not numbers.'); return; }
     
+    const emailStr = registerEmail.trim();
+    if (!emailStr) { setErrorMessage('Email is required.'); return; }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailStr)) { setErrorMessage('Please enter a valid email address.'); return; }
+
+    const pwdError = validatePassword(registerPassword);
+    if (pwdError) { setErrorMessage(pwdError.message); return; }
+    if (registerPassword !== confirmPassword) { setErrorMessage('Passwords do not match.'); return; }
+
+    const nameParts = nameStr.split(/\s+/);
+    const firstName = nameParts[0];
+    const lastName = nameParts.slice(1).join(' ');
+
     try {
       await sendRegisterOtp({
-        firstName: fullName.trim(),
-        lastName: '',
-        email: registerEmail.trim(),
+        firstName,
+        lastName,
+        email: emailStr,
         password: registerPassword,
         adminSecret: adminSecret.trim() ? adminSecret.trim() : undefined,
       }).unwrap();
       setRegisterStep('otp');
       setCountdown(30);
       toast.success('Registration OTP sent to your email');
-      setTimeout(() => otpRefs.current[0]?.focus(), 100);
     } catch (err: any) {
       const msg = err?.data?.message || 'Failed to send registration OTP.';
       setErrorMessage(msg);
       toast.error(msg);
-    }
-  };
-
-  const handleOtpChange = (idx: number, val: string) => {
-    if (!/^\d?$/.test(val)) return;
-    const next = [...otpValues];
-    next[idx] = val;
-    setOtpValues(next);
-    if (val && idx < 5) otpRefs.current[idx + 1]?.focus();
-  };
-
-  const handleOtpKeyDown = (idx: number, e: React.KeyboardEvent) => {
-    if (e.key === 'Backspace' && !otpValues[idx] && idx > 0) {
-      otpRefs.current[idx - 1]?.focus();
     }
   };
 
@@ -183,9 +191,13 @@ const LoginPage = () => {
     if (code.length !== 6) { setErrorMessage('Enter the 6-digit OTP'); return; }
     setErrorMessage('');
     try {
+      const nameParts = fullName.trim().split(/\s+/);
+      const firstName = nameParts[0];
+      const lastName = nameParts.slice(1).join(' ');
+      
       const registerDto = {
-        firstName: fullName.trim(),
-        lastName: '',
+        firstName,
+        lastName,
         email: registerEmail.trim(),
         password: registerPassword,
         adminSecret: adminSecret.trim() ? adminSecret.trim() : undefined,
@@ -210,7 +222,6 @@ const LoginPage = () => {
       setErrorMessage(msg);
       toast.error(msg);
       setOtpValues(['', '', '', '', '', '']);
-      otpRefs.current[0]?.focus();
     }
   };
 
@@ -281,43 +292,32 @@ const LoginPage = () => {
             {/* Mobile brand */}
             <Link to="/" className="mb-8 block text-2xl font-black tracking-tight lg:hidden">AutoTrade</Link>
 
-            {/* Glassmorphism card */}
-            <div className="bg-white/70 dark:bg-zinc-900/70 backdrop-blur-xl border border-zinc-200/50 dark:border-zinc-700/50 rounded-3xl p-10 sm:p-14 shadow-[0_8px_60px_rgba(0,0,0,0.05)] dark:shadow-[0_8px_60px_rgba(0,0,0,0.3)]">
-              <div className="mb-10">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center mb-6 shadow-lg shadow-orange-500/20">
-                  <KeyRound size={26} className="text-white" />
-                </div>
-                <h2 className="text-4xl font-black tracking-tight">
-                  {isRegister ? 'Join AutoTrade' : 'Welcome back'}
-                </h2>
-                <p className="mt-3 text-[15px] leading-7 text-zinc-500 dark:text-zinc-400 normal-case tracking-normal">
-                  {isRegister
-                    ? 'Create your free account — no card required.'
-                    : 'Sign in to access your dashboard, orders, and more.'}
-                </p>
-              </div>
-
+            <AuthCard
+              title={isRegister ? 'Join AutoTrade' : 'Welcome back'}
+              subtitle={isRegister ? 'Create your account' : 'Sign in to access your dashboard'}
+            >
               {/* LOGIN FORM */}
               {!isRegister && !requires2FA && (
                 <>
-                  <form onSubmit={handleLogin} className="space-y-5" noValidate>
-                    <div>
-                      <label className="block text-[11px] font-semibold uppercase tracking-widest text-zinc-500 mb-2.5">Email address</label>
-                      <div className={inputBox}>
-                        <Mail size={17} className="shrink-0 text-zinc-400" />
-                        <input type="email" placeholder="you@example.com" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} className={inputField} />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="mb-2.5 block text-[11px] font-semibold uppercase tracking-widest text-zinc-500">Password</label>
-                      <div className={inputBox}>
-                        <Lock size={17} className="shrink-0 text-zinc-400" />
-                        <input type={showLoginPassword ? 'text' : 'password'} placeholder="Enter your password" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} className={inputField} />
-                        <button type="button" onClick={() => setShowLoginPassword((p) => !p)} className="text-zinc-400 hover:text-zinc-700 dark:hover:text-white cursor-pointer transition-colors">
-                          {showLoginPassword ? <EyeOff size={17} /> : <Eye size={17} />}
-                        </button>
-                      </div>
-                    </div>
+                  <form onSubmit={handleLogin} className="space-y-4" noValidate>
+                    <AuthInput
+                      label="Email address"
+                      type="email"
+                      placeholder="you@example.com"
+                      value={loginEmail}
+                      onChange={(e) => setLoginEmail(e.target.value)}
+                      icon={<Mail size={18} strokeWidth={1.5} />}
+                    />
+                    
+                    <AuthInput
+                      label="Password"
+                      type="password"
+                      placeholder="Enter your password"
+                      value={loginPassword}
+                      onChange={(e) => setLoginPassword(e.target.value)}
+                      icon={<Lock size={18} strokeWidth={1.5} />}
+                      isPassword
+                    />
 
                     <div className="flex justify-end">
                       <Link to="/forgot-password" className="text-[12px] font-semibold text-orange-500 hover:text-orange-600 transition-colors">
@@ -326,17 +326,14 @@ const LoginPage = () => {
                     </div>
 
                     {errorMessage && (
-                      <div className="rounded-xl border border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-950/30 px-4 py-3 text-sm font-semibold text-red-700 dark:text-red-300">{errorMessage}</div>
+                      <div className="rounded-xl border border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-950/30 px-4 py-3 text-sm font-semibold text-red-700 dark:text-red-300 animate-fadeIn">{errorMessage}</div>
                     )}
 
-                    <button type="submit" disabled={isLoading} className="mt-4 w-full rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white h-16 text-[15px] font-bold tracking-wider transition-all duration-300 shadow-lg shadow-orange-500/20 hover:shadow-orange-500/30 disabled:opacity-60 cursor-pointer active:scale-[0.98]">
-                      {isLoading ? (
-                        <span className="flex items-center justify-center gap-2">
-                          <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                          Signing in...
-                        </span>
-                      ) : 'Sign In'}
-                    </button>
+                    <div className="mt-2">
+                      <AuthButton type="submit" isLoading={isLoading} loadingText="Signing in...">
+                        Sign In
+                      </AuthButton>
+                    </div>
                   </form>
 
                   <div className="mt-8 text-center">
@@ -352,25 +349,29 @@ const LoginPage = () => {
               {!isRegister && requires2FA && (
                 <form onSubmit={handleVerify2FA} className="space-y-5" noValidate>
                   <div className="mb-5">
-                    <h3 className="text-3xl font-black tracking-tight">Authentication Code</h3>
-                    <p className="mt-3 text-[15px] leading-7 text-zinc-500 dark:text-zinc-400 normal-case tracking-normal">
+                    {/* <h3 className="text-3xl font-black tracking-tight">Authentication Code</h3> */}
+                    {/* <p className="mt-3 text-[15px] leading-7 text-zinc-500 dark:text-zinc-400 normal-case tracking-normal">
                       Open your authenticator app and enter the 6-digit code.
-                    </p>
+                    </p> */}
                   </div>
                   <div>
                     <label className="mb-2.5 block text-[11px] font-semibold uppercase tracking-widest text-zinc-500">6-Digit Code</label>
-                    <div className={inputBox}>
-                      <input type="text" inputMode="numeric" placeholder="1 2 3 4 5 6" value={twoFactorCode} onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, '').slice(0, 6))} className="min-w-0 flex-1 bg-transparent text-center text-xl tracking-[0.5em] font-semibold outline-none placeholder:text-zinc-400 normal-case" />
-                    </div>
+                    <OtpInput
+                      value={twoFactorDigits}
+                      onChange={setTwoFactorDigits}
+                      autoFocus
+                    />
                   </div>
-                  
+
                   {errorMessage && (
                     <div className="rounded-xl border border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-950/30 px-4 py-3 text-sm font-semibold text-red-700 dark:text-red-300">{errorMessage}</div>
                   )}
 
-                  <button type="submit" disabled={verifying2FA || twoFactorCode.length !== 6} className="mt-5 w-full rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white h-16 text-[15px] font-bold tracking-wider transition-all duration-300 shadow-lg shadow-orange-500/20 disabled:opacity-60 cursor-pointer flex items-center justify-center gap-2">
-                    {verifying2FA ? 'Verifying...' : 'Verify & Sign In →'}
-                  </button>
+                  <div className="mt-4">
+                    <AuthButton type="submit" isLoading={verifying2FA} loadingText="Verifying..." disabled={twoFactorCode.length !== 6}>
+                      Verify & Sign In
+                    </AuthButton>
+                  </div>
 
                   <p className="text-center text-xs text-zinc-500 normal-case tracking-normal mt-4">
                     <button type="button" onClick={() => { setRequires2FA(false); setTempToken(''); setTwoFactorCode(''); setErrorMessage(''); }} className="font-semibold text-zinc-500 hover:text-orange-500 transition cursor-pointer">← Back to login</button>
@@ -378,69 +379,67 @@ const LoginPage = () => {
                 </form>
               )}
 
-              {/* REGISTER FORM */}
+
               {isRegister && (
                 registerStep === 'form' ? (
-                  <form onSubmit={handleRegister} className="space-y-5" noValidate>
-                    <div>
-                      <label className="mb-2.5 block text-[11px] font-semibold uppercase tracking-widest text-zinc-500">Full Name</label>
-                      <div className={inputBox}>
-                        <input type="text" placeholder="Aarav Sharma" value={fullName} onChange={(e) => setFullName(e.target.value)} className={inputField} />
-                      </div>
-                    </div>
+                  <form onSubmit={handleRegister} className="space-y-4" noValidate>
+                    <AuthInput
+                      label="Full Name"
+                      type="text"
+                      placeholder="Enter your full name"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                    />
+                    
+                    <AuthInput
+                      label="Email address"
+                      type="email"
+                      placeholder="you@example.com"
+                      value={registerEmail}
+                      onChange={(e) => setRegisterEmail(e.target.value)}
+                      icon={<Mail size={18} strokeWidth={1.5} />}
+                    />
+                    
+                    <AuthInput
+                      label="Password"
+                      type="password"
+                      placeholder="Enter your password"
+                      value={registerPassword}
+                      onChange={(e) => setRegisterPassword(e.target.value)}
+                      icon={<Lock size={18} strokeWidth={1.5} />}
+                      isPassword
+                    />
+                    <PasswordStrengthMeter password={registerPassword} />
 
-                    <div>
-                      <label className="mb-2.5 block text-[11px] font-semibold uppercase tracking-widest text-zinc-500">Email address</label>
-                      <div className={inputBox}>
-                        <Mail size={17} className="shrink-0 text-zinc-400" />
-                        <input type="email" placeholder="you@example.com" value={registerEmail} onChange={(e) => setRegisterEmail(e.target.value)} className={inputField} />
-                      </div>
-                    </div>
+                    <AuthInput
+                      label="Confirm password"
+                      type="password"
+                      placeholder="Re-enter your password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      icon={<Lock size={18} strokeWidth={1.5} />}
+                      isPassword
+                    />
 
-                    <div>
-                      <label className="mb-2.5 block text-[11px] font-semibold uppercase tracking-widest text-zinc-500">Password</label>
-                      <div className={inputBox}>
-                        <Lock size={17} className="shrink-0 text-zinc-400" />
-                        <input type={showRegisterPassword ? 'text' : 'password'} placeholder="Minimum 6 characters" value={registerPassword} onChange={(e) => setRegisterPassword(e.target.value)} className={inputField} />
-                        <button type="button" onClick={() => setShowRegisterPassword((p) => !p)} className="text-zinc-400 hover:text-zinc-700 dark:hover:text-white cursor-pointer">
-                          {showRegisterPassword ? <EyeOff size={17} /> : <Eye size={17} />}
-                        </button>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="mb-2.5 block text-[11px] font-semibold uppercase tracking-widest text-zinc-500">Confirm password</label>
-                      <div className={inputBox}>
-                        <Lock size={17} className="shrink-0 text-zinc-400" />
-                        <input type={showConfirmPassword ? 'text' : 'password'} placeholder="Re-enter your password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className={inputField} />
-                        <button type="button" onClick={() => setShowConfirmPassword((p) => !p)} className="text-zinc-400 hover:text-zinc-700 dark:hover:text-white cursor-pointer">
-                          {showConfirmPassword ? <EyeOff size={17} /> : <Eye size={17} />}
-                        </button>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="mb-2.5 block text-[11px] font-semibold uppercase tracking-widest text-zinc-500">
-                        Admin Secret Code <span className="normal-case text-zinc-400 font-normal">(Optional)</span>
-                      </label>
-                      <div className={inputBox}>
-                        <ShieldCheck size={17} className="shrink-0 text-zinc-400" />
-                        <input type="password" placeholder="Leave blank for regular user" value={adminSecret} onChange={(e) => setAdminSecret(e.target.value)} className={inputField} />
-                      </div>
-                    </div>
+                    <AuthInput
+                      label="Admin Secret Code (Optional)"
+                      type="password"
+                      placeholder="Enter admin secret code"
+                      value={adminSecret}
+                      onChange={(e) => setAdminSecret(e.target.value)}
+                      icon={<ShieldCheck size={18} strokeWidth={1.5} />}
+                      isPassword
+                    />
 
                     {errorMessage && (
                       <div className="rounded-xl border border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-950/30 px-4 py-3 text-sm font-semibold text-red-700 dark:text-red-300">{errorMessage}</div>
                     )}
 
-                    <button type="submit" disabled={isLoading} className="mt-4 w-full rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white h-16 text-[15px] font-bold tracking-wider transition-all duration-300 shadow-lg shadow-orange-500/20 hover:shadow-orange-500/30 disabled:opacity-60 cursor-pointer active:scale-[0.98]">
-                      {isLoading ? (
-                        <span className="flex items-center justify-center gap-2">
-                          <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                          Creating account...
-                        </span>
-                      ) : 'Create Account'}
-                    </button>
+                    <div className="mt-2">
+                      <AuthButton type="submit" isLoading={isLoading} loadingText="Creating account...">
+                        Create Account
+                      </AuthButton>
+                    </div>
 
                     <p className="text-center text-sm text-zinc-500 normal-case tracking-normal">
                       Already have an account?{' '}
@@ -452,33 +451,25 @@ const LoginPage = () => {
                     <button type="button" onClick={() => setRegisterStep('form')} className="flex items-center gap-1.5 text-[12px] font-semibold text-zinc-500 hover:text-orange-500 transition-colors cursor-pointer mb-2">
                       <ArrowLeft size={14} strokeWidth={2} /> Back to Register Form
                     </button>
-                    <p className="text-[13px] text-zinc-500 mb-4">OTP sent to {registerEmail}</p>
-                    
-                    <div className="flex gap-3 justify-center mb-3">
-                      {otpValues.map((val, i) => (
-                        <input
-                          key={i}
-                          ref={(el) => { otpRefs.current[i] = el; }}
-                          type="text"
-                          inputMode="numeric"
-                          maxLength={1}
-                          value={val}
-                          onChange={(e) => handleOtpChange(i, e.target.value)}
-                          onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                          className={`w-13 h-15 p-0 px-0 min-w-0 text-center text-xl font-bold leading-none rounded-xl border-2 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-sm outline-none transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                            val ? 'border-orange-500 text-orange-500 shadow-sm shadow-orange-500/10' : 'border-zinc-200 dark:border-zinc-700 focus:border-orange-500'
-                          }`}
-                        />
-                      ))}
+                    <p className="text-[13px] text-zinc-500 mb-4 text-center">OTP sent to {registerEmail}</p>
+
+                    <div className="mb-3">
+                      <OtpInput
+                        value={otpValues}
+                        onChange={setOtpValues}
+                        autoFocus
+                      />
                     </div>
 
                     {errorMessage && (
                       <div className="rounded-xl border border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-950/30 px-4 py-3 text-sm font-semibold text-red-700 dark:text-red-300">{errorMessage}</div>
                     )}
 
-                    <button type="submit" disabled={isLoading || otpValues.join('').length !== 6} className="mt-3 w-full rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white h-16 text-[15px] font-bold tracking-wider transition-all duration-300 shadow-lg shadow-orange-500/20 disabled:opacity-60 cursor-pointer">
-                      {isLoading ? 'Verifying...' : 'Verify & Create Account'}
-                    </button>
+                    <div className="mt-4">
+                      <AuthButton type="submit" isLoading={isLoading} loadingText="Verifying..." disabled={otpValues.join('').length !== 6}>
+                        Verify & Create Account
+                      </AuthButton>
+                    </div>
 
                     <div className="text-center">
                       {countdown > 0 ? (
@@ -490,7 +481,7 @@ const LoginPage = () => {
                   </form>
                 )
               )}
-            </div>
+            </AuthCard>
 
             {/* Trust badges below the card */}
             <div className="mt-8 flex items-center justify-center gap-8 text-[11px] text-zinc-400 font-medium">

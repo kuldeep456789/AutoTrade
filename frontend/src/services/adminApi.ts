@@ -1,12 +1,17 @@
-
+import type { SharedUserActivityLog } from '../types/shared';
 const BASE = '/api/admin';
 function getToken(): string {
   try {
     const raw = localStorage.getItem('userInfo');
-    if (!raw) return '';
-    return JSON.parse(raw)?.accessToken ?? '';
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed?.accessToken || parsed?.token) {
+        return parsed.accessToken || parsed.token;
+      }
+    }
+    return localStorage.getItem('token') || localStorage.getItem('accessToken') || '';
   } catch {
-    return '';
+    return localStorage.getItem('token') || localStorage.getItem('accessToken') || '';
   }
 }
 function authHeaders(): HeadersInit {
@@ -38,7 +43,7 @@ export interface DashboardStats {
   totalOrders: number;
   pendingReturns: number;
   totalRevenue: number;
-  unpaidOrders: number;
+  pendingPaymentOrders: number;
 }
 
 export interface AdminOrder {
@@ -54,6 +59,8 @@ export interface AdminOrder {
     productName?: string;
     price?: number;
     sku?: string;
+    brand?: string;
+    category?: string;
 
     // Variant Details
     color?: string;
@@ -63,18 +70,21 @@ export interface AdminOrder {
     discountPrice?: number;
   }[];
   totalAmount: number;
+  currency?: string;
   status: string;
   paymentStatus: string;
   paymentProvider: string;
   paymentReference?: string;
-  razorpayOrderId?: string;
-  razorpayPaymentId?: string;
+  checkoutSessionId?: string;
+  paymentIntentId?: string;
+  receiptUrl?: string;
   shippingDetails?: {
     customerName?: string;
     address?: string;
     city?: string;
     province?: string;
     countryCode?: string;
+    country?: string;
     zip?: string;
     phone?: string;
   };
@@ -113,6 +123,8 @@ export interface CustomerIssue {
   createdAt: string;
 }
 
+export type UserActivityLog = SharedUserActivityLog;
+
 export interface ContactMessage {
   _id: string;
   name: string;
@@ -129,9 +141,17 @@ export interface AdminReturn {
   _id: string;
   userId: { _id: string; name?: string; email?: string } | null;
   orderId: string;
-  // productId: string;
-  productName: string;
-  productImage?: string;
+  items: {
+    productId: string;
+    productName: string;
+    productImage?: string;
+    productSize?: string;
+    productColor?: string;
+    quantity: number;
+    price?: number;
+  }[];
+  totalItems: number;
+  totalReturnAmount: number;
   reason: string;
   description?: string;
   status: string;
@@ -209,6 +229,23 @@ export const adminApi = {
   search: (query: string) =>
     request<{ users: AdminUser[]; orders: AdminOrder[] }>('GET', `/search?q=${encodeURIComponent(query)}`),
 
+  // Finance
+  finance: {
+    get: () => request<{
+      totalRevenue: number;
+      todayRevenue: number;
+      weeklyRevenue: number;
+      monthlyRevenue: number;
+      totalOrders: number;
+      averageOrderValue: number;
+      totalGst: number;
+      pendingOrders: number;
+      deliveredOrders: number;
+      cancelledOrders: number;
+      totalRefunds: number;
+    }>('GET', '/finance'),
+  },
+
   // Analytics
   analytics: {
     get: (days?: number) => request<AnalyticsData>('GET', `/analytics${days ? `?days=${days}` : ''}`),
@@ -217,6 +254,12 @@ export const adminApi = {
   // Orders
   orders: {
     list: () => request<{ orders: AdminOrder[] }>('GET', '/orders'),
+    getById: async (id: string) => {
+      const data = await request<{ orders: AdminOrder[] }>('GET', '/orders');
+      const order = data.orders?.find((o) => o._id === id);
+      if (!order) throw new Error('Order not found');
+      return order;
+    },
     updateStatus: (id: string, status: string) =>
       request<{ message: string; order: AdminOrder }>('PATCH', `/orders/${id}/status`, { status }),
   },
@@ -257,6 +300,16 @@ export const adminApi = {
   // Activity Logs
   activityLogs: {
     list: () => request<{ logs: ActivityLog[] }>('GET', '/activity-logs'),
+    getUserActivityLogs: (params?: { page?: number; limit?: number; search?: string; eventTypes?: string; verificationStatus?: string }) => {
+      const qs = new URLSearchParams();
+      if (params?.page) qs.append('page', params.page.toString());
+      if (params?.limit) qs.append('limit', params.limit.toString());
+      if (params?.search) qs.append('search', params.search);
+      if (params?.eventTypes) qs.append('eventTypes', params.eventTypes);
+      if (params?.verificationStatus) qs.append('verificationStatus', params.verificationStatus);
+      const query = qs.toString();
+      return request<{ logs: UserActivityLog[]; pagination: any }>('GET', `/user-activity-logs${query ? `?${query}` : ''}`);
+    },
   },
 
   // Settings

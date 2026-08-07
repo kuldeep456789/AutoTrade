@@ -8,9 +8,9 @@ export default function AdminUsers() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
 
-  const fetchUsers = useCallback(async () => {
+  const fetchUsers = useCallback(async (isInitial = false) => {
     try {
-      setLoading(true);
+      if (isInitial) setLoading(true);
       setError(null);
       const data = await adminApi.users.list();
       setUsers(data.users ?? []);
@@ -21,7 +21,9 @@ export default function AdminUsers() {
     }
   }, []);
 
-  useEffect(() => { fetchUsers(); }, [fetchUsers]);
+  useEffect(() => {
+    fetchUsers(true);
+  }, [fetchUsers]);
 
   const filtered = users.filter(
     (u) =>
@@ -38,7 +40,7 @@ export default function AdminUsers() {
             {loading ? 'Loading...' : `${users.length} registered users`}
           </p>
         </div>
-        <button onClick={fetchUsers} className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 shadow-sm cursor-pointer transition-colors">
+        <button onClick={() => fetchUsers()} className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 shadow-sm cursor-pointer transition-colors">
           <RefreshCw className="h-4 w-4 text-orange-500" />
           Refresh
         </button>
@@ -66,11 +68,11 @@ export default function AdminUsers() {
         ) : error ? (
           <div className="flex flex-col items-center justify-center h-48 text-center">
             <p className="text-red-500 text-sm font-semibold">{error}</p>
-            <button onClick={fetchUsers} className="mt-3 text-orange-500 text-sm font-bold underline">Retry</button>
+            <button onClick={() => fetchUsers()} className="mt-3 text-orange-500 text-sm font-bold underline">Retry</button>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-left border-collapse min-w-[800px]">
               <thead className="bg-zinc-100 dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 font-mono text-xs text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                 <tr>
                   <th className="px-6 py-4 font-semibold">User</th>

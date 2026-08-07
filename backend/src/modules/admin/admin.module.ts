@@ -15,8 +15,10 @@ import {
 } from './schemas/notification.schema';
 import { ActivityLog, ActivityLogSchema } from './schemas/activity-log.schema';
 import { Settings, SettingsSchema } from './schemas/settings.schema';
+import { UserActivityLog, UserActivityLogSchema } from '../users/schemas/user-activity-log.schema';
 
 import { UsersModule } from '../users/users.module';
+import { SearchModule } from '../search/search.module';
 import { AdminController } from './admin.controller';
 
 import {
@@ -24,6 +26,8 @@ import {
   CustomerIssueSchema,
 } from './schemas/customer-issue.schema';
 import { Product, ProductSchema } from '../products/schemas/product.schema';
+
+import { SettingsModule } from '../settings/settings.module';
 
 @Module({
   imports: [
@@ -37,6 +41,7 @@ import { Product, ProductSchema } from '../products/schemas/product.schema';
       { name: Settings.name, schema: SettingsSchema },
       { name: CustomerIssue.name, schema: CustomerIssueSchema },
       { name: Product.name, schema: ProductSchema },
+      { name: UserActivityLog.name, schema: UserActivityLogSchema },
     ]),
     JwtModule.registerAsync({
       useFactory: () => ({
@@ -44,6 +49,8 @@ import { Product, ProductSchema } from '../products/schemas/product.schema';
       }),
     }),
     UsersModule,
+    SearchModule,
+    SettingsModule,
   ],
   controllers: [AdminController],
 })

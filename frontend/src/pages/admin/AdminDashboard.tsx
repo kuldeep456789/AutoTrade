@@ -3,6 +3,7 @@ import { Download, Banknote, Calendar, ShoppingBag, MousePointerClick, Truck, Us
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import toast from 'react-hot-toast';
 import { adminApi, type DashboardStats, type AdminOrder, type AnalyticsData } from '../../services/adminApi';
+import { formatInCurrency } from '../../lib/currency';
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -47,7 +48,7 @@ export default function AdminDashboard() {
         const name = (customer ? (customer.name || `${customer.firstName ?? ''} ${customer.lastName ?? ''}`.trim() || customer.email) : 'Unknown') || 'Unknown';
         const email = customer?.email || 'N/A';
         const date = new Date(order.createdAt).toLocaleDateString();
-        return `"${order._id}","${name.replace(/"/g, '""')}","${email}","₹${order.totalAmount}","${order.status}","${date}"`;
+        return `"${order._id}","${name.replace(/"/g, '""')}","${email}","${formatInCurrency(Number(order.totalAmount || 0), (order as any).currency || 'INR')}","${order.status}","${date}"`;
       })
     ].join('\n');
 
@@ -123,7 +124,7 @@ export default function AdminDashboard() {
         <StatCard
           icon={Calendar}
           title="Total Orders" value={String(stats?.totalOrders ?? 0)}
-          subtitle={`${stats?.unpaidOrders ?? 0} unpaid · ${(stats?.totalOrders ?? 0) - (stats?.unpaidOrders ?? 0)} paid`}
+          subtitle={`${stats?.pendingPaymentOrders ?? 0} pending payment · ${(stats?.totalOrders ?? 0) - (stats?.pendingPaymentOrders ?? 0)} paid`}
         />
         <StatCard
           icon={ShoppingBag}
@@ -146,9 +147,6 @@ export default function AdminDashboard() {
               <h4 className="text-lg font-bold text-zinc-900 dark:text-white">Revenue Analytics</h4>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Monthly breakdown of gross sales</p>
             </div>
-            <a href="/admin/commission-finance" className="text-orange-500 text-xs font-semibold hover:underline">
-              View Finance &rarr;
-            </a>
           </div>
           <div className="h-64">
             {analytics?.monthlyRevenue && analytics.monthlyRevenue.length > 0 ? (
@@ -201,7 +199,7 @@ export default function AdminDashboard() {
             <div className="flex items-center justify-center h-40 text-zinc-400 dark:text-zinc-500 text-sm">No orders yet</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+              <table className="w-full text-left border-collapse min-w-[600px]">
                 <thead className="bg-zinc-100 dark:bg-zinc-950 font-mono text-[11px] text-zinc-600 dark:text-zinc-400 uppercase tracking-wider border-b border-zinc-200 dark:border-zinc-800">
                   <tr>
                     <th className="px-6 py-4 font-semibold">Order ID</th>
@@ -228,7 +226,7 @@ export default function AdminDashboard() {
                             <span className="font-medium text-zinc-800 dark:text-zinc-200 truncate max-w-[150px]">{name}</span>
                           </div>
                         </td>
-                        <td className="px-6 py-4 font-bold text-zinc-900 dark:text-white">₹{(order.totalAmount ?? 0).toLocaleString()}</td>
+                        <td className="px-6 py-4 font-bold text-zinc-900 dark:text-white">{formatInCurrency(Number(order.totalAmount ?? 0), (order as any).currency || 'INR')}</td>
                         <td className="px-6 py-4">
                           <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold border ${
                             isPaid

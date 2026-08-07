@@ -233,11 +233,13 @@ export class ProductsService implements OnModuleInit {
     return { review };
   }
 
+
+
   private async fetchFromWarehouse(query: ProductQuery) {
     const pageNum = Math.max(1, Number(query.pageNum || query.page || 1));
     const pageSize = Math.min(
       Math.max(1, Number(query.pageSize || query.limit || 6)),
-      20,
+      200,
     );
 
     // ── Search query: filter & score warehouse products with relevance engine ──
@@ -360,7 +362,7 @@ export class ProductsService implements OnModuleInit {
       };
     }
 
-    // ── Fallback: Live CJ API fetch if warehouse returns 0 items ──────────────
+
     try {
       this.logger.log(
         `[Products] Warehouse MISS sub=${query.subcategoryName ?? '-'} — falling back to live CJ API`,

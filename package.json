@@ -2,13 +2,20 @@
   "name": "autotrade-monorepo",
   "version": "1.0.0",
   "private": true,
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
   "scripts": {
-    "build": "npm run build --prefix backend",
-    "build:frontend": "npm run build --prefix frontend",
+    "build": "turbo run build",
+    "dev": "turbo run dev --parallel",
+    "lint": "turbo run lint",
     "start": "npm run start:prod --prefix backend",
     "start:prod": "npm run start:prod --prefix backend",
     "start:dev": "npm run start:dev --prefix backend",
-    "lint": "npm run lint --prefix backend",
-    "test": "npm run test --prefix backend"
+    "test": "turbo run test"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0"
   }
 }

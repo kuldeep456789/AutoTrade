@@ -14,21 +14,20 @@ const TrackOrderPage = () => {
       return;
     }
     setError('');
-    // Remove # symbol if the user pasted it (e.g. #87E5CE9F), since # breaks the URL route
+
     navigate(`/orders/${orderId.trim().replace(/^#/, '')}`);
   };
 
   return (
     <div className="bg-[#FAFAFA] dark:bg-[#0a0a0a] min-h-screen text-[hsl(var(--foreground))] font-sans selection:bg-[#d4af37] selection:text-black relative overflow-hidden">
-      {/* Premium Decorative Background Glows */}
+
       <div className="absolute top-0 inset-x-0 h-[600px] pointer-events-none overflow-hidden z-0">
         <div className="absolute -top-40 -right-20 w-96 h-96 bg-[#d4af37]/20 dark:bg-[#d4af37]/10 rounded-full blur-[120px] opacity-70" />
         <div className="absolute top-20 -left-20 w-72 h-72 bg-zinc-300/40 dark:bg-zinc-800/30 rounded-full blur-[100px] opacity-60" />
       </div>
 
-      {/* Container */}
+
       <div className="relative z-10 max-w-[1400px] mx-auto px-6 sm:px-10 py-12 lg:py-24 space-y-8 lg:space-y-12">
-        {/* Track Order Form Card Container */}
         <div className="max-w-xl mx-auto">
           <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border border-zinc-200/80 dark:border-zinc-800/80 rounded-[32px] p-8 sm:p-12 shadow-[0_8px_40px_rgba(0,0,0,0.08)] dark:shadow-[0_8px_40px_rgba(0,0,0,0.4)] relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-64 h-64 bg-[#d4af37] opacity-[0.03] rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
@@ -63,13 +62,13 @@ const TrackOrderPage = () => {
                 )}
               </div>
 
-              <button
+              {/* <button
                 type="submit"
                 className="w-full py-4 rounded-xl bg-gradient-to-r from-[#b68945] via-[#d4af37] to-[#e4c985] text-black text-sm font-bold tracking-widest hover:opacity-90 transition-opacity flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(212,175,55,0.15)]"
               >
                 <Search size={16} strokeWidth={2.5} />
                 TRACK ORDER
-              </button>
+              </button> */}
             </form>
           </div>
         </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, ShieldCheck, ShieldAlert, Copy, Check } from 'lucide-react';
+import { X, ShieldCheck, ShieldAlert, Copy, Check, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDispatch, useSelector } from 'react-redux';
 import { setCredentials } from '../../store/slices/authSlice';
@@ -9,6 +9,7 @@ import {
   useEnable2FAMutation,
   useDisable2FAMutation,
 } from '../../store/slices/userApiSlice';
+import OtpInput from '../OtpInput';
 import toast from 'react-hot-toast';
 
 interface TwoFactorModalProps {
@@ -24,6 +25,9 @@ const TwoFactorModal = ({ isOpen, onClose }: TwoFactorModalProps) => {
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const [code, setCode] = useState('');
   const [copied, setCopied] = useState(false);
+
+  const codeDigits = code.split('').concat(Array(6).fill('')).slice(0, 6);
+  const setCodeDigits = (digits: string[]) => setCode(digits.join(''));
 
   const [generate2FA, { isLoading: generating }] = useGenerate2FAMutation();
   const [enable2FA, { isLoading: enabling }] = useEnable2FAMutation();
@@ -49,15 +53,15 @@ const TwoFactorModal = ({ isOpen, onClose }: TwoFactorModalProps) => {
     try {
       const res = await generate2FA({}).unwrap();
       setSecret(res.secret);
-      setQrCodeUrl(res.qrCodeUrl);
+      setQrCodeUrl(res.qrCode);
       setStep('setup');
     } catch (err: any) {
       toast.error(err?.data?.message || 'Failed to generate 2FA secret');
     }
   };
 
-  const handleEnable = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleEnable = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (code.length !== 6) return;
     try {
       await enable2FA({ secret, code }).unwrap();
@@ -155,20 +159,30 @@ const TwoFactorModal = ({ isOpen, onClose }: TwoFactorModalProps) => {
                   </div>
                 )}
 
-                <p className="text-sm font-semibold text-zinc-900 dark:text-white mb-2">
+                <p className="text-sm font-semibold text-zinc-900 dark:text-white mb-3">
                   Enter the 6-digit code from your app:
                 </p>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="123456"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  className="w-full text-center text-2xl tracking-[0.5em] pl-[0.5em] font-bold py-3 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-transparent outline-none focus:border-zinc-500 mb-6"
-                />
+                <div className="mb-6">
+                  <OtpInput
+                    value={codeDigits}
+                    onChange={setCodeDigits}
+                    autoFocus
+                  />
+                </div>
 
-                <button type="submit" disabled={enabling || code.length !== 6} className="w-full py-3 rounded-xl font-bold text-white bg-orange-700 hover:bg-orange-800 transition disabled:opacity-50 cursor-pointer">
-                  {enabling ? 'Verifying...' : 'Verify & Enable'}
+                <button
+                  type="submit"
+                  disabled={enabling || code.length !== 6}
+                  className="w-full py-3.5 rounded-xl font-bold text-white bg-orange-500 hover:bg-orange-600 shadow-md shadow-orange-500/20 transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  {enabling ? (
+                    <>
+                      <Loader2 size={18} className="animate-spin" />
+                      Verifying & Enabling...
+                    </>
+                  ) : (
+                    'Verify & Enable'
+                  )}
                 </button>
               </form>
             )}
