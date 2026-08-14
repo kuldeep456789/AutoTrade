@@ -32,7 +32,7 @@ export class SettingsService {
         currencyRateEUR: 0.011,
         currencyRateINR: 1,
         gstPercentage: 18,
-        adminSecretCode: process.env.ADMIN_SECRET_CODE || 'admin123',
+        adminSecretCode: process.env.ADMIN_SECRET_CODE || 'secret_admin_123',
       });
     } else {
       let needsSave = false;
@@ -40,7 +40,7 @@ export class SettingsService {
       if (settings.currencyRateEUR === undefined) { settings.currencyRateEUR = 0.011; needsSave = true; }
       if (settings.currencyRateINR === undefined) { settings.currencyRateINR = 1; needsSave = true; }
       if (settings.gstPercentage === undefined) { settings.gstPercentage = 18; needsSave = true; }
-      if (!settings.adminSecretCode) { settings.adminSecretCode = process.env.ADMIN_SECRET_CODE || 'admin123'; needsSave = true; }
+      if (!settings.adminSecretCode) { settings.adminSecretCode = process.env.ADMIN_SECRET_CODE || 'secret_admin_123'; needsSave = true; }
       if (needsSave) {
         await settings.save();
       }
@@ -64,6 +64,7 @@ export class SettingsService {
     if (dto.currencyRateINR !== undefined) settings.currencyRateINR = dto.currencyRateINR;
     if (dto.gstPercentage !== undefined) settings.gstPercentage = dto.gstPercentage;
     if (dto.adminSecretCode !== undefined) settings.adminSecretCode = dto.adminSecretCode;
+    if (dto.defaultDiscountPct !== undefined) (settings as any).defaultDiscountPct = dto.defaultDiscountPct;
     if (dto.storeName !== undefined) settings.storeName = dto.storeName;
     if (dto.storeEmail !== undefined) settings.storeEmail = dto.storeEmail;
     if (dto.currency !== undefined) settings.currency = dto.currency;

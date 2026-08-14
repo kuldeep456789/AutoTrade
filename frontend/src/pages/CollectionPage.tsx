@@ -63,38 +63,7 @@ const CollectionPage = () => {
 
   const rawProducts = Array.isArray(apiResponse?.products) ? apiResponse.products : [];
 
-  // Query full collection pool to derive category navigation tabs for the current section
-  // Use pageSize:500 without page param so we get a broad pool for tab counts
-  const collectionPoolQuery = useMemo(() => {
-    if (targetCollectionType) {
-      return { collectionType: targetCollectionType, pageNum: 1, pageSize: 500 };
-    }
-    return { pageNum: 1, pageSize: 500 };
-  }, [targetCollectionType]);
-
-  const { data: collectionPoolData } = useGetProductsQuery(
-    collectionPoolQuery,
-    { skip: !targetCollectionType }
-  );
-
-  // Build count map from API data
-  const apiCountMap = useMemo(() => {
-    const pool =
-      Array.isArray(collectionPoolData?.products) && collectionPoolData.products.length > 0
-        ? collectionPoolData.products
-        : rawProducts;
-
-    const catMap = new Map<string, number>();
-    for (const p of pool) {
-      const cat = String(p.subcategoryName ?? p._category ?? '').trim();
-      if (!cat) continue;
-      catMap.set(cat, (catMap.get(cat) || 0) + 1);
-    }
-    return catMap;
-  }, [collectionPoolData, rawProducts]);
-
-  // Derive subcategory tabs: prefer static config subs so all categories always show,
-  // then fill in counts from API data. Fall back to API-only tabs if no static config.
+  // Derive subcategory tabs: use static NAV_CATEGORIES configuration for fast, instant rendering
   const derivedTabs = useMemo(() => {
     if (targetCollectionType) {
       const navCat = NAV_CATEGORIES.find(
@@ -103,15 +72,24 @@ const CollectionPage = () => {
       if (navCat && navCat.subs.length > 0) {
         return navCat.subs.map((sub) => ({
           name: sub.label,
-          count: apiCountMap.get(sub.label) ?? 0,
+          count: rawProducts.filter(
+            (p: any) => String(p.subcategoryName || '').toLowerCase() === sub.label.toLowerCase()
+          ).length || 0,
         }));
       }
     }
-    // Fallback: derive from API data sorted by count
-    return Array.from(apiCountMap.entries())
+
+    const catMap = new Map<string, number>();
+    for (const p of rawProducts) {
+      const cat = String(p.subcategoryName ?? p._category ?? '').trim();
+      if (!cat) continue;
+      catMap.set(cat, (catMap.get(cat) || 0) + 1);
+    }
+
+    return Array.from(catMap.entries())
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count);
-  }, [targetCollectionType, apiCountMap]);
+  }, [targetCollectionType, rawProducts]);
 
   // Page title
   const rawTitle = categoryInfo?.title || (normalizedSubcategory ? fromSlug(normalizedSubcategory) : 'All Collections');

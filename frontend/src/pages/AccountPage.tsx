@@ -265,9 +265,14 @@ const AccountPage = () => {
     const fetchMessages = () => {
       if (activeTab === 'notifications' || activeTab === 'messages') {
         const token = userInfo?.accessToken || (userInfo as any)?.token || localStorage.getItem('token') || localStorage.getItem('accessToken') || '';
+        if (!token) {
+          setUserMessages([]);
+          setLoadingMessages(false);
+          return;
+        }
 
         fetch(`/api/contact/me`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          headers: { Authorization: `Bearer ${token}` },
         })
           .then((res) => {
             if (res.status === 401) {
@@ -293,7 +298,7 @@ const AccountPage = () => {
     if (activeTab === 'notifications' || activeTab === 'messages') {
       setLoadingMessages(true);
       fetchMessages();
-      timerId = setInterval(fetchMessages, 3000);
+      timerId = setInterval(fetchMessages, 15000);
     }
 
     return () => {

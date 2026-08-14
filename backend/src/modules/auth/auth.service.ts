@@ -258,7 +258,11 @@ export class AuthService {
 
     this.logger.log(`[REGISTER_OTP] OTP generated for email=${normalizedEmail} role=${isAdmin ? 'admin' : 'customer'}.`);
 
-    this.fireAndForgetOtp(firstName.trim(), normalizedEmail, code);
+    try {
+      await this.mailService.sendOtp(firstName.trim(), normalizedEmail, code);
+    } catch (err: any) {
+      this.logger.error(`[REGISTER_OTP] Mail sending error for email=${normalizedEmail}: ${err?.message}`);
+    }
 
     this.activityLogService.logEvent({
       email: normalizedEmail,

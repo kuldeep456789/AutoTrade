@@ -21,6 +21,8 @@ import ProductCard from '../components/product/ProductCard';
 import { getProductId } from '../lib/product';
 import TrustBadgesBar from '../components/layout/TrustBadgesBar';
 import { useCurrency } from '../context/CurrencyContext';
+import { useDiscount } from '../context/DiscountContext';
+import DiscountBadge from '../components/common/DiscountBadge';
 
 const heroCategories = [
   {
@@ -112,6 +114,7 @@ const HomePage = () => {
   const location = useLocation();
   const typedText = useTypewriter(TYPED_PHRASES);
   const { formatCurrency } = useCurrency();
+  const { getOriginalPrice, getDiscountPercent } = useDiscount();
 
   // Hero slideshow
   const [heroSlide, setHeroSlide] = useState(0);
@@ -134,7 +137,7 @@ const HomePage = () => {
 
   const { data: autoData } = useGetProductsQuery({
     pageNum: 1,
-    pageSize: 200,
+    pageSize: 40,
   });
 
   const { data: statsData } = useGetCatalogStatsQuery(undefined);
@@ -545,8 +548,9 @@ const HomePage = () => {
                 <div className="mt-5 xs:mt-6 space-y-2.5 xs:space-y-3">
                   {dealProducts.slice(0, 4).map((prod, idx) => {
                     const price = prod.discountPrice && prod.discountPrice < prod.price ? prod.discountPrice : prod.price;
-                    const originalPrice = prod.price;
-                    const discountPercent = originalPrice > price ? Math.round(((originalPrice - price) / originalPrice) * 100) : 0;
+                    const rawOriginal = prod.originalPrice || prod.mrp;
+                    const displayOriginal = rawOriginal && Number(rawOriginal) > price ? Number(rawOriginal) : getOriginalPrice(price);
+                    const discountPercent = getDiscountPercent(price, displayOriginal);
 
                     return (
                       <div
@@ -565,8 +569,8 @@ const HomePage = () => {
                             className="w-full h-full object-contain filter drop-shadow-[0_4px_12px_rgba(255,122,0,0.15)] group-hover/deal:scale-110 transition-transform duration-300"
                           />
                           {discountPercent > 0 && (
-                            <span className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-[#FF7A00] text-white text-[9px] font-black uppercase tracking-wider shadow-md">
-                              {discountPercent}% OFF
+                            <span className="absolute top-1 left-1 z-10">
+                              <DiscountBadge percent={discountPercent} variant="emerald" />
                             </span>
                           )}
                         </Link>
@@ -594,8 +598,8 @@ const HomePage = () => {
                           </Link>
                           <div className="flex items-center gap-2 mt-1">
                             <span className="text-sm sm:text-base font-extrabold text-[#FF7A00] tabular-nums">{formatCurrency(price)}</span>
-                            {discountPercent > 0 && (
-                              <span className="text-xs text-zinc-400 dark:text-zinc-500 line-through">{formatCurrency(originalPrice)}</span>
+                            {displayOriginal > price && (
+                              <span className="text-xs text-zinc-400 dark:text-zinc-500 line-through tabular-nums">{formatCurrency(displayOriginal)}</span>
                             )}
                           </div>
                         </div>

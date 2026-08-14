@@ -8,7 +8,8 @@ import { toggleWishlist } from '../../store/slices/wishlistSlice';
 import type { RootState } from '../../store/store';
 import { getProductId } from '../../lib/product';
 import { useCurrency } from '../../context/CurrencyContext';
-import { useGetSettingsQuery } from '../../store/slices/settingsApiSlice';
+import { useDiscount } from '../../context/DiscountContext';
+import DiscountBadge from '../common/DiscountBadge';
 
 interface ProductCardProps {
   product: any;
@@ -29,11 +30,10 @@ export const ProductCardSkeleton = () => (
 
 const ProductCard = ({ product }: ProductCardProps) => {
   const { formatCurrency } = useCurrency();
+  const { getOriginalPrice, getDiscountPercent } = useDiscount();
   const [imageFailed, setImageFailed] = useState(false);
   const [hovered, setHovered] = useState(false);
   const [isAdded, setIsAdded] = useState(false);
-  const { data: settingsData } = useGetSettingsQuery(undefined);
-  const gstPercentage = settingsData?.settings?.gstPercentage || 18;
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -50,15 +50,12 @@ const ProductCard = ({ product }: ProductCardProps) => {
   const hoverImage = product?.images?.[1] || null;
 
   const currentPrice = product.discountPrice && product.discountPrice < product.price ? product.discountPrice : product.price;
-  const rawOriginal = product.originalPrice || product.mrp || (product.discountPrice && product.discountPrice < product.price ? product.price : undefined);
+  const rawOriginal = product.originalPrice || product.mrp;
   const displayOriginalPrice = rawOriginal && Number(rawOriginal) > Number(currentPrice)
     ? Number(rawOriginal)
-    : Math.round(Number(currentPrice) * 1.3);
+    : getOriginalPrice(currentPrice);
 
-  const discountPercent =
-    displayOriginalPrice > Number(currentPrice)
-      ? Math.round(((displayOriginalPrice - Number(currentPrice)) / displayOriginalPrice) * 100)
-      : 0;
+  const discountPercent = getDiscountPercent(currentPrice, displayOriginalPrice);
 
 
 
@@ -146,10 +143,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
       <Link to={`/product/${productId}`} className="relative block aspect-[4/3] w-full bg-zinc-50 dark:bg-[#161616] overflow-hidden">
         {/* Top Badges */}
         <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5">
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-100 dark:bg-emerald-950/90 text-emerald-800 dark:text-emerald-300 text-[10px] sm:text-[11px] font-bold border border-emerald-300/60 dark:border-emerald-800 shadow-sm backdrop-blur-sm">
-            <span className="text-[10px]">💵</span>
-            {gstPercentage}% GST
-          </span>
+          <DiscountBadge percent={discountPercent} variant="emerald" showIcon />
         </div>
 
         <img
@@ -179,8 +173,8 @@ const ProductCard = ({ product }: ProductCardProps) => {
 
       {/* Product Content Details */}
       <div className="flex flex-col p-4 bg-white dark:bg-[#111111]">
-        <Link to={`/product/${productId}`} className="block mb-2">
-          <h3 className="text-sm sm:text-[15px] font-inter font-semibold text-zinc-900 dark:text-white group-hover:text-[#FF7A00] transition-colors line-clamp-2 leading-snug tracking-tight">
+        <Link to={`/product/${productId}`} className="group/title block mb-2">
+          <h3 className="text-sm sm:text-[15px] font-inter font-semibold text-zinc-900 dark:text-white group-hover/title:text-[#FF7A00] transition-colors line-clamp-2 leading-snug tracking-tight">
             {productName}
           </h3>
         </Link>
@@ -194,15 +188,13 @@ const ProductCard = ({ product }: ProductCardProps) => {
                 {formatCurrency(currentPrice)}
               </span>
 
-              <span className="text-xs text-zinc-400 line-through">
-                {formatCurrency(displayOriginalPrice)}
-              </span>
+              {displayOriginalPrice > currentPrice && (
+                <span className="text-xs text-zinc-400 line-through tabular-nums">
+                  {formatCurrency(displayOriginalPrice)}
+                </span>
+              )}
 
             </div>
-
-            <span className="w-fit px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40 text-[10px] font-bold">
-              Bulk Rate
-            </span>
 
           </div>
 

@@ -40,6 +40,7 @@ export class ProductsService implements OnModuleInit {
   private readonly logger = new Logger(ProductsService.name);
   private readonly productTtlSeconds = 60 * 60 * 6;
   private readonly inFlightRequests = new Map<string, Promise<any>>();
+  private readonly l1Cache = new Map<string, { data: any; expiresAt: number }>();
 
   constructor(
     private readonly cjService: CjService,
@@ -52,26 +53,29 @@ export class ProductsService implements OnModuleInit {
 
   async onModuleInit() {
     this.logger.log(
-      '[Products] Module initialized — preserving existing api:products:* cache keys',
+      '[Products] Module initialized — in-memory L1 cache ready',
     );
   }
 
   async getProducts(query: ProductQuery = {}) {
     const cacheKey = this.buildCacheKey(query);
-    const cached = await this.redisService.getJson(cacheKey);
+    const now = Date.now();
 
-    if (cached) {
-      this.logger.log(`[Products] Cache HIT ${cacheKey}`);
-      return cached;
+    // 1. In-memory L1 Cache (< 1ms, zero network latency)
+    const l1Hit = this.l1Cache.get(cacheKey);
+    if (l1Hit && l1Hit.expiresAt > now) {
+      this.logger.log(`[Products] L1 Memory Cache HIT ${cacheKey}`);
+      return l1Hit.data;
     }
 
-    this.logger.log(`[Products] Cache MISS ${cacheKey}`);
+    this.logger.log(`[Products] L1 Cache MISS ${cacheKey} — fast in-memory warehouse evaluation`);
 
+    // 2. Evaluate from local in-memory catalog directly (takes ~15ms)
     const result = await this.runSingleFlight(cacheKey, () =>
       this.fetchFromWarehouse(query),
     );
 
-    // Cache search queries for 300s (5 min TTL), listings for 6 hours
+    // Cache search queries for 30 min, listings for 6 hours
     const isSearchQuery = Boolean(
       (query.q || query.keyword || query.search || '').trim(),
     );
@@ -82,7 +86,14 @@ export class ProductsService implements OnModuleInit {
       Array.isArray(result.products) &&
       result.products.length > 0
     ) {
-      await this.redisService.setJson(cacheKey, result, ttlSeconds);
+      // Store in L1 memory cache immediately for instant subsequent hits
+      this.l1Cache.set(cacheKey, { data: result, expiresAt: now + 10 * 60 * 1000 });
+
+      // Non-blocking async write to Redis in background
+      this.redisService.setJson(cacheKey, result, ttlSeconds).catch((e) => {
+        this.logger.warn(`[Products] Background Redis write failed for ${cacheKey}: ${e.message}`);
+      });
+
       this.logger.log(
         `[Products] Cache WRITE ${cacheKey} (TTL ${ttlSeconds}s) → ${result.products.length} products`,
       );
@@ -145,60 +156,71 @@ export class ProductsService implements OnModuleInit {
     const cached = await this.redisService.getJson<any[]>(cacheKey);
 
     if (cached) {
-      this.logger.log(`[Products] Related cache HIT ${cacheKey}`);
+      this.logger.log(`[RelatedProducts] CACHE HIT ${cacheKey}`);
       return { products: cached };
     }
 
+    this.logger.log(`[RelatedProducts] CACHE MISS — local catalog lookup for ${id}`);
+
     try {
-      const cjProduct = await this.cjService.getProductById(id);
+      // Read from local Redis only — warehouse:product:{id} is the primary key,
+      // product:{id} is the legacy fallback. Do NOT call cjService.getProductById()
+      // here: related-products must never trigger a live CJ API request.
+      let localProduct =
+        await this.redisService.getJson<Record<string, any>>(`warehouse:product:${id}`) ??
+        await this.redisService.getJson<Record<string, any>>(`product:${id}`);
+
+      if (!localProduct) {
+        this.logger.log(`[RelatedProducts] No local product found for ${id} — returning empty`);
+        return { products: [] };
+      }
+
       const subcategoryName =
-        cjProduct?._category ??
-        cjProduct?.subcategoryName ??
-        cjProduct?.categoryName ??
+        localProduct._category ??
+        localProduct.subcategoryName ??
+        localProduct.categoryName ??
         '';
 
-      let products: any[] = [];
+      // Subcategory lookup via in-memory warehouse cache (no extra Redis/CJ calls)
+      this.logger.log(`[RelatedProducts] Local catalog lookup — subcategory: "${subcategoryName}"`);
 
-      // 1. Try finding products from the same subcategory
-      if (subcategoryName) {
-        const warehouseResult = await this.cjService.getWarehouseProducts(
-          1,
-          16,
-          undefined,
-          subcategoryName,
-        );
-        if (warehouseResult && warehouseResult.products.length > 0) {
-          products = warehouseResult.products.filter(
-            (p: any) => (p.pid || p.id || p._id) !== id,
-          );
-        }
+      if (!subcategoryName) {
+        this.logger.log(`[RelatedProducts] No subcategory on product ${id} — returning empty`);
+        return { products: [] };
       }
 
-      // 2. Fallback: if no products found in subcategory, return items from main warehouse pool
-      if (products.length === 0) {
-        const fallbackResult = await this.cjService.getWarehouseProducts(1, 16);
-        if (fallbackResult && fallbackResult.products.length > 0) {
-          products = fallbackResult.products.filter(
-            (p: any) => (p.pid || p.id || p._id) !== id,
-          );
-        }
-      }
-
-      const finalProducts = products.slice(0, 8);
-      const withRatings = await Promise.all(
-        finalProducts.map((p: any) => this.withReviews(p, p.pid || p._id)),
+      const warehouseResult = await this.cjService.getWarehouseProducts(
+        1,
+        16,
+        undefined,
+        subcategoryName,
       );
+
+      if (!warehouseResult || warehouseResult.products.length === 0) {
+        this.logger.log(`[RelatedProducts] No related products found for subcategory "${subcategoryName}"`);
+        return { products: [] };
+      }
+
+      // Exclude the current product, take max 8
+      const candidates = warehouseResult.products
+        .filter((p: any) => String(p.pid || p.id || p._id) !== String(id))
+        .slice(0, 8);
+
+      const withRatings = await Promise.all(
+        candidates.map((p: any) => this.withReviews(p, p.pid || p._id)),
+      );
+
       if (withRatings.length > 0) {
         await this.redisService.setJson(cacheKey, withRatings, 60 * 60);
       }
+
       return { products: withRatings };
     } catch (err: any) {
       this.logger.warn(
-        `[Products] Failed to fetch related for ${id}: ${err?.message ?? err}`,
+        `[RelatedProducts] Error building related products for ${id}: ${err?.message ?? err}`,
       );
+      return { products: [] };
     }
-
-    return { products: [] };
   }
 
   async createReview(id: string, token: string, dto: CreateReviewDto) {
@@ -242,7 +264,7 @@ export class ProductsService implements OnModuleInit {
       200,
     );
 
-    // ── Search query: filter & score warehouse products with relevance engine ──
+    // ── Search query ─────────────────────────────────────────────────────────
     const rawSearchQuery = (
       query.q ||
       query.keyword ||
@@ -250,96 +272,41 @@ export class ProductsService implements OnModuleInit {
       ''
     ).trim();
 
-    // Sanitize input: cap length at 100, remove dangerous injection symbols
+    // Sanitize: cap at 100 chars, strip injection symbols
     const cleanQuery = rawSearchQuery
       .slice(0, 100)
       .replace(/[<>{}$]/g, '')
       .trim();
 
     if (cleanQuery) {
-      const queryKeywords = cleanQuery
-        .toLowerCase()
-        .split(/\s+/)
-        .filter(Boolean);
+      // Delegate to cjService.getProducts which uses the 5-minute in-memory
+      // warehouse cache (getWarehouseCache + mgetJson index lookup).
+      // This avoids a direct warehouse:all Redis GET on every search cache miss.
+      const searchResult = await this.cjService.getProducts({
+        keyword: cleanQuery,
+        pageNum: String(pageNum),
+        pageSize: String(pageSize),
+        ...(query.sort ? { sort: query.sort } : {}),
+        ...(query.minPrice ? { minPrice: query.minPrice } : {}),
+        ...(query.maxPrice ? { maxPrice: query.maxPrice } : {}),
+      });
 
-      // ── Pure Redis search: read warehouse directly, zero CJ API calls ──
-      const MAX_MATCHES = 10;
-      const rawWarehouse =
-        (await this.redisService.getJson<any[]>('warehouse:all')) ??
-        (await this.redisService.getJson<any[]>('products:all')) ??
-        [];
-
-      const candidateProducts: any[] = Array.isArray(rawWarehouse)
-        ? rawWarehouse
-        : (rawWarehouse as any)?.products ?? [];
-
-      if (candidateProducts.length > 0) {
-        const scoredProducts: { product: any; score: number }[] = [];
-
-        for (const p of candidateProducts) {
-          const score = this.computeRelevanceScore(
-            p,
-            cleanQuery,
-            queryKeywords,
-          );
-          if (score > 0) {
-            // Price range filtering
-            const price = Number(p.discountPrice || p.price || 0);
-            if (query.minPrice && price < Number(query.minPrice)) continue;
-            if (query.maxPrice && price > Number(query.maxPrice)) continue;
-
-            scoredProducts.push({ product: p, score });
-
-            if (scoredProducts.length >= MAX_MATCHES) break;
-          }
-        }
-
-        // Sort by relevance (or price/rating if specified)
-        const sortMode = (query.sort || 'relevance').toLowerCase();
-        scoredProducts.sort((a, b) => {
-          if (sortMode === 'price-asc' || sortMode === 'price-low-to-high') {
-            return (a.product.price || 0) - (b.product.price || 0);
-          }
-          if (sortMode === 'price-desc' || sortMode === 'price-high-to-low') {
-            return (b.product.price || 0) - (a.product.price || 0);
-          }
-          if (sortMode === 'rating') {
-            return (
-              (b.product.averageRating || 0) - (a.product.averageRating || 0)
-            );
-          }
-          return b.score - a.score;
-        });
-
-        const total = scoredProducts.length;
-        const start = (pageNum - 1) * pageSize;
-        const paginatedProducts = scoredProducts
-          .slice(start, start + pageSize)
-          .map((item) => item.product);
-
-        return {
-          success: true,
-          query: cleanQuery,
-          total,
-          page: pageNum,
-          limit: pageSize,
-          source: 'warehouse:search',
-          products: paginatedProducts,
-        };
-      }
+      const products = Array.isArray(searchResult?.products)
+        ? searchResult.products
+        : [];
 
       return {
         success: true,
         query: cleanQuery,
-        total: 0,
+        total: searchResult?.total ?? searchResult?.data?.total ?? products.length,
         page: pageNum,
         limit: pageSize,
-        source: 'warehouse:search_empty',
-        products: [],
+        source: products.length > 0 ? 'warehouse:search' : 'warehouse:search_empty',
+        products,
       };
     }
 
-    // ── Category / collection listing: read from warehouse ─────────────────────
+    // ── Category / collection listing ─────────────────────────────────────────
     const warehouseResult = await this.cjService.getWarehouseProducts(
       pageNum,
       pageSize,
@@ -348,6 +315,7 @@ export class ProductsService implements OnModuleInit {
       query.collectionType,
     );
 
+    // Warehouse returned products — serve directly, no CJ call.
     if (warehouseResult && warehouseResult.products.length > 0) {
       this.logger.log(
         `[Products] Warehouse HIT sub=${query.subcategoryName ?? '-'} page=${pageNum} → ${warehouseResult.products.length}/${warehouseResult.total}`,
@@ -362,10 +330,30 @@ export class ProductsService implements OnModuleInit {
       };
     }
 
+    // warehouseResult is non-null but empty: warehouse is populated and the
+    // requested subcategory simply has no matching products. Return empty —
+    // do NOT fall back to the live CJ API. A populated warehouse miss must
+    // never become a CJ request.
+    if (warehouseResult !== null) {
+      this.logger.log(
+        `[Products] Warehouse populated but 0 matches for sub=${query.subcategoryName ?? '-'} — returning empty`,
+      );
+      return {
+        success: true,
+        products: [],
+        total: 0,
+        page: pageNum,
+        limit: pageSize,
+        source: 'warehouse_empty',
+        message: 'No products found in this category',
+      };
+    }
 
+    // warehouseResult === null: warehouse is genuinely empty (not yet synced).
+    // Allow a single CJ API call so the page is not blank on first boot.
     try {
       this.logger.log(
-        `[Products] Warehouse MISS sub=${query.subcategoryName ?? '-'} — falling back to live CJ API`,
+        `[Products] Warehouse not synced yet — falling back to live CJ API for sub=${query.subcategoryName ?? '-'}`,
       );
       const liveData = await this.cjService.getProducts(query);
       if (
@@ -384,7 +372,7 @@ export class ProductsService implements OnModuleInit {
       }
     } catch (err: any) {
       this.logger.warn(
-        `[Products] Live CJ API fallback attempt failed: ${err?.message ?? err}`,
+        `[Products] CJ live fallback failed: ${err?.message ?? err}`,
       );
     }
 
@@ -399,109 +387,7 @@ export class ProductsService implements OnModuleInit {
     };
   }
 
-  // ─── Private: Relevance Scoring Engine ─────────────────────────────────────
 
-  private computeRelevanceScore(
-    product: any,
-    queryStr: string,
-    queryKeywords: string[],
-  ): number {
-    const title = String(
-      product.name || product.title || product.productName || '',
-    ).trim();
-    const brand = String(product.brand || product.productBrand || '').trim();
-    const sku = String(product.sku || product.variantSku || '').trim();
-    const category = String(
-      product.collectionType ||
-      product.categoryName ||
-      product._category ||
-      product.subcategoryName ||
-      '',
-    ).trim();
-    const tags = Array.isArray(product.tags)
-      ? product.tags.join(' ')
-      : String(product.tags || '');
-    const desc = String(product.description || '').trim();
-
-    const titleLower = title.toLowerCase();
-    const brandLower = brand.toLowerCase();
-    const categoryLower = category.toLowerCase();
-    const tagsLower = tags.toLowerCase();
-    const descLower = desc.toLowerCase();
-    const qLower = queryStr.toLowerCase();
-
-    /**
-     * Tokenize a text field into an array of lowercase word tokens.
-     * Splits on any non-alphanumeric character so "women's" becomes ["women", "s"]
-     * and handles hyphenated compound words like "full-zip" as ["full", "zip"].
-     */
-    const tokenize = (text: string): string[] =>
-      text
-        .toLowerCase()
-        .split(/[^a-z0-9]+/)
-        .filter((t) => t.length > 0);
-
-
-    const kwMatchesField = (kw: string, text: string): boolean => {
-      const tokens = tokenize(text);
-      return tokens.some((tok) => tok === kw || tok.startsWith(kw));
-    };
-
-
-    const allFields = [titleLower, brandLower, categoryLower, tagsLower, descLower];
-
-
-    for (const kw of queryKeywords) {
-      const matchedAnyField = allFields.some((field) => kwMatchesField(kw, field));
-      if (!matchedAnyField) {
-        return 0;
-      }
-    }
-
-
-    let score = 0;
-
-    // 1. Exact full-phrase match in title
-    if (titleLower === qLower) {
-      score += 100;
-    }
-    // 2. Title starts with the full phrase
-    else if (titleLower.startsWith(qLower)) {
-      score += 60;
-    }
-    // 3. Title contains the full phrase as a substring
-    else if (titleLower.includes(qLower)) {
-      score += 35;
-    }
-
-    // 4. Count how many keywords match in title specifically (higher = more relevaSnt)
-    const titleTokens = tokenize(titleLower);
-    const titleMatchCount = queryKeywords.filter((kw) =>
-      titleTokens.some((tok) => tok === kw || tok.startsWith(kw)),
-    ).length;
-    score += titleMatchCount * 10;
-
-    // 5. All keywords found in title+brand (tight match)
-    const mainText = `${titleLower} ${brandLower}`;
-    const allInMain = queryKeywords.every((kw) => kwMatchesField(kw, mainText));
-    if (allInMain) {
-      score += 20;
-    }
-
-    // 6. Category match (any keyword)
-    const catMatchCount = queryKeywords.filter((kw) =>
-      kwMatchesField(kw, categoryLower),
-    ).length;
-    score += catMatchCount * 8;
-
-    // 7. Tags / Description match (softer signal)
-    const tagDescMatchCount = queryKeywords.filter((kw) =>
-      kwMatchesField(kw, tagsLower) || kwMatchesField(kw, descLower),
-    ).length;
-    score += tagDescMatchCount * 3;
-
-    return score;
-  }
 
   // ─── Private: helpers ─────────────────────────────────────────────────────
 

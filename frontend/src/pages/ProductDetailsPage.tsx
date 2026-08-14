@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { useGetProductDetailsQuery, useCreateReviewMutation, useGetRelatedProductsQuery } from '../store/slices/productApiSlice';
-import { useGetSettingsQuery } from '../store/slices/settingsApiSlice';
 import { addToCart } from '../store/slices/cartSlice';
 import { toggleWishlist } from '../store/slices/wishlistSlice';
 import type { RootState } from '../store/store';
@@ -13,6 +12,8 @@ import ProductCard from '../components/product/ProductCard';
 import { getColorHex } from '../utils/colorMap';
 import { getProductId } from '../lib/product';
 import { useCurrency } from '../context/CurrencyContext';
+import { useDiscount } from '../context/DiscountContext';
+import DiscountBadge from '../components/common/DiscountBadge';
 import { normalizeSlug } from '../config/categories';
 import TrustBadgesBar from '../components/layout/TrustBadgesBar';
 import QuantitySelector from '../components/QuantitySelector';
@@ -146,8 +147,37 @@ const ProductFeaturesAndSpecs = ({ product }: { product: any }) => {
   );
 };
 
+const ProductDetailsSkeleton = () => (
+  <div className="bg-[hsl(var(--background))] min-h-screen text-[hsl(var(--foreground))] animate-pulse">
+    <div className="border-b border-zinc-200 dark:border-zinc-800">
+      <div className="max-w-[1400px] mx-auto px-8 lg:px-12 py-4">
+        <div className="h-4 w-64 bg-zinc-200 dark:bg-zinc-800 rounded" />
+      </div>
+    </div>
+    <div className="max-w-[1400px] mx-auto px-8 lg:px-12 py-10">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+        <div className="lg:col-span-7 space-y-4">
+          <div className="aspect-[4/3] w-full bg-zinc-200 dark:bg-zinc-800 rounded-2xl" />
+          <div className="flex gap-3">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="w-20 h-20 bg-zinc-200 dark:bg-zinc-800 rounded-xl" />
+            ))}
+          </div>
+        </div>
+        <div className="lg:col-span-5 space-y-6">
+          <div className="h-8 w-3/4 bg-zinc-200 dark:bg-zinc-800 rounded" />
+          <div className="h-10 w-1/3 bg-zinc-200 dark:bg-zinc-800 rounded" />
+          <div className="h-12 w-full bg-zinc-200 dark:bg-zinc-800 rounded-full" />
+          <div className="h-32 w-full bg-zinc-200 dark:bg-zinc-800 rounded-2xl" />
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
 const ProductDetailsPage = () => {
   const { formatCurrency } = useCurrency();
+  const { getOriginalPrice, getDiscountPercent } = useDiscount();
   const { id } = useParams();
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -159,9 +189,7 @@ const ProductDetailsPage = () => {
   const wishlistItems = useSelector((state: RootState) => state.wishlist.wishlistItems);
   const productId = product ? getProductId(product) || id || '' : '';
   const isWishlisted = product ? wishlistItems.some((item: any) => item._id === productId) : false;
-  
-  const { data: settingsData } = useGetSettingsQuery(undefined);
-  const gstPercentage = settingsData?.settings?.gstPercentage || 18;
+
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedColor, setSelectedColor] = useState('');
   const [qty, setQty] = useState(1);
@@ -225,7 +253,7 @@ const ProductDetailsPage = () => {
   }, [dispatch]);
 
   if (isLoading) {
-    return <Loader />;
+    return <ProductDetailsSkeleton />;
   }
 
   if (error || !product) {
@@ -264,12 +292,12 @@ const ProductDetailsPage = () => {
   const productName = String(product?.name || product?.title || '').trim();
 
   const currentSellingPrice = Number(product.discountPrice || product.price || 0);
-  const rawOriginalPrice = product.originalPrice || product.mrp || (product.discountPrice && product.price > product.discountPrice ? product.price : undefined);
+  const rawOriginalPrice = product.originalPrice || product.mrp;
   const displayOriginalPrice = rawOriginalPrice && Number(rawOriginalPrice) > currentSellingPrice
     ? Number(rawOriginalPrice)
-    : Math.round(currentSellingPrice * 1.3);
+    : getOriginalPrice(currentSellingPrice);
 
-  const discountPct = Math.round(((displayOriginalPrice - currentSellingPrice) / displayOriginalPrice) * 100);
+  const discountPct = getDiscountPercent(currentSellingPrice, displayOriginalPrice);
 
   const handleAddToCart = () => {
     const activeColor = selectedColor || (colors && colors.length > 0 ? colors[0] : 'Default');
@@ -486,10 +514,7 @@ const ProductDetailsPage = () => {
 
                   {/* Badges */}
                   <div className="absolute top-3 left-3 flex flex-col gap-2 z-10">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-xs font-bold border border-emerald-200 dark:border-emerald-500/20">
-                      <span className="text-[10px]">💵</span>
-                      {gstPercentage}% GST
-                    </span>
+                    <DiscountBadge percent={discountPct} variant="emerald" showIcon />
                   </div>
 
                   {/* Zoom hint */}
@@ -581,12 +606,12 @@ const ProductDetailsPage = () => {
                   <span className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white">
                     {formatCurrency(currentSellingPrice)}
                   </span>
-                  <span className="text-base text-zinc-400 dark:text-zinc-500 line-through font-medium">
-                    {formatCurrency(displayOriginalPrice)}
-                  </span>
-                  <span className="px-2.5 py-1 rounded-md bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40 text-xs font-bold">
-                    Bulk Rate
-                  </span>
+                  {displayOriginalPrice > currentSellingPrice && (
+                    <span className="text-base text-zinc-400 dark:text-zinc-500 line-through font-medium tabular-nums">
+                      {formatCurrency(displayOriginalPrice)}
+                    </span>
+                  )}
+                  <DiscountBadge percent={discountPct} variant="emerald" />
                 </div>
               </div>
             </div>
@@ -652,7 +677,7 @@ const ProductDetailsPage = () => {
           </div>
         </div>
       )}
-       {/* Image Lightbox */}
+      {/* Image Lightbox */}
       <div
         className={`fixed inset-0 z-[80] flex items-center justify-center transition-opacity duration-300 ${lightboxOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
           }`}

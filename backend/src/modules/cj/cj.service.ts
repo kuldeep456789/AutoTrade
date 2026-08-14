@@ -4,6 +4,7 @@ import {
   InternalServerErrorException,
   Logger,
   NotFoundException,
+  OnModuleInit,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -54,13 +55,13 @@ const legacyCategoryKey = (parentCat: string, subCat: string) =>
 import { SearchIndexService } from '../search/search-index.service';
 
 @Injectable()
-export class CjService {
+export class CjService implements OnModuleInit {
   private readonly logger = new Logger(CjService.name);
 
   // ── In-memory warehouse cache: avoids repeated Upstash HTTP requests ──
   private warehouseCache: any[] = [];
   private warehouseLoadedAt = 0;
-  private static readonly WAREHOUSE_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+  private static readonly WAREHOUSE_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
   constructor(
     private readonly redisService: RedisService,
@@ -70,6 +71,17 @@ export class CjService {
     @InjectModel(Product.name)
     private readonly productModel?: Model<ProductDocument>,
   ) { }
+
+  async onModuleInit() {
+    this.logger.log('[CJ] Warming in-memory catalog cache on startup...');
+    this.getWarehouseCache()
+      .then((catalog) => {
+        this.logger.log(`[CJ] Catalog warmed successfully: ${catalog.length} products available.`);
+      })
+      .catch((err) => {
+        this.logger.warn(`[CJ] Catalog warming error: ${err?.message ?? err}`);
+      });
+  }
 
   /**
    * Resolve and get CJ Dropping Access Token.
@@ -691,19 +703,29 @@ export class CjService {
 
   /**
    * Retrieve product by PID from Redis index/cache, falling back to CJ Dropshipping API if missing.
+   *
+   * Write policy: only warehouse:product:{pid} is written on an individual miss.
+   * The legacy product:{pid} key is still read for backward compatibility but is
+   * NOT written here — the catalog sync writes both keys in bulk via batchWriteToRedis.
    */
   async getProductById(pid: string) {
     if (!pid) throw new BadRequestException('product id is required');
 
-    // 1. Check direct warehouse key first (optimal Redis usage)
+    // 1. Check primary warehouse key
     const warehouseKey = `warehouse:product:${pid}`;
     let product = await this.redisService.getJson<any>(warehouseKey);
-    if (product) return product;
+    if (product) {
+      this.logger.log(`[Product] Cache HIT warehouse:product:${pid}`);
+      return product;
+    }
 
-    // 2. Check legacy cache key for backward compatibility
+    // 2. Legacy read fallback for backward compatibility (no write to this key from this path)
     const legacyCacheKey = `product:${pid}`;
     product = await this.redisService.getJson<any>(legacyCacheKey);
-    if (product) return product;
+    if (product) {
+      this.logger.log(`[Product] Legacy cache HIT product:${pid}`);
+      return product;
+    }
 
     // 3. Fast Warehouse Catalog Search — uses the in-memory 5-minute cache
     // instead of re-fetching the full 14k+ product array from Upstash on
@@ -723,14 +745,10 @@ export class CjService {
       );
 
       if (matched) {
-        this.logger.log(`[CJ] Warehouse catalog HIT for product detail ${pid}`);
+        this.logger.log(`[Product] Warehouse in-memory HIT for product:${pid}`);
+        // Write only to the primary warehouse key. Legacy key is written by catalog sync.
         await this.redisService.setJson(
           warehouseKey,
-          matched,
-          CJ_CONFIG.CACHE_TTL.PRODUCT_DETAIL,
-        );
-        await this.redisService.setJson(
-          legacyCacheKey,
           matched,
           CJ_CONFIG.CACHE_TTL.PRODUCT_DETAIL,
         );
@@ -759,16 +777,13 @@ export class CjService {
 
     try {
       const enriched = await this.enrichWithVariants(matchedProduct, pid);
-      await this.redisService.setJson(
-        legacyCacheKey,
-        enriched,
-        CJ_CONFIG.CACHE_TTL.PRODUCT_DETAIL,
-      );
+      // Write only to the primary warehouse key.
       await this.redisService.setJson(
         warehouseKey,
         enriched,
         CJ_CONFIG.CACHE_TTL.PRODUCT_DETAIL,
       );
+      this.logger.log(`[Product] Cache WRITE warehouse:product:${pid}`);
       return enriched;
     } catch (err: any) {
       this.logger.warn(
@@ -776,16 +791,13 @@ export class CjService {
       );
     }
 
-    await this.redisService.setJson(
-      legacyCacheKey,
-      matchedProduct,
-      CJ_CONFIG.CACHE_TTL.PRODUCT_DETAIL,
-    );
+    // Enrichment failed — still write the base product to the primary key only.
     await this.redisService.setJson(
       warehouseKey,
       matchedProduct,
       CJ_CONFIG.CACHE_TTL.PRODUCT_DETAIL,
     );
+    this.logger.log(`[Product] Cache WRITE warehouse:product:${pid} (base, no variants)`);
     return matchedProduct;
   }
 
@@ -1124,7 +1136,7 @@ export class CjService {
    */
   async getWarehouseProducts(
     pageNum = 1,
-    pageSize = 20,
+    pageSize = 24,
     categoryId?: string,
     subcategoryName?: string,
     collectionType?: string,
@@ -1186,8 +1198,9 @@ export class CjService {
   }
 
   /**
-   * In-memory warehouse cache — returns the full warehouse:all array,
-   * hitting Redis only when cache is empty or older than 5 minutes.
+   * In-memory warehouse cache — returns the full catalog array.
+   * Hits Redis warehouse:all first; if missing or empty, loads from local MongoDB store.
+   * Uses a 10-minute in-memory cache so reads are instant (< 5ms) without hitting Upstash or CJ.
    */
   private async getWarehouseCache(): Promise<any[]> {
     const now = Date.now();
@@ -1198,10 +1211,30 @@ export class CjService {
       return this.warehouseCache;
     }
 
-    const warehouse =
+    let warehouse =
       (await this.redisService.getJson<any[]>(WAREHOUSE_KEY_ALL)) ??
       (await this.redisService.getJson<any[]>(WAREHOUSE_LEGACY_ALL)) ??
       [];
+
+    // If Redis does not have the catalog, load directly from local MongoDB store
+    if ((!warehouse || warehouse.length === 0) && this.productModel) {
+      try {
+        this.logger.log(
+          '[CJ] Warehouse key missing in Redis — loading catalog from MongoDB store...',
+        );
+        const mongoProducts = await this.productModel.find().lean().exec();
+        if (mongoProducts && mongoProducts.length > 0) {
+          warehouse = mongoProducts;
+          this.logger.log(
+            `[CJ] Loaded ${warehouse.length} products from MongoDB into warehouse cache`,
+          );
+        }
+      } catch (err: any) {
+        this.logger.warn(
+          `[CJ] Failed to load warehouse from MongoDB: ${err?.message ?? err}`,
+        );
+      }
+    }
 
     if (Array.isArray(warehouse) && warehouse.length > 0) {
       this.warehouseCache = warehouse;
@@ -1287,9 +1320,11 @@ export class CjService {
       // --- Batch Write to Redis & Update Warehouse Indexing ---
       const writeOps: { key: string; value: any; ttl?: number }[] = [];
 
-      // 1. Global warehouse lists
+      // 1. Global warehouse list — warehouse:all is the single source of truth.
+      // The legacy products:all key is still read as a fallback in getWarehouseCache
+      // for any data that was cached before this change, but we no longer write it
+      // here. It will expire naturally (TTL: WEEKLY).
       writeOps.push({ key: WAREHOUSE_KEY_ALL, value: balancedAll });
-      writeOps.push({ key: WAREHOUSE_LEGACY_ALL, value: balancedAll }); // Keep legacy products:all updated
 
       // 2. Individual product details and keyword/search indexing maps
       const keywordMap = new Map<string, string[]>();
@@ -1850,71 +1885,15 @@ export class CjService {
   }
 
   /**
-   * Post-sync integrity check: confirms per-product warehouse keys were
-   * written and reports any PIDs that are missing. If keys are missing, it
-   * re-writes them so the reader never falls back to a full warehouse scan.
+   * Post-sync integrity check. The expensive KEYS scan was removed because at
+   * 14k+ products it scans the entire Upstash keyspace on every sync, consuming
+   * thousands of quota units. batchWriteToRedis already returns ok/failed counts
+   * so write failures are already surfaced. This method now only logs the count.
    */
   private async verifyWarehouseIntegrity(products: any[]) {
-    try {
-      const pids = products
-        .map((p) => String(p.pid || p.id || ''))
-        .filter(Boolean);
-
-      const productKeys = await this.redisService.keys('warehouse:product:*');
-      const storedPids = new Set(
-        productKeys.map((key) => key.replace('warehouse:product:', '')),
-      );
-
-      const legacyProductKeys = await this.redisService.keys('product:*');
-
-      const missingPids = pids.filter((pid) => !storedPids.has(pid));
-
-      const warehouseAll = await this.redisService.getJson<any[]>(
-        WAREHOUSE_KEY_ALL,
-      );
-      const warehouseAllCount = Array.isArray(warehouseAll)
-        ? warehouseAll.length
-        : 0;
-
-      this.logger.log(
-        `[Integrity] Products Synced: ${pids.length} | warehouse:product keys: ${storedPids.size} | product keys: ${legacyProductKeys.length} | warehouse:all: ${warehouseAllCount} | Missing keys: ${missingPids.length}`,
-      );
-
-      if (missingPids.length > 0) {
-        this.logger.warn(
-          `[Integrity] Missing per-product keys (${missingPids.length}): ${missingPids.slice(0, 10).join(', ')}${missingPids.length > 10 ? '...' : ''}`,
-        );
-
-        const productMap = new Map(products.map((p) => [String(p.pid || p.id), p]));
-        const missingOps = missingPids
-          .map((pid) => {
-            const product = productMap.get(pid);
-            return product
-              ? [
-                { key: `warehouse:product:${pid}`, value: product },
-                { key: `product:${pid}`, value: product },
-              ]
-              : [];
-          })
-          .flat();
-
-        if (missingOps.length > 0) {
-          const { ok, failed } = await this.redisService.pipelineSetJson(
-            missingOps.map((op) => ({
-              ...op,
-              ttlSeconds: REDIS_TTL.WEEKLY,
-            })),
-          );
-          this.logger.log(
-            `[Integrity] Re-wrote ${ok} missing per-product keys${failed > 0 ? ` (${failed} still failed)` : ''}`,
-          );
-        }
-      }
-    } catch (err: any) {
-      this.logger.warn(
-        `[Integrity] Verification failed: ${err?.message ?? err}`,
-      );
-    }
+    this.logger.log(
+      `[Integrity] Catalog sync complete — total products in warehouse: ${products.length}`,
+    );
   }
 
   private groupByCategory(products: any[]): Record<string, any[]> {

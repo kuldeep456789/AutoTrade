@@ -116,12 +116,12 @@ export class MailService {
         });
 
         this.logger.log(`Nodemailer sent email to ${to} (Subject: ${subject})`);
-
         return;
       } catch (err: any) {
         this.logger.error(
           `Nodemailer transport error sending to ${to}: ${err?.message}`,
         );
+        throw err;
       }
     }
 

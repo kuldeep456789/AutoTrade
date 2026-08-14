@@ -68,35 +68,51 @@ const Navbar = () => {
   const [unreadNotifications, setUnreadNotifications] = useState(0);
 
   useEffect(() => {
-    if (!userInfo?.accessToken && !(userInfo as any)?.token) {
+    const resolveToken = () =>
+      userInfo?.accessToken ||
+      (userInfo as any)?.token ||
+      localStorage.getItem('token') ||
+      localStorage.getItem('accessToken') ||
+      '';
+
+    const token = resolveToken();
+    if (!token) {
       setUnreadNotifications(0);
       return;
     }
+
+    let isSubscribed = true;
     const fetchNotifications = () => {
-      const token = userInfo?.accessToken || (userInfo as any)?.token || localStorage.getItem('token') || localStorage.getItem('accessToken') || '';
+      const currentToken = resolveToken();
+      if (!currentToken) {
+        if (isSubscribed) setUnreadNotifications(0);
+        return;
+      }
+
       fetch(`/api/contact/me`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        headers: { Authorization: `Bearer ${currentToken}` },
       })
         .then((res) => {
           if (res.status === 401) {
-            setUnreadNotifications(0);
-            return [];
+            if (isSubscribed) setUnreadNotifications(0);
+            return null;
           }
           return res.json();
         })
         .then((data) => {
-          if (Array.isArray(data)) {
+          if (isSubscribed && Array.isArray(data)) {
             setUnreadNotifications(data.length);
-          } else {
-            setUnreadNotifications(0);
           }
         })
         .catch(() => { });
     };
 
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 2000);
-    return () => clearInterval(interval);
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => {
+      isSubscribed = false;
+      clearInterval(interval);
+    };
   }, [userInfo]);
 
   // Scroll shadow

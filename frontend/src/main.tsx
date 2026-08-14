@@ -7,6 +7,7 @@ import App from './App.tsx'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from './context/ThemeContext'
 import { CurrencyProvider } from './context/CurrencyContext'
+import { DiscountProvider } from './context/DiscountContext'
 
 import store from './store/store.ts'
 
@@ -27,9 +28,11 @@ createRoot(document.getElementById('root')!).render(
       <Provider store={store}>
         <QueryClientProvider client={queryClient}>
           <ThemeProvider>
-          <CurrencyProvider>
-            <App />
-          </CurrencyProvider>
+            <CurrencyProvider>
+              <DiscountProvider>
+                <App />
+              </DiscountProvider>
+            </CurrencyProvider>
         <Toaster
           position="bottom-center"
           toastOptions={{

@@ -52,7 +52,8 @@ const ForgotPasswordPage = () => {
     try {
       await sendOtp({ email: emailStr }).unwrap();
       setStep('otp');
-      setCountdown(30);
+      setCountdown(60);
+      setOtpValues(['', '', '', '', '', '']);
       toast.success('OTP sent to your email');
     } catch (err: any) {
       setErrorMessage(err?.data?.message || 'Failed to send OTP');
@@ -180,11 +181,14 @@ const ForgotPasswordPage = () => {
                   Verify OTP
                 </AuthButton>
               </div>
-              <div className="text-center">
+              <p className="text-[12px] text-zinc-500 text-center dark:text-zinc-400 mt-2">
+                Code is valid for <strong className="text-zinc-700 dark:text-zinc-200">10 minutes</strong>. If you don't see it in your inbox, please check your <strong className="text-zinc-700 dark:text-zinc-200">Spam or Junk folder</strong>.
+              </p>
+              <div className="text-center pt-1">
                 {countdown > 0 ? (
-                  <span className="text-[13px] text-zinc-400">Resend in {countdown}s</span>
+                  <span className="text-[12px] text-zinc-400 font-medium">Resend OTP in {countdown}s</span>
                 ) : (
-                  <button type="button" onClick={handleSendOtp as any} className="text-[13px] font-semibold text-orange-500 hover:text-orange-600 transition-colors cursor-pointer">Resend OTP</button>
+                  <button type="button" onClick={handleSendOtp as any} className="text-[12px] font-bold text-orange-500 hover:text-orange-600 transition-colors cursor-pointer">Resend OTP</button>
                 )}
               </div>
             </div>

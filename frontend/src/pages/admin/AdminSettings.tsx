@@ -5,16 +5,18 @@ import { Save, Loader2, Coins, ShieldCheck, Eye, EyeOff, KeyRound } from 'lucide
 import { useAdminCurrency } from '../../hooks/useAdminCurrency';
 import { type CurrencyCode } from '../../context/CurrencyContext';
 
+import { useDiscount } from '../../context/DiscountContext';
+
 const AdminSettings = () => {
   const { data: settings, isLoading } = useGetSettingsQuery(undefined);
   const [updateSettings, { isLoading: isUpdating }] = useUpdateSettingsMutation();
   const { adminCurrency, updateAdminCurrency } = useAdminCurrency();
+  const { discountPercentage, setDiscountPercentage } = useDiscount();
 
   const [formData, setFormData] = useState({
     currencyRateUSD: 0.012,
     currencyRateEUR: 0.011,
     currencyRateINR: 1,
-    gstPercentage: 18,
     adminSecretCode: 'secret_admin_123',
   });
 
@@ -27,7 +29,6 @@ const AdminSettings = () => {
         currencyRateUSD: data.currencyRateUSD ?? 0.012,
         currencyRateEUR: data.currencyRateEUR ?? 0.011,
         currencyRateINR: data.currencyRateINR ?? 1,
-        gstPercentage: data.gstPercentage ?? 18,
         adminSecretCode: data.adminSecretCode || 'secret_admin_123',
       });
     }
@@ -48,8 +49,8 @@ const AdminSettings = () => {
         currencyRateUSD: Number(formData.currencyRateUSD),
         currencyRateEUR: Number(formData.currencyRateEUR),
         currencyRateINR: Number(formData.currencyRateINR),
-        gstPercentage: Number(formData.gstPercentage),
         adminSecretCode: String(formData.adminSecretCode || '').trim(),
+        defaultDiscountPct: Number(discountPercentage),
       };
       await updateSettings(payload).unwrap();
       toast.success('Global settings saved successfully.');
@@ -205,20 +206,24 @@ const AdminSettings = () => {
                 required
               />
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                GST Percentage (%)
+                Global Default OFF Discount Badge Rate (%)
               </label>
-              <input
-                type="number"
-                step="0.1"
-                name="gstPercentage"
-                value={formData.gstPercentage}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-zinc-900 dark:text-white"
-                required
-              />
+              <select
+                value={discountPercentage}
+                onChange={(e) => setDiscountPercentage(Number(e.target.value))}
+                className="w-full px-4 py-2.5 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-zinc-900 dark:text-white font-medium cursor-pointer"
+              >
+                <option value={10}>10% OFF Badge</option>
+                <option value={15}>15% OFF Badge</option>
+                <option value={20}>20% OFF Badge (Default)</option>
+                <option value={25}>25% OFF Badge</option>
+                <option value={30}>30% OFF Badge</option>
+                <option value={40}>40% OFF Badge</option>
+                <option value={50}>50% OFF Badge</option>
+              </select>
             </div>
           </div>
 

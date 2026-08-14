@@ -61,6 +61,9 @@ export class Settings {
 
   @Prop({ default: 'secret_admin_123' })
   adminSecretCode: string;
+
+  @Prop({ default: 20 })
+  defaultDiscountPct: number;
 }
 
 export const SettingsSchema = SchemaFactory.createForClass(Settings);

@@ -55,7 +55,11 @@ const STORAGE_KEY = 'autotrade_currency';
 
 export const CurrencyProvider = ({ children }: { children: ReactNode }) => {
   const [currency, setCurrencyState] = useState<CurrencyCode>('INR');
-  const { data: settings } = useGetSettingsQuery(undefined);
+  const { data: settingsData } = useGetSettingsQuery(undefined);
+
+  const settings = useMemo(() => {
+    return (settingsData as any)?.settings || settingsData;
+  }, [settingsData]);
 
   const dynamicCurrencies = useMemo(() => ({
     INR: { ...CURRENCIES.INR, rate: settings?.currencyRateINR ?? CURRENCIES.INR.rate },
