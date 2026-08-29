@@ -1,6 +1,29 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { ShoppingBag, Heart, UserRound, X, Search, Menu, Package, MapPin, Settings, LogOut, Loader2, Shield, Bell } from 'lucide-react';
+import {
+  ShoppingBag,
+  Heart,
+  UserRound,
+  X,
+  Search,
+  Menu,
+  Package,
+  MapPin,
+  Settings,
+  LogOut,
+  Loader2,
+  Shield,
+  Bell,
+  Home,
+  LayoutGrid,
+  Car,
+  Armchair,
+  Wrench,
+  Bike,
+  Cpu,
+  Cog,
+  ChevronRight,
+} from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { RootState } from '../../store/store';
@@ -18,6 +41,15 @@ import ThemeToggle from '../theme/ThemeToggle';
 import { useTheme } from '../../context/ThemeContext';
 import { useCurrency } from '../../context/CurrencyContext';
 import { NAV_CATEGORIES as navCategories } from '../../config/categories';
+
+const CATEGORY_ICONS: Record<string, any> = {
+  'Exterior Accessories': Car,
+  'Interior Accessories': Armchair,
+  'Tools, Maintenance & Care': Wrench,
+  'Car Electronics': Cpu,
+  'Motorcycle Accessories & Parts': Bike,
+  'Auto Replacement Parts': Cog,
+};
 
 const Navbar = () => {
   const { theme, toggleTheme } = useTheme();
@@ -48,9 +80,10 @@ const Navbar = () => {
       setSearchQuery('');
     }
   }, [location.pathname, location.search]);
+
   const [searchFocused, setSearchFocused] = useState(false);
+  const [mobileSearchFocused, setMobileSearchFocused] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [miniCartOpen, setMiniCartOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -59,6 +92,8 @@ const Navbar = () => {
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchContainerRef = useRef<HTMLDivElement>(null);
+  const mobileSearchInputRef = useRef<HTMLInputElement>(null);
+  const mobileSearchContainerRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const suggestionListRef = useRef<any[]>([]);
   const doSearchRef = useRef<((q: string) => void) | undefined>(undefined);
@@ -67,34 +102,40 @@ const Navbar = () => {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
 
+  // Close mobile drawer and search focus on route change
   useEffect(() => {
-    const resolveToken = () =>
-      userInfo?.accessToken ||
-      (userInfo as any)?.token ||
-      localStorage.getItem('token') ||
-      localStorage.getItem('accessToken') ||
-      '';
+    setMobileMenuOpen(false);
+    setMobileSearchFocused(false);
+    setSearchFocused(false);
+  }, [location.pathname]);
 
-    const token = resolveToken();
+  useEffect(() => {
+    const token = userInfo?.accessToken || (userInfo as any)?.token;
     if (!token) {
       setUnreadNotifications(0);
       return;
     }
 
+    let intervalId: ReturnType<typeof setInterval> | null = null;
     let isSubscribed = true;
+
     const fetchNotifications = () => {
-      const currentToken = resolveToken();
+      const currentToken = userInfo?.accessToken || (userInfo as any)?.token;
       if (!currentToken) {
         if (isSubscribed) setUnreadNotifications(0);
         return;
       }
 
-      fetch(`/api/contact/me`, {
+      fetch('/api/contact/me', {
         headers: { Authorization: `Bearer ${currentToken}` },
       })
         .then((res) => {
           if (res.status === 401) {
             if (isSubscribed) setUnreadNotifications(0);
+            if (intervalId !== null) {
+              clearInterval(intervalId);
+              intervalId = null;
+            }
             return null;
           }
           return res.json();
@@ -104,14 +145,15 @@ const Navbar = () => {
             setUnreadNotifications(data.length);
           }
         })
-        .catch(() => { });
+        .catch(() => {});
     };
 
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 30000);
+    intervalId = setInterval(fetchNotifications, 30000);
+
     return () => {
       isSubscribed = false;
-      clearInterval(interval);
+      if (intervalId !== null) clearInterval(intervalId);
     };
   }, [userInfo]);
 
@@ -122,12 +164,14 @@ const Navbar = () => {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-
   // Close search suggestions on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
         setSearchFocused(false);
+      }
+      if (mobileSearchContainerRef.current && !mobileSearchContainerRef.current.contains(e.target as Node)) {
+        setMobileSearchFocused(false);
       }
     };
     document.addEventListener('mousedown', handler);
@@ -148,31 +192,44 @@ const Navbar = () => {
 
   // Keyboard navigation
   useEffect(() => {
-    if (!searchFocused) return;
+    if (!searchFocused && !mobileSearchFocused) return;
     const handler = (e: KeyboardEvent) => {
       const list = suggestionListRef.current;
-      if (e.key === 'Escape') { setSearchFocused(false); searchInputRef.current?.blur(); return; }
-      if (e.key === 'ArrowDown') { e.preventDefault(); setSelectedSuggestionIdx((i) => Math.min(i + 1, list.length - 1)); return; }
-      if (e.key === 'ArrowUp') { e.preventDefault(); setSelectedSuggestionIdx((i) => Math.max(i - 1, -1)); return; }
+      if (e.key === 'Escape') {
+        setSearchFocused(false);
+        setMobileSearchFocused(false);
+        searchInputRef.current?.blur();
+        mobileSearchInputRef.current?.blur();
+        return;
+      }
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelectedSuggestionIdx((i) => Math.min(i + 1, list.length - 1));
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelectedSuggestionIdx((i) => Math.max(i - 1, -1));
+        return;
+      }
       if (e.key === 'Enter') {
         if (selectedSuggestionIdx >= 0) {
           e.preventDefault();
           const item = list[selectedSuggestionIdx];
-          if (item.type === 'recent' || item.type === 'trending') {
-            setSearchQuery(item.label);
-            doSearchRef.current?.(item.label);
-          } else if ((item.type === 'product' || item.type === 'category') && item.to) {
-            navigate(item.to);
-            setSearchFocused(false);
-            setSelectedSuggestionIdx(-1);
+          if (item.type === 'category' || item.type === 'product') {
+            if (item.to) {
+              navigate(item.to);
+              setSearchFocused(false);
+              setMobileSearchFocused(false);
+              setSelectedSuggestionIdx(-1);
+            }
           }
         }
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [searchFocused, selectedSuggestionIdx, navigate]);
-
+  }, [searchFocused, mobileSearchFocused, selectedSuggestionIdx, navigate]);
 
   const [debouncedQuery, setDebouncedQuery] = useState('');
 
@@ -189,21 +246,26 @@ const Navbar = () => {
     { skip: debouncedQuery.trim().length < 3 }
   );
 
-  // const products = searchResults?.products || [];
   const products = searchResults?.products?.slice(0, 5) ?? [];
 
   // Build suggestion list
-  const suggestionList: { type: string; label: string; to?: string; productId?: string; image?: string; price?: string; category?: string }[] = [];
+  const suggestionList: {
+    type: string;
+    label: string;
+    to?: string;
+    productId?: string;
+    image?: string;
+    price?: string;
+    category?: string;
+  }[] = [];
+
   if (debouncedQuery.length >= 2) {
     const qLower = debouncedQuery.toLowerCase();
     const qTokens = qLower.split(/\s+/).filter(Boolean);
 
-
     const tokenPrefixMatchAll = (label: string): boolean => {
       const labelTokens = label.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
-      return qTokens.every((qt) =>
-        labelTokens.some((lt) => lt === qt || lt.startsWith(qt)),
-      );
+      return qTokens.every((qt) => labelTokens.some((lt) => lt === qt || lt.startsWith(qt)));
     };
 
     navCategories.forEach((cat) => {
@@ -227,7 +289,12 @@ const Navbar = () => {
 
     products.forEach((p: any) => {
       const getProductPrice = (item: any) => {
-        const num = (v: any) => (typeof v === 'number' && !isNaN(v) && v > 0 ? v : typeof v === 'string' && !isNaN(Number(v)) && Number(v) > 0 ? Number(v) : 0);
+        const num = (v: any) =>
+          typeof v === 'number' && !isNaN(v) && v > 0
+            ? v
+            : typeof v === 'string' && !isNaN(Number(v)) && Number(v) > 0
+            ? Number(v)
+            : 0;
         const discount = num(item.discountPrice);
         const price = num(item.price);
         const sell = num(item.sellPrice);
@@ -258,20 +325,24 @@ const Navbar = () => {
   }
   suggestionListRef.current = suggestionList;
 
-  const doSearchRefValue = useCallback((q: string) => {
-    const trimmed = q.trim();
-    if (!trimmed) return;
-    navigate(`/search?q=${encodeURIComponent(trimmed)}`);
-    setSearchFocused(false);
-    setMobileSearchOpen(false);
-    setSelectedSuggestionIdx(-1);
-  }, [navigate]);
+  const doSearchRefValue = useCallback(
+    (q: string) => {
+      const trimmed = q.trim();
+      if (!trimmed) return;
+      navigate(`/search?q=${encodeURIComponent(trimmed)}`);
+      setSearchFocused(false);
+      setMobileSearchFocused(false);
+      setSelectedSuggestionIdx(-1);
+    },
+    [navigate]
+  );
   doSearchRef.current = doSearchRefValue;
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     doSearchRefValue(searchQuery);
   };
+
   const highlightMatch = (text: string) => {
     if (!debouncedQuery || debouncedQuery.length < 2) return text;
     const idx = text.toLowerCase().indexOf(debouncedQuery.toLowerCase());
@@ -280,41 +351,45 @@ const Navbar = () => {
     return (
       <>
         {text.slice(0, idx)}
-        {match && <mark className="bg-yellow-200 text-black px-0.5 rounded">{match}</mark>}
+        {match && <mark className="bg-orange-500/30 text-[#FF7A00] font-bold px-0.5 rounded">{match}</mark>}
         {text.slice(idx + debouncedQuery.length)}
       </>
     );
   };
 
-
-
   return (
     <>
-      <header className={`fixed top-0 left-0 right-0 z-50 w-full bg-black text-white transition-all duration-300 font-sans border-b border-zinc-800 ${scrolled ? 'shadow-xl shadow-black/40' : 'shadow-none'}`}>
-        <div className="flex items-center justify-between h-[80px] max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-10 gap-6">
-
-          {/* Left - Logo (Enlarged) */}
+      <header
+        className={`fixed top-0 left-0 right-0 z-50 w-full bg-black text-white transition-all duration-300 font-sans border-b border-zinc-800/80 ${
+          scrolled ? 'shadow-2xl shadow-black/70' : 'shadow-none'
+        }`}
+      >
+        {/* ───────── 1. DESKTOP HEADER (hidden md:flex) ───────── */}
+        <div className="hidden md:flex items-center justify-between h-[80px] max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-10 gap-6">
+          {/* Desktop Left - Logo */}
           <Link to="/" className="shrink-0 flex items-center group py-1">
             <img
               src="/img/logo.png"
-              alt="AutoTrade"
+              alt="AutoTrade Pro"
               className="h-14 sm:h-16 md:h-[64px] w-auto object-contain transition-transform duration-200 group-hover:scale-105"
             />
           </Link>
 
-          {/* Middle - Search Bar + Currency Selector */}
-          <div className="hidden md:flex items-center gap-2.5 flex-1 max-w-[500px] lg:max-w-[700px] mx-auto">
+          {/* Desktop Middle - Search Bar + Currency Selector */}
+          <div className="flex items-center gap-2.5 flex-1 max-w-[500px] lg:max-w-[700px] mx-auto">
             <div ref={searchContainerRef} className="flex-1 relative">
-              <form
-                onSubmit={handleSearchSubmit}
-                className="relative w-full"
-              >
-                <div className={`flex items-center rounded-lg border transition-all duration-200 h-[42px] bg-zinc-100 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 focus-within:border-orange-500 overflow-hidden`}>
+              <form onSubmit={handleSearchSubmit} className="relative w-full">
+                <div
+                  className={`flex items-center rounded-lg border transition-all duration-200 h-[42px] bg-zinc-100 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 focus-within:border-[#FF7A00] overflow-hidden`}
+                >
                   <input
                     ref={searchInputRef}
                     type="text"
                     value={searchQuery}
-                    onChange={(e) => { setSearchQuery(e.target.value); setSelectedSuggestionIdx(-1); }}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setSelectedSuggestionIdx(-1);
+                    }}
                     onFocus={() => setSearchFocused(true)}
                     placeholder="Search parts, categories..."
                     className="flex-1 bg-transparent text-[13px] px-4 text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-zinc-400 focus:outline-none text-left normal-case"
@@ -330,7 +405,7 @@ const Navbar = () => {
                   )}
                   <button
                     type="submit"
-                    className="bg-orange-500 hover:bg-orange-600 text-white px-4 h-full flex items-center justify-center transition-colors cursor-pointer rounded-r-lg shrink-0"
+                    className="bg-[#FF7A00] hover:bg-[#FF9E00] text-white px-4 h-full flex items-center justify-center transition-colors cursor-pointer rounded-r-lg shrink-0"
                     aria-label="Submit search"
                   >
                     <Search className="h-4 w-4 text-white" strokeWidth={2.5} />
@@ -338,7 +413,7 @@ const Navbar = () => {
                 </div>
               </form>
 
-              {/* Search Suggestions Dropdown */}
+              {/* Desktop Search Suggestions Dropdown */}
               <AnimatePresence>
                 {searchFocused && debouncedQuery.trim().length >= 2 && (
                   <motion.div
@@ -346,18 +421,16 @@ const Navbar = () => {
                     animate={{ opacity: 1, y: 0, scaleY: 1 }}
                     exit={{ opacity: 0, y: -8, scaleY: 0.95 }}
                     transition={{ duration: 0.15 }}
-                    className="absolute top-full mt-2 left-0 right-0 bg-zinc-950 rounded-xl shadow-2xl border border-zinc-800 overflow-hidden z-50"
+                    className="absolute top-full mt-2 left-0 right-0 bg-zinc-950 rounded-xl shadow-2xl border border-zinc-800 overflow-hidden z-50 text-left"
                     style={{ transformOrigin: 'top center' } as React.CSSProperties}
                   >
                     <div className="py-2">
-                      {/* Loading */}
                       {isSearchFetching && (
                         <div className="flex items-center justify-center py-6">
                           <Loader2 className="h-5 w-5 animate-spin text-zinc-400" strokeWidth={1.5} />
                         </div>
                       )}
-                      {/* Results */}
-                      {!isSearchFetching && (suggestionList.length > 0) && (
+                      {!isSearchFetching && suggestionList.length > 0 && (
                         <div>
                           {suggestionList.map((item: any, i: number) => {
                             if (item.type === 'category') {
@@ -365,9 +438,14 @@ const Navbar = () => {
                                 <Link
                                   key={`cat-${item.label}-${i}`}
                                   to={item.to}
-                                  onClick={() => { setSearchFocused(false); setSearchQuery(''); }}
+                                  onClick={() => {
+                                    setSearchFocused(false);
+                                    setSearchQuery('');
+                                  }}
                                   onMouseEnter={() => setSelectedSuggestionIdx(i)}
-                                  className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${selectedSuggestionIdx === i ? 'bg-zinc-800' : 'hover:bg-zinc-900'}`}
+                                  className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
+                                    selectedSuggestionIdx === i ? 'bg-zinc-800' : 'hover:bg-zinc-900'
+                                  }`}
                                 >
                                   <Search className="h-3.5 w-3.5 text-zinc-400 shrink-0" strokeWidth={1.5} />
                                   <span className="text-zinc-200">{highlightMatch(item.label)}</span>
@@ -379,14 +457,19 @@ const Navbar = () => {
                                 <Link
                                   key={`prod-${item.to}-${i}`}
                                   to={item.to}
-                                  onClick={() => { setSearchFocused(false); setSearchQuery(''); }}
+                                  onClick={() => {
+                                    setSearchFocused(false);
+                                    setSearchQuery('');
+                                  }}
                                   onMouseEnter={() => {
                                     setSelectedSuggestionIdx(i);
                                     if (item.productId) {
                                       prefetchProductDetails(item.productId);
                                     }
                                   }}
-                                  className={`flex items-center gap-3 px-4 py-2.5 transition-colors ${selectedSuggestionIdx === i ? 'bg-zinc-800' : 'hover:bg-zinc-900'}`}
+                                  className={`flex items-center gap-3 px-4 py-2.5 transition-colors ${
+                                    selectedSuggestionIdx === i ? 'bg-zinc-800' : 'hover:bg-zinc-900'
+                                  }`}
                                 >
                                   <div className="w-10 h-12 shrink-0 bg-zinc-900 border border-zinc-800 overflow-hidden rounded">
                                     {item.image && (
@@ -399,7 +482,9 @@ const Navbar = () => {
                                     </p>
                                     <p className="text-xs text-zinc-400 mt-0.5 truncate">{item.category}</p>
                                   </div>
-                                  <span className="text-sm font-semibold text-orange-400 shrink-0">{item.price}</span>
+                                  <span className="text-sm font-semibold text-orange-400 shrink-0">
+                                    {item.price}
+                                  </span>
                                 </Link>
                               );
                             }
@@ -407,7 +492,6 @@ const Navbar = () => {
                           })}
                         </div>
                       )}
-                      {/* Empty */}
                       {!isSearchFetching && products.length === 0 && debouncedQuery.length >= 2 && (
                         <div className="px-4 py-8 text-center">
                           <p className="text-sm text-zinc-400">No products found for "{debouncedQuery}"</p>
@@ -419,15 +503,17 @@ const Navbar = () => {
               </AnimatePresence>
             </div>
 
-            {/* Currency Selector directly on the right of Search Bar */}
             <CurrencySelector />
           </div>
 
-          {/* Right - Actions */}
-          <div className="flex items-center gap-0.5 sm:gap-1 lg:gap-1.5 shrink-0">
-
-            {/* 1. Wishlist */}
-            <Link to="/wishlist" className="hidden md:flex relative items-center justify-center w-11 h-11 hover:bg-zinc-800 rounded-full transition-colors group text-zinc-300 hover:text-white">
+          {/* Desktop Right - Actions */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {/* Wishlist */}
+            <Link
+              to="/wishlist"
+              className="relative flex items-center justify-center w-11 h-11 hover:bg-zinc-800 rounded-full transition-colors group text-zinc-300 hover:text-white"
+              aria-label="Wishlist"
+            >
               <Heart className="h-6 w-6 group-hover:scale-105 transition-transform duration-200" strokeWidth={1.5} />
               {wishlistCount > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 h-[18px] w-[18px] bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full shadow-sm">
@@ -436,21 +522,24 @@ const Navbar = () => {
               )}
             </Link>
 
-            {/* 2. Cart */}
+            {/* Cart */}
             <button
               onClick={() => setMiniCartOpen(true)}
               className="relative flex items-center justify-center w-11 h-11 hover:bg-zinc-800 rounded-full transition-colors group cursor-pointer text-zinc-300 hover:text-white"
               aria-label="Open cart"
             >
-              <ShoppingBag className="h-6 w-6 group-hover:scale-105 transition-transform duration-200" strokeWidth={1.5} />
+              <ShoppingBag
+                className="h-6 w-6 group-hover:scale-105 transition-transform duration-200"
+                strokeWidth={1.5}
+              />
               {cartCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] px-1 h-[18px] bg-[#f97316] text-white text-[10px] font-bold flex items-center justify-center rounded-full shadow-sm">
+                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] px-1 h-[18px] bg-[#FF7A00] text-white text-[10px] font-bold flex items-center justify-center rounded-full shadow-sm">
                   {cartCount > 99 ? '99+' : cartCount}
                 </span>
               )}
             </button>
 
-            {/* 3. Notifications */}
+            {/* Notifications */}
             {userInfo && (
               <Link
                 to="/account?tab=notifications"
@@ -459,22 +548,26 @@ const Navbar = () => {
               >
                 <Bell className="h-6 w-6 group-hover:scale-105 transition-transform duration-200" strokeWidth={1.5} />
                 {unreadNotifications > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 min-w-[18px] px-1 h-[18px] bg-[#f97316] text-white text-[10px] font-bold flex items-center justify-center rounded-full shadow-sm animate-pulse">
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[18px] px-1 h-[18px] bg-[#FF7A00] text-white text-[10px] font-bold flex items-center justify-center rounded-full shadow-sm animate-pulse">
                     {unreadNotifications}
                   </span>
                 )}
               </Link>
             )}
 
-            {/* 3. Settings & Account Section */}
+            {/* Settings & Account Section */}
             <div className="relative" ref={profileRef}>
               <button
                 onClick={() => setProfileOpen(!profileOpen)}
-                className={`flex items-center justify-center w-11 h-11 rounded-full transition-all duration-200 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-zinc-600 group ${profileOpen ? 'bg-zinc-800 text-white' : 'text-zinc-300 hover:bg-zinc-800 hover:text-white'
-                  }`}
+                className={`flex items-center justify-center w-11 h-11 rounded-full transition-all duration-200 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-zinc-600 group ${
+                  profileOpen ? 'bg-zinc-800 text-white' : 'text-zinc-300 hover:bg-zinc-800 hover:text-white'
+                }`}
                 aria-label="Account"
               >
-                <UserRound className="h-6 w-6 group-hover:scale-105 transition-transform duration-200" strokeWidth={1.5} />
+                <UserRound
+                  className="h-6 w-6 group-hover:scale-105 transition-transform duration-200"
+                  strokeWidth={1.5}
+                />
               </button>
 
               <AnimatePresence>
@@ -487,7 +580,6 @@ const Navbar = () => {
                     className="absolute right-0 top-full mt-2 w-96 bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-700 overflow-hidden z-50 text-left"
                     style={{ transformOrigin: 'top right' } as React.CSSProperties}
                   >
-                    {/* Account Info Header */}
                     {userInfo ? (
                       <div className="px-6 py-5 bg-gradient-to-br from-zinc-50 to-white dark:from-zinc-800 dark:to-zinc-900 border-b border-zinc-100 dark:border-zinc-800">
                         <div className="flex items-center gap-3">
@@ -499,7 +591,13 @@ const Navbar = () => {
                               <p className="text-[15px] font-bold text-zinc-800 dark:text-zinc-100 truncate">
                                 {userInfo.firstName || userDisplayName}
                               </p>
-                              <span className={`shrink-0 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${userInfo.role === 'admin' ? 'bg-[#0050cb] text-white' : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300'}`}>
+                              <span
+                                className={`shrink-0 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                                  userInfo.role === 'admin'
+                                    ? 'bg-[#0050cb] text-white'
+                                    : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300'
+                                }`}
+                              >
                                 {userInfo.role === 'admin' ? 'Admin' : 'User'}
                               </span>
                             </div>
@@ -521,12 +619,11 @@ const Navbar = () => {
                       </div>
                     )}
 
-                    {/* Appearance / Dark Mode Section */}
                     <div className="px-4 py-4 border-b border-zinc-100 dark:border-zinc-800">
-                      <p className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider px-1 mb-3">Appearance</p>
-                      <div
-                        className="flex items-center justify-between px-4 py-3 rounded-xl bg-zinc-100 dark:bg-zinc-800/80 hover:bg-zinc-200 dark:hover:bg-zinc-700/80 transition-colors cursor-pointer"
-                      >
+                      <p className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider px-1 mb-3">
+                        Appearance
+                      </p>
+                      <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-zinc-100 dark:bg-zinc-800/80 hover:bg-zinc-200 dark:hover:bg-zinc-700/80 transition-colors cursor-pointer">
                         <span className="text-[14px] font-semibold text-zinc-800 dark:text-zinc-100">
                           {theme === 'dark' ? 'Dark Mode' : 'Light Mode'}
                         </span>
@@ -534,10 +631,11 @@ const Navbar = () => {
                       </div>
                     </div>
 
-                    {/* User Account Actions */}
                     {userInfo ? (
                       <div className="py-3">
-                        <p className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider px-5 mb-2">Account Options</p>
+                        <p className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider px-5 mb-2">
+                          Account Options
+                        </p>
                         {[
                           { to: '/account?tab=profile', label: 'My Profile', icon: UserRound },
                           { to: '/account', label: 'My Orders', icon: Package },
@@ -582,18 +680,20 @@ const Navbar = () => {
                       </div>
                     ) : (
                       <div className="p-5 space-y-3">
-                        <p className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider mb-3">Account Access</p>
+                        <p className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider mb-3">
+                          Account Access
+                        </p>
                         <Link
                           to="/login"
                           onClick={() => setProfileOpen(false)}
-                          className="block w-full text-center bg-[#111111] dark:bg-white text-white dark:text-zinc-900 rounded-xl py-3.5 text-[14px] font-bold tracking-wide hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-all"
+                          className="block w-full text-center bg-[#FF7A00] hover:bg-[#FF9E00] text-white rounded-xl py-3.5 text-[14px] font-bold tracking-wide transition-all shadow-md shadow-orange-500/20"
                         >
                           Login
                         </Link>
                         <Link
                           to="/register"
                           onClick={() => setProfileOpen(false)}
-                          className="block w-full text-center bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700 rounded-xl py-3 text-[14px] font-semibold tracking-wide hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-all"
+                          className="block w-full text-center bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700 rounded-xl py-3 text-[14px] font-semibold tracking-wide hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all"
                         >
                           Sign Up
                         </Link>
@@ -603,228 +703,361 @@ const Navbar = () => {
                 )}
               </AnimatePresence>
             </div>
-
-            {/* Mobile menu toggle (Right side) */}
-            <button
-              className="lg:hidden flex items-center justify-center w-10 h-10 hover:bg-zinc-800 rounded-full transition-colors cursor-pointer ml-1 text-zinc-300 hover:text-white"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-label="Toggle menu"
-            >
-              {mobileMenuOpen ? <X className="h-5.5 w-5.5" strokeWidth={1.5} /> : <Menu className="h-5.5 w-5.5" strokeWidth={1.5} />}
-            </button>
           </div>
         </div>
 
-        {/* Mobile Menu */}
-        {mobileMenuOpen && (
-          <div className="lg:hidden bg-white dark:bg-[#111111] border-t border-zinc-200 dark:border-zinc-800 shadow-lg max-h-[calc(100vh-88px)] overflow-y-auto">
-            <div className="px-6 py-6 space-y-1">
-              {/* Profile section at top */}
-              {userInfo ? (
-                <div className="mb-5 p-4 bg-zinc-50 dark:bg-zinc-900 rounded-2xl">
-                  <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-full bg-[#111111] flex items-center justify-center text-sm font-bold text-white uppercase shrink-0">
-                      {(userInfo.firstName?.[0] || userInfo.email?.[0] || 'U').toUpperCase()}
-                      {(userInfo.lastName?.[0] || '')}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-100 truncate">{userInfo.firstName || userDisplayName}</p>
-                        <span className={`shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${userInfo.role === 'admin' ? 'bg-[#0050cb] text-white' : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300'}`}>
-                          {userInfo.role === 'admin' ? 'Admin' : 'User'}
-                        </span>
-                      </div>
-                      <p className="text-xs text-zinc-500 truncate">{userInfo.email}</p>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="mb-5 p-4 bg-zinc-50 dark:bg-zinc-900 rounded-2xl">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-11 h-11 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center">
-                      <UserRound className="h-5 w-5 text-zinc-500" strokeWidth={1.5} />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">Welcome to AutoTrade</p>
-                      <p className="text-xs text-zinc-500">Sign in for exclusive access</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Link
-                      to="/login"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="flex-1 text-center bg-[#111111] dark:bg-white text-white dark:text-zinc-900 rounded-xl py-2.5 text-sm font-semibold"
-                    >
-                      Login
-                    </Link>
-                    <Link
-                      to="/register"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="flex-1 text-center bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 border-2 border-zinc-200 dark:border-zinc-700 rounded-xl py-2.5 text-sm font-semibold"
-                    >
-                      Sign Up
-                    </Link>
-                  </div>
-                </div>
-              )}
+        {/* ───────── 2. MOBILE HEADER (md:hidden) — ULTRA SLEEK PRO ROW ───────── */}
+        <div className="md:hidden flex items-center justify-between h-16 px-3.5 gap-2.5 bg-black border-b border-zinc-850">
+          {/* Left: AutoTrade Pro Logo */}
+          <Link to="/" className="shrink-0 flex items-center py-1">
+            <img src="/img/logo.png" alt="AutoTrade Pro" className="h-8 xs:h-9 w-auto object-contain" />
+          </Link>
 
-              {/* Nav links */}
-              <p className="px-3 py-2 text-[10px] font-semibold tracking-widest text-zinc-400 uppercase">Shop</p>
-              {navCategories.map((cat) => (
-                <Link
-                  key={cat.to}
-                  to={cat.to}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block px-4 py-3 text-[17px] font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:text-black dark:hover:text-white rounded-lg transition-colors"
-                >
-                  {cat.label}
-                </Link>
-              ))}
-
-              <hr className="my-3 border-zinc-100 dark:border-zinc-800" />
-
-              {/* Account links */}
-              <p className="px-3 py-2 text-[10px] font-semibold tracking-widest text-zinc-400 uppercase">Account</p>
-              {userInfo && (
-                <>
-                  {[
-                    { to: '/account?tab=profile', label: 'My Profile', icon: UserRound },
-                    { to: '/account', label: 'My Orders', icon: Package },
-                    { to: '/account?tab=wishlist', label: 'Wishlist', icon: Heart },
-                    { to: '/account?tab=addresses', label: 'Saved Addresses', icon: MapPin },
-                    { to: '/account?tab=settings', label: 'Settings', icon: Settings },
-                  ].map(({ to, label, icon: Icon }) => (
-                    <Link
-                      key={to}
-                      to={to}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="flex items-center gap-3 px-4 py-3 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-lg transition-colors"
-                    >
-                      <Icon className="h-5 w-5 text-zinc-400" strokeWidth={1.5} />
-                      {label}
-                    </Link>
-                  ))}
-                  {userInfo?.role === 'admin' && (
-                    <Link
-                      to="/admin"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="flex items-center gap-3 px-4 py-3 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-lg transition-colors"
-                    >
-                      <Shield className="h-5 w-5 text-zinc-400" strokeWidth={1.5} />
-                      Admin Panel
-                    </Link>
-                  )}
+          {/* Center: Integrated Pill Search Bar */}
+          <div className="flex-1 relative" ref={mobileSearchContainerRef}>
+            <form onSubmit={handleSearchSubmit} className="relative w-full">
+              <div className="flex items-center rounded-full bg-zinc-900 border border-zinc-800 focus-within:border-[#FF7A00] h-10 px-3.5 transition-all duration-200 overflow-hidden shadow-inner">
+                <Search className="w-4 h-4 text-zinc-400 shrink-0 mr-2" strokeWidth={2} />
+                <input
+                  ref={mobileSearchInputRef}
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setSelectedSuggestionIdx(-1);
+                  }}
+                  onFocus={() => setMobileSearchFocused(true)}
+                  placeholder="Search parts, brands, categories..."
+                  className="flex-1 bg-transparent text-xs sm:text-[13px] text-white placeholder:text-zinc-500 focus:outline-none text-left normal-case tracking-tight"
+                />
+                {searchQuery && (
                   <button
-                    onClick={() => { setMobileMenuOpen(false); setShowLogoutModal(true); }}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors cursor-pointer"
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="p-1 text-zinc-400 hover:text-white transition-colors cursor-pointer"
                   >
-                    <LogOut className="h-5 w-5" strokeWidth={1.5} />
-                    Logout
+                    <X className="w-3.5 h-3.5" strokeWidth={2.5} />
                   </button>
-                </>
+                )}
+              </div>
+            </form>
+
+            {/* Mobile Search Suggestions Dropdown */}
+            <AnimatePresence>
+              {mobileSearchFocused && debouncedQuery.trim().length >= 2 && (
+                <motion.div
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute top-full left-0 right-0 mt-1.5 bg-zinc-950 rounded-2xl shadow-2xl border border-zinc-800 overflow-hidden z-50 text-left max-h-[70vh] overflow-y-auto"
+                >
+                  <div className="py-2">
+                    {isSearchFetching && (
+                      <div className="flex items-center justify-center py-4">
+                        <Loader2 className="h-5 w-5 animate-spin text-zinc-400" strokeWidth={1.5} />
+                      </div>
+                    )}
+                    {!isSearchFetching && suggestionList.length > 0 && (
+                      <div className="divide-y divide-zinc-900">
+                        {suggestionList.map((item: any, i: number) => {
+                          if (item.type === 'category') {
+                            return (
+                              <Link
+                                key={`m-cat-${item.label}-${i}`}
+                                to={item.to}
+                                onClick={() => {
+                                  setMobileSearchFocused(false);
+                                  setSearchQuery('');
+                                }}
+                                className="flex items-center gap-2.5 px-3.5 py-2.5 text-xs text-zinc-200 hover:bg-zinc-900"
+                              >
+                                <Search className="h-3.5 w-3.5 text-zinc-500 shrink-0" strokeWidth={1.5} />
+                                <span className="truncate">{highlightMatch(item.label)}</span>
+                              </Link>
+                            );
+                          }
+                          if (item.type === 'product') {
+                            return (
+                              <Link
+                                key={`m-prod-${item.to}-${i}`}
+                                to={item.to}
+                                onClick={() => {
+                                  setMobileSearchFocused(false);
+                                  setSearchQuery('');
+                                }}
+                                className="flex items-center gap-2.5 px-3.5 py-2 hover:bg-zinc-900 transition-colors"
+                              >
+                                <div className="w-9 h-11 shrink-0 bg-zinc-900 border border-zinc-800 overflow-hidden rounded">
+                                  {item.image && (
+                                    <img src={item.image} alt="" className="w-full h-full object-cover" />
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs font-semibold text-white truncate">
+                                    {highlightMatch(item.label)}
+                                  </p>
+                                  <p className="text-[10px] text-zinc-400 truncate">{item.category}</p>
+                                </div>
+                                <span className="text-xs font-bold text-[#FF7A00] shrink-0">{item.price}</span>
+                              </Link>
+                            );
+                          }
+                          return null;
+                        })}
+                      </div>
+                    )}
+                    {!isSearchFetching && products.length === 0 && debouncedQuery.length >= 2 && (
+                      <div className="px-4 py-6 text-center">
+                        <p className="text-xs text-zinc-400">No results found for "{debouncedQuery}"</p>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
               )}
-            </div>
+            </AnimatePresence>
           </div>
-        )}
+
+          {/* Right: Hamburger Menu Toggle Button */}
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(true)}
+            className="w-9 h-9 rounded-xl flex items-center justify-center text-zinc-200 hover:text-white hover:bg-zinc-900 active:scale-95 transition-all shrink-0 cursor-pointer"
+            aria-label="Open navigation drawer"
+          >
+            <Menu className="w-5 h-5" strokeWidth={2.25} />
+          </button>
+        </div>
       </header>
 
-      {/* Mobile Search Overlay */}
+      {/* ───────── 3. MOBILE SLIDE-IN DRAWER NAVIGATION ───────── */}
       <AnimatePresence>
-        {mobileSearchOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-white dark:bg-[#111111] md:hidden"
-          >
-            <div className="flex flex-col h-full">
-              {/* Search header */}
-              <div className="flex items-center gap-3 px-6 py-4 border-b border-zinc-200 dark:border-zinc-800">
-                <form onSubmit={(e) => { e.preventDefault(); doSearchRefValue(searchQuery); }} className="flex-1 flex items-center rounded-[25px] border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 h-[50px]">
-                  <Search className="ml-5 mr-3 h-5 w-5 text-zinc-400 shrink-0" strokeWidth={1.5} />
-                  <input
-                    autoFocus
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search products..."
-                    className="flex-1 bg-transparent text-[15px] text-zinc-800 dark:text-white placeholder:text-zinc-400 focus:outline-none pr-2 text-left normal-case"
-                  />
-                  {searchQuery && (
-                    <button type="button" onClick={() => setSearchQuery('')} className="mr-2 p-1 cursor-pointer">
-                      <X className="h-4 w-4 text-zinc-400" strokeWidth={2} />
-                    </button>
-                  )}
-                </form>
-                <button onClick={() => { setMobileSearchOpen(false); setSearchQuery(''); }} className="text-sm font-medium text-zinc-600 dark:text-zinc-400 shrink-0 cursor-pointer">
-                  Cancel
+        {mobileMenuOpen && (
+          <div className="fixed inset-0 z-[100] md:hidden">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              onClick={() => setMobileMenuOpen(false)}
+              className="fixed inset-0 bg-black/80 backdrop-blur-sm"
+            />
+
+            {/* Slide-in Panel from Left */}
+            <motion.div
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', damping: 28, stiffness: 280 }}
+              className="relative w-[85vw] max-w-[340px] h-full bg-zinc-950 border-r border-zinc-800 text-white flex flex-col justify-between overflow-y-auto shadow-2xl z-10"
+            >
+              {/* Drawer Top Bar: Logo + Close Button */}
+              <div className="flex items-center justify-between p-4 border-b border-zinc-850 bg-black/60 sticky top-0 z-20 backdrop-blur-md">
+                <Link to="/" onClick={() => setMobileMenuOpen(false)} className="flex items-center">
+                  <img src="/img/logo.png" alt="AutoTrade Pro" className="h-8 w-auto object-contain" />
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-9 h-9 rounded-xl flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-850 active:scale-95 transition-all cursor-pointer"
+                  aria-label="Close menu"
+                >
+                  <X className="w-5 h-5" strokeWidth={2} />
                 </button>
               </div>
 
-              {/* Search content */}
-              <div className="flex-1 overflow-y-auto px-6 py-4">
-                {debouncedQuery.length >= 2 ? (
-                  isSearchFetching ? (
-                    <div className="flex justify-center py-8">
-                      <Loader2 className="h-6 w-6 animate-spin text-zinc-400" strokeWidth={1.5} />
+              {/* Drawer Scrollable Content */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-6 text-left">
+                {/* User Info / Login Banner */}
+                {userInfo ? (
+                  <div className="p-3.5 rounded-2xl bg-zinc-900/90 border border-zinc-800 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-white font-black text-sm shrink-0">
+                      {(userInfo.firstName?.[0] || userInfo.email?.[0] || 'U').toUpperCase()}
                     </div>
-                  ) : suggestionList.length > 0 ? (
-                    <div className="space-y-3">
-                      {suggestionList.map((item: any, i: number) => {
-                        if (item.type === 'category') {
-                          return (
-                            <Link
-                              key={`mcat-${item.label}-${i}`}
-                              to={item.to}
-                              onClick={() => { setMobileSearchOpen(false); setSearchQuery(''); }}
-                              className="flex items-center gap-3 p-2 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
-                            >
-                              <Search className="h-4 w-4 text-zinc-400 shrink-0" strokeWidth={1.5} />
-                              <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">{highlightMatch(item.label)}</span>
-                            </Link>
-                          );
-                        }
-                        if (item.type === 'product') {
-                          return (
-                            <Link
-                              key={`mprod-${item.to}-${i}`}
-                              to={item.to}
-                              onClick={() => { setMobileSearchOpen(false); setSearchQuery(''); }}
-                              className="flex items-center gap-3"
-                            >
-                              <div className="w-16 h-20 shrink-0 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 overflow-hidden rounded-lg">
-                                {item.image && <img src={item.image} alt="" className="w-full h-full object-cover" />}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200 truncate">{highlightMatch(item.label)}</p>
-                                <p className="text-xs text-zinc-500 mt-0.5">{item.category}</p>
-                                <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 mt-1">{item.price}</p>
-                              </div>
-                            </Link>
-                          );
-                        }
-                        return null;
-                      })}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs font-bold text-white truncate">{userInfo.firstName || userDisplayName}</p>
+                        <span className="shrink-0 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-orange-500/20 text-[#FF7A00]">
+                          {userInfo.role === 'admin' ? 'Admin' : 'Member'}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-zinc-400 truncate mt-0.5">{userInfo.email}</p>
                     </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <Search className="h-8 w-8 mx-auto mb-3 text-zinc-300" strokeWidth={1.5} />
-                      <p className="text-sm text-zinc-500">No products found</p>
-                    </div>
-                  )
+                  </div>
                 ) : (
-                  <div className="text-center py-12">
-                    <Search className="h-10 w-10 mx-auto mb-3 text-zinc-300 dark:text-zinc-600" strokeWidth={1.5} />
-                    <p className="text-sm font-medium text-zinc-400 dark:text-zinc-500">Type at least 2 characters to search...</p>
+                  <div className="p-4 rounded-2xl bg-gradient-to-br from-zinc-900 to-black border border-zinc-800 space-y-3">
+                    <div>
+                      <p className="text-xs font-extrabold text-white uppercase tracking-wider">Welcome to AutoTrade</p>
+                      <p className="text-[11px] text-zinc-400 mt-0.5">Sign in to track orders & save vehicles</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Link
+                        to="/login"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="h-9 rounded-xl bg-[#FF7A00] text-white text-xs font-black uppercase tracking-wider flex items-center justify-center hover:bg-[#FF9E00] transition-colors shadow-sm"
+                      >
+                        Login
+                      </Link>
+                      <Link
+                        to="/register"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="h-9 rounded-xl border border-zinc-700 bg-zinc-850 text-zinc-200 text-xs font-bold uppercase tracking-wider flex items-center justify-center hover:bg-zinc-800 transition-colors"
+                      >
+                        Sign Up
+                      </Link>
+                    </div>
                   </div>
                 )}
+
+                {/* Section 1: Main Pages */}
+                <div className="space-y-1">
+                  <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block px-2 mb-1.5">
+                    Explore
+                  </span>
+                  <Link
+                    to="/"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-zinc-200 hover:text-white hover:bg-zinc-900 transition-colors"
+                  >
+                    <Home className="w-4 h-4 text-[#FF7A00]" />
+                    <span>Home</span>
+                  </Link>
+                  <Link
+                    to="/collections/all"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-zinc-200 hover:text-white hover:bg-zinc-900 transition-colors"
+                  >
+                    <LayoutGrid className="w-4 h-4 text-[#FF7A00]" />
+                    <span>All Collections</span>
+                  </Link>
+                </div>
+
+                {/* Section 2: Shop by Category */}
+                <div className="space-y-1">
+                  <span className="text-[10px] font-black text-[#FF7A00] uppercase tracking-widest block px-2 mb-1.5">
+                    Shop Categories
+                  </span>
+                  {navCategories.map((cat) => {
+                    const Icon = CATEGORY_ICONS[cat.label] || Car;
+                    return (
+                      <Link
+                        key={cat.to}
+                        to={cat.to}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-zinc-300 hover:text-white hover:bg-zinc-900 transition-colors group"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <Icon className="w-4 h-4 text-zinc-400 group-hover:text-[#FF7A00] transition-colors shrink-0" />
+                          <span className="truncate">{cat.label}</span>
+                        </div>
+                        <ChevronRight size={13} className="text-zinc-600 group-hover:text-white transition-colors" />
+                      </Link>
+                    );
+                  })}
+                </div>
+
+                {/* Section 3: Account Hub */}
+                <div className="space-y-1 pt-2 border-t border-zinc-900">
+                  <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block px-2 mb-1.5">
+                    Account & Preferences
+                  </span>
+                  {userInfo ? (
+                    <>
+                      <Link
+                        to="/account?tab=profile"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium text-zinc-300 hover:text-white hover:bg-zinc-900 transition-colors"
+                      >
+                        <UserRound className="w-4 h-4 text-zinc-400" />
+                        <span>My Profile</span>
+                      </Link>
+                      <Link
+                        to="/account"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium text-zinc-300 hover:text-white hover:bg-zinc-900 transition-colors"
+                      >
+                        <Package className="w-4 h-4 text-zinc-400" />
+                        <span>My Orders</span>
+                      </Link>
+                      <Link
+                        to="/wishlist"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium text-zinc-300 hover:text-white hover:bg-zinc-900 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Heart className="w-4 h-4 text-zinc-400" />
+                          <span>Wishlist</span>
+                        </div>
+                        {wishlistCount > 0 && (
+                          <span className="px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 text-[10px] font-bold">
+                            {wishlistCount}
+                          </span>
+                        )}
+                      </Link>
+                      <Link
+                        to="/account?tab=addresses"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium text-zinc-300 hover:text-white hover:bg-zinc-900 transition-colors"
+                      >
+                        <MapPin className="w-4 h-4 text-zinc-400" />
+                        <span>Saved Addresses</span>
+                      </Link>
+                      <Link
+                        to="/account?tab=settings"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium text-zinc-300 hover:text-white hover:bg-zinc-900 transition-colors"
+                      >
+                        <Settings className="w-4 h-4 text-zinc-400" />
+                        <span>Settings</span>
+                      </Link>
+                      {userInfo?.role === 'admin' && (
+                        <Link
+                          to="/admin"
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-blue-400 hover:bg-zinc-900 transition-colors"
+                        >
+                          <Shield className="w-4 h-4" />
+                          <span>Admin Panel</span>
+                        </Link>
+                      )}
+                    </>
+                  ) : null}
+
+                  {/* Dark Mode Toggle */}
+                  <div className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-zinc-900/60 border border-zinc-850 mt-2">
+                    <span className="text-xs font-medium text-zinc-300">
+                      {theme === 'dark' ? 'Dark Mode' : 'Light Mode'}
+                    </span>
+                    <ThemeToggle />
+                  </div>
+
+                  {userInfo && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        setShowLogoutModal(true);
+                      }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-red-400 hover:bg-red-950/30 transition-colors cursor-pointer mt-2"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      <span>Logout</span>
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-          </motion.div>
+
+              {/* Drawer Footer info */}
+              <div className="p-4 border-t border-zinc-900 text-center text-[10px] text-zinc-500">
+                AutoTrade Pro &middot; Direct Automotive Marketplace
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 
-      {/* Mini Cart */}
+      {/* Mini Cart Panel */}
       <MiniCart isOpen={miniCartOpen} onClose={() => setMiniCartOpen(false)} />
 
       {/* Logout Confirmation Modal */}
@@ -845,7 +1078,6 @@ const Navbar = () => {
               transition={{ type: 'spring', duration: 0.3 }}
               className="relative w-full max-w-md bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 sm:p-8 shadow-2xl text-center overflow-hidden z-10 animate-fadeIn"
             >
-              {/* Close X Button */}
               <button
                 onClick={() => setShowLogoutModal(false)}
                 className="absolute top-5 right-5 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors cursor-pointer"
@@ -854,15 +1086,12 @@ const Navbar = () => {
                 <X size={20} />
               </button>
 
-              {/* Red Circular Icon */}
               <div className="w-16 h-16 rounded-full bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 flex items-center justify-center mx-auto mb-5 shadow-sm border border-red-100 dark:border-red-900/20">
                 <LogOut size={28} />
               </div>
 
-              {/* Title */}
               <h3 className="text-xl font-bold text-zinc-900 dark:text-white tracking-tight">Confirm Logout</h3>
 
-              {/* Message */}
               <div className="mt-3.5 space-y-1.5">
                 <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 leading-normal">
                   Are you sure you want to logout from your account?
@@ -872,7 +1101,6 @@ const Navbar = () => {
                 </p>
               </div>
 
-              {/* Buttons */}
               <div className="mt-8 grid grid-cols-2 gap-3.5">
                 <button
                   type="button"
@@ -906,8 +1134,3 @@ const Navbar = () => {
 };
 
 export default Navbar;
-
-
-
-
-

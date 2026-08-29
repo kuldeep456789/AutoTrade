@@ -63,15 +63,18 @@ const ScrollToTop = () => {
   return null;
 };
 
+import MobileBottomNav from './components/layout/MobileBottomNav';
+
 function MainLayout() {
   return (
-    <div className="min-h-screen w-full flex flex-col bg-white dark:bg-zinc-950">
+    <div className="min-h-screen w-full flex flex-col bg-white dark:bg-zinc-950 pb-16 md:pb-0">
       <Navbar />
       <AnnouncementBanner />
-      <main className="flex-grow w-full">
+      <main className="flex-grow w-full pt-16 md:pt-0">
         <Outlet />
       </main>
       <Footer />
+      <MobileBottomNav />
     </div>
   );
 }
