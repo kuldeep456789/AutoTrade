@@ -15,6 +15,7 @@
     "start:dev": "npm run start:dev --prefix backend",
     "test": "turbo run test"
   },
+  "packageManager": "npm@10.9.2",
   "devDependencies": {
     "turbo": "^2.0.0"
   }
