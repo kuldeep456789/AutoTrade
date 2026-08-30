@@ -9,42 +9,59 @@ interface FeaturedProductsResponse {
     featured: CjProduct[];
 }
 
+/**
+ * The production Render backend URL.
+ * This is the single source of truth for the backend origin.
+ * It is embedded at build time by Vite and never changes at runtime.
+ */
 export const PROD_BACKEND_URL = 'https://autotrade-1-k96m.onrender.com';
 
 /**
- * Returns the normalized backend origin (without trailing slash or /api).
- * Example: "https://autotrade-1-k96m.onrender.com"
- * 
- * Priority:
- * 1. Explicit import.meta.env.VITE_API_URL if configured
- * 2. Hardcoded production Render backend URL when in production or on Vercel
- * 3. Empty string in local development (falling back to Vite proxy /api)
+ * Returns the normalized backend origin (no trailing slash, no /api suffix).
+ *
+ * Resolution order:
+ *  1. VITE_API_URL env var (set in Vercel Project Settings at build time)
+ *  2. Hardcoded PROD_BACKEND_URL — always used in production builds
+ *
+ * Local development:
+ *  - Set VITE_API_URL=http://127.0.0.1:3000 in frontend/.env to point
+ *    directly at the local backend, OR leave it unset to use Vite proxy.
+ *
+ * NOTE: This function is intentionally NEVER empty in a production build.
+ * import.meta.env.MODE is baked at Vite build time ('production' | 'development').
  */
 export function getApiBaseUrl(): string {
-    const envUrl = import.meta.env.VITE_API_URL;
+    const envUrl: string | undefined = import.meta.env.VITE_API_URL;
+
+    // 1. Explicit env var wins (configured in Vercel / local .env)
     if (typeof envUrl === 'string' && envUrl.trim().length > 0) {
+        // Strip any trailing slash or /api suffix so baseUrl is always the origin
         return envUrl.trim().replace(/\/+$/, '').replace(/\/api\/?$/, '');
     }
 
-    // When deployed on Vercel or any non-localhost host, always target the Render backend
-    if (
-        import.meta.env.PROD ||
-        (typeof window !== 'undefined' &&
-            window.location.hostname !== 'localhost' &&
-            window.location.hostname !== '127.0.0.1')
-    ) {
+    // 2. In a production Vite build (import.meta.env.PROD === true),
+    //    always use the Render backend, even if VITE_API_URL was not set.
+    //    This prevents relative-URL fallback which would hit Vercel's SPA catch-all.
+    if (import.meta.env.PROD) {
         return PROD_BACKEND_URL;
     }
 
+    // 3. Development-only fallback: empty string so Vite proxy handles /api/*
     return '';
 }
 
 /**
- * Builds a standardized API URL that preserves /api prefix and targets the backend origin.
- * Example: apiUrl('/api/auth/send-register-otp')
- *          -> "https://autotrade-1-k96m.onrender.com/api/auth/send-register-otp"
- *          apiUrl('products')
- *          -> "https://autotrade-1-k96m.onrender.com/api/products"
+ * Builds an absolute URL to the backend API.
+ *
+ * Examples (production):
+ *   apiUrl('/api/auth/send-register-otp')
+ *     → 'https://autotrade-1-k96m.onrender.com/api/auth/send-register-otp'
+ *   apiUrl('products')
+ *     → 'https://autotrade-1-k96m.onrender.com/api/products'
+ *   apiUrl('/api/contact')
+ *     → 'https://autotrade-1-k96m.onrender.com/api/contact'
+ *
+ * Never produces /api/api/... — the /api prefix is added only once.
  */
 export function apiUrl(path: string): string {
     const base = getApiBaseUrl();
