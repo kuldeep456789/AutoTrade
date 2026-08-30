@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { CURRENCIES, type CurrencyCode } from '../context/CurrencyContext';
-import { getApiBaseUrl } from '../lib/api';
+import { apiUrl } from '../lib/api';
 
 export function useAdminCurrency() {
   const [currency, setCurrency] = useState<CurrencyCode>('INR');
@@ -57,14 +57,14 @@ export function useAdminCurrency() {
     try {
       const raw = localStorage.getItem('userInfo');
       const token = raw ? (JSON.parse(raw)?.accessToken || JSON.parse(raw)?.token) : '';
-      const baseUrl = getApiBaseUrl();
-      const endpoint = `${baseUrl}/api/users/admin-currency`;
+      const endpoint = apiUrl('/api/users/admin-currency');
 
       await fetch(endpoint, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'ngrok-skip-browser-warning': 'true',
         },
         body: JSON.stringify({ currency: newCurrency })
       });

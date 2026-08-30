@@ -2,11 +2,26 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Redis } from '@upstash/redis';
 import { REDIS_TTL } from './redis.constants';
 
+type CircuitState = 'CLOSED' | 'OPEN' | 'HALF_OPEN';
+
 @Injectable()
 export class RedisService {
   private readonly logger = new Logger(RedisService.name);
   private client: Redis | null = null;
   private disabled = false;
+
+  // ── Circuit Breaker & Fallback State ──
+  private circuitState: CircuitState = 'CLOSED';
+  private lastCircuitTripTime = 0;
+  private circuitCooldownMs = 60_000; // 1 minute default, 10 minutes for quota exceeded
+  private consecutiveErrors = 0;
+  private readonly MAX_CONSECUTIVE_ERRORS = 3;
+
+  // ── In-Memory Fallback L1 Cache ──
+  private readonly memoryStore = new Map<
+    string,
+    { value: any; expiresAt: number }
+  >();
 
   constructor() {
     const url = process.env.UPSTASH_REDIS_REST_URL;
@@ -31,25 +46,91 @@ export class RedisService {
     }
   }
 
+  /**
+   * Evaluates if Redis is currently ready for calls.
+   * If circuit breaker is OPEN, checks if cooldown has expired to transition to HALF_OPEN.
+   */
   isReady(): boolean {
-    return !this.disabled && this.client !== null;
+    if (this.disabled || !this.client) {
+      return false;
+    }
+
+    if (this.circuitState === 'OPEN') {
+      const now = Date.now();
+      if (now - this.lastCircuitTripTime >= this.circuitCooldownMs) {
+        this.circuitState = 'HALF_OPEN';
+        this.logger.log(
+          '[UPSTASH CIRCUIT] Cooldown expired. Testing Redis connection (HALF_OPEN)...',
+        );
+        return true;
+      }
+      return false;
+    }
+
+    return true;
+  }
+
+  private handleSuccess() {
+    if (this.circuitState === 'HALF_OPEN' || this.consecutiveErrors > 0) {
+      this.circuitState = 'CLOSED';
+      this.consecutiveErrors = 0;
+      this.logger.log('✅ Upstash Redis circuit breaker restored to CLOSED');
+    }
+  }
+
+  private handleError(method: string, keyOrDesc: string, error: any) {
+    const errorMsg = error?.message ?? String(error);
+    const isQuotaError =
+      /limit exceeded|max requests|quota|rate limit/i.test(errorMsg);
+
+    if (isQuotaError) {
+      this.circuitState = 'OPEN';
+      this.lastCircuitTripTime = Date.now();
+      this.circuitCooldownMs = 10 * 60 * 1000; // 10 minutes cooldown for quota limits
+      this.logger.error(
+        `[UPSTASH QUOTA EXCEEDED] ${errorMsg}. Circuit breaker OPEN for 10m. Falling back to in-memory/database operations.`,
+      );
+      return;
+    }
+
+    this.consecutiveErrors++;
+    this.logger.warn(
+      `[UPSTASH ERROR] ${method} failed for "${keyOrDesc}" (${this.consecutiveErrors}/${this.MAX_CONSECUTIVE_ERRORS}): ${errorMsg}`,
+    );
+
+    if (this.consecutiveErrors >= this.MAX_CONSECUTIVE_ERRORS) {
+      this.circuitState = 'OPEN';
+      this.lastCircuitTripTime = Date.now();
+      this.circuitCooldownMs = 60_000; // 1 minute cooldown for temporary network errors
+      this.logger.error(
+        `[UPSTASH CIRCUIT TRIPPED] ${this.consecutiveErrors} consecutive errors. Circuit breaker OPEN for 60s.`,
+      );
+    }
   }
 
   async getJson<T>(key: string): Promise<T | null> {
+    const now = Date.now();
+
+    // Check in-memory fallback cache first if available
+    const memHit = this.memoryStore.get(key);
+    if (memHit) {
+      if (memHit.expiresAt > now) {
+        return memHit.value as T;
+      }
+      this.memoryStore.delete(key);
+    }
+
     if (!this.isReady()) {
-      this.logger.log(`[UPSTASH CACHE MISS] ${key}`);
       return null;
     }
 
     try {
       const value = await this.client!.get<any>(key);
+      this.handleSuccess();
 
       if (value === null || value === undefined) {
-        this.logger.log(`[UPSTASH CACHE MISS] ${key}`);
         return null;
       }
-
-      this.logger.log(`[UPSTASH CACHE HIT] ${key}`);
 
       if (typeof value === 'string') {
         try {
@@ -61,10 +142,7 @@ export class RedisService {
 
       return value as T;
     } catch (error: any) {
-      this.logger.warn(
-        `[UPSTASH ERROR] getJson failed for "${key}": ${error?.message ?? error}`,
-      );
-      this.logger.log(`[UPSTASH CACHE MISS] ${key}`);
+      this.handleError('getJson', key, error);
       return null;
     }
   }
@@ -74,10 +152,21 @@ export class RedisService {
    * Dramatically reduces network round-trips compared to N individual getJson calls.
    */
   async mgetJson<T>(keys: string[]): Promise<(T | null)[]> {
-    if (!this.isReady() || keys.length === 0) return keys.map(() => null);
+    if (keys.length === 0) return [];
+    if (!this.isReady()) {
+      // Return any in-memory cached entries or null
+      const now = Date.now();
+      return keys.map((key) => {
+        const mem = this.memoryStore.get(key);
+        if (mem && mem.expiresAt > now) return mem.value as T;
+        return null;
+      });
+    }
 
     try {
       const results = await this.client!.mget<any[]>(...keys);
+      this.handleSuccess();
+
       return results.map((value) => {
         if (value === null || value === undefined) return null;
         if (typeof value === 'string') {
@@ -90,9 +179,7 @@ export class RedisService {
         return value as T;
       });
     } catch (error: any) {
-      this.logger.warn(
-        `[UPSTASH ERROR] mgetJson failed: ${error?.message ?? error}`,
-      );
+      this.handleError('mgetJson', `${keys.length} keys`, error);
       return keys.map(() => null);
     }
   }
@@ -102,6 +189,15 @@ export class RedisService {
     value: T,
     ttlSeconds: number = REDIS_TTL.MEDIUM,
   ): Promise<void> {
+    const ttlMs =
+      ttlSeconds && ttlSeconds > 0
+        ? ttlSeconds * 1000
+        : REDIS_TTL.MEDIUM * 1000;
+    this.memoryStore.set(key, {
+      value,
+      expiresAt: Date.now() + Math.min(ttlMs, 10 * 60 * 1000), // In-memory max 10 mins
+    });
+
     if (!this.isReady()) {
       return;
     }
@@ -114,29 +210,34 @@ export class RedisService {
       } else {
         await this.client!.set(key, serialized);
       }
-      this.logger.log(`[UPSTASH CACHE WRITE] ${key}`);
+      this.handleSuccess();
     } catch (error: any) {
-      this.logger.warn(
-        `[UPSTASH ERROR] setJson failed for "${key}": ${error?.message ?? error}`,
-      );
+      this.handleError('setJson', key, error);
     }
   }
 
   /**
    * Batch-write many keys via a single Upstash REST pipeline call per chunk.
-   * Required for large writes (e.g. the warehouse catalog): individual setJson
-   * calls fire one HTTP request per key, which exhausts Upstash's rate limit
-   * and silently drops the tail of the batch.
-   *
-   * Returns success/failure counts plus the failed keys so callers can detect
-   * partial writes instead of assuming the whole batch succeeded.
    */
   async pipelineSetJson(
     operations: { key: string; value: unknown; ttlSeconds?: number }[],
   ): Promise<{ ok: number; failed: number; failedKeys: string[] }> {
     const result = { ok: 0, failed: 0, failedKeys: [] as string[] };
 
-    if (!this.isReady() || operations.length === 0) {
+    if (operations.length === 0) {
+      return result;
+    }
+
+    // Always cache in memory fallback
+    for (const op of operations) {
+      const ttl = op.ttlSeconds ?? REDIS_TTL.MEDIUM;
+      this.memoryStore.set(op.key, {
+        value: op.value,
+        expiresAt: Date.now() + Math.min(ttl * 1000, 10 * 60 * 1000),
+      });
+    }
+
+    if (!this.isReady()) {
       result.failed = operations.length;
       result.failedKeys = operations.map((op) => op.key);
       return result;
@@ -152,6 +253,8 @@ export class RedisService {
           pipe.setex(op.key, ttl, op.value as any);
         }
         const responses = await pipe.exec({ keepErrors: true });
+        this.handleSuccess();
+
         responses.forEach((res, idx) => {
           if (res.error) {
             result.failed += 1;
@@ -161,23 +264,17 @@ export class RedisService {
           }
         });
       } catch (error: any) {
-        this.logger.warn(
-          `[UPSTASH ERROR] pipelineSetJson chunk failed: ${error?.message ?? error}`,
+        this.handleError(
+          'pipelineSetJson',
+          `chunk of ${chunk.length} keys`,
+          error,
         );
         result.failed += chunk.length;
         result.failedKeys.push(...chunk.map((op) => op.key));
+        break; // Stop further chunks if circuit breaker tripped
       }
     }
 
-    if (result.failed > 0) {
-      this.logger.warn(
-        `[UPSTASH] pipelineSetJson: ${result.ok} ok, ${result.failed} failed (${result.failedKeys.slice(0, 5).join(', ')}...)`,
-      );
-    } else {
-      this.logger.log(
-        `[UPSTASH CACHE WRITE] pipeline batch: ${result.ok} keys`,
-      );
-    }
     return result;
   }
 
@@ -195,30 +292,38 @@ export class RedisService {
         nx: true,
         ex: ttlSeconds,
       });
+      this.handleSuccess();
       return result === 'OK';
     } catch (error: any) {
-      this.logger.warn(
-        `[UPSTASH ERROR] setnx failed for "${key}": ${error?.message ?? error}`,
-      );
+      this.handleError('setnx', key, error);
       return false;
     }
   }
 
   async del(key: string): Promise<void> {
+    this.memoryStore.delete(key);
+
     if (!this.isReady()) {
       return;
     }
 
     try {
       await this.client!.del(key);
+      this.handleSuccess();
     } catch (error: any) {
-      this.logger.warn(
-        `[UPSTASH ERROR] del failed for "${key}": ${error?.message ?? error}`,
-      );
+      this.handleError('del', key, error);
     }
   }
 
   async delPattern(pattern: string): Promise<void> {
+    // Delete from memory store
+    const regex = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$');
+    for (const key of this.memoryStore.keys()) {
+      if (regex.test(key)) {
+        this.memoryStore.delete(key);
+      }
+    }
+
     if (!this.isReady()) {
       return;
     }
@@ -227,42 +332,44 @@ export class RedisService {
       const matchedKeys = await this.keys(pattern);
       if (matchedKeys && matchedKeys.length > 0) {
         await this.client!.del(...matchedKeys);
+        this.handleSuccess();
       }
     } catch (error: any) {
-      this.logger.warn(
-        `[UPSTASH ERROR] delPattern failed for "${pattern}": ${error?.message ?? error}`,
-      );
+      this.handleError('delPattern', pattern, error);
     }
   }
 
   async keys(pattern: string): Promise<string[]> {
     if (!this.isReady()) {
-      return [];
+      const regex = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$');
+      return Array.from(this.memoryStore.keys()).filter((k) => regex.test(k));
     }
 
     try {
       const found = await this.client!.keys(pattern);
+      this.handleSuccess();
       return found || [];
     } catch (error: any) {
-      this.logger.warn(
-        `[UPSTASH ERROR] keys failed for "${pattern}": ${error?.message ?? error}`,
-      );
+      this.handleError('keys', pattern, error);
       return [];
     }
   }
 
   async exists(key: string): Promise<boolean> {
+    const now = Date.now();
+    const mem = this.memoryStore.get(key);
+    if (mem && mem.expiresAt > now) return true;
+
     if (!this.isReady()) {
       return false;
     }
 
     try {
       const count = await this.client!.exists(key);
+      this.handleSuccess();
       return count > 0;
     } catch (error: any) {
-      this.logger.warn(
-        `[UPSTASH ERROR] exists failed for "${key}": ${error?.message ?? error}`,
-      );
+      this.handleError('exists', key, error);
       return false;
     }
   }
@@ -274,10 +381,9 @@ export class RedisService {
 
     try {
       await this.client!.rename(source, destination);
+      this.handleSuccess();
     } catch (error: any) {
-      this.logger.debug(
-        `[UPSTASH DEBUG] rename failed from "${source}" to "${destination}": ${error?.message ?? error}`,
-      );
+      this.handleError('rename', `${source} -> ${destination}`, error);
     }
   }
 
@@ -287,11 +393,11 @@ export class RedisService {
     }
 
     try {
-      return await this.client!.ttl(key);
+      const result = await this.client!.ttl(key);
+      this.handleSuccess();
+      return result;
     } catch (error: any) {
-      this.logger.warn(
-        `[UPSTASH ERROR] ttl failed for "${key}": ${error?.message ?? error}`,
-      );
+      this.handleError('ttl', key, error);
       return -2;
     }
   }
@@ -303,25 +409,25 @@ export class RedisService {
 
     try {
       await this.client!.expire(key, ttlSeconds);
+      this.handleSuccess();
     } catch (error: any) {
-      this.logger.warn(
-        `[UPSTASH ERROR] expire failed for "${key}": ${error?.message ?? error}`,
-      );
+      this.handleError('expire', key, error);
     }
   }
 
   async flushAll(): Promise<void> {
+    this.memoryStore.clear();
+
     if (!this.isReady()) {
       return;
     }
 
     try {
       await this.client!.flushdb();
+      this.handleSuccess();
       this.logger.log('✅ Flushed all keys in Upstash Redis DB');
     } catch (error: any) {
-      this.logger.warn(
-        `[UPSTASH ERROR] flushAll failed: ${error?.message ?? error}`,
-      );
+      this.handleError('flushAll', 'all', error);
     }
   }
 }

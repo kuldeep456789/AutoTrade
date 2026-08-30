@@ -61,6 +61,7 @@ export class CjService implements OnModuleInit {
   // ── In-memory warehouse cache: avoids repeated Upstash HTTP requests ──
   private warehouseCache: any[] = [];
   private warehouseLoadedAt = 0;
+  private isLocalSyncing = false;
   private static readonly WAREHOUSE_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
   constructor(
@@ -1255,12 +1256,24 @@ export class CjService implements OnModuleInit {
     count: number;
     skipped?: boolean;
   }> {
-    const lockKey = 'cj:sync:lock';
-    const locked = await this.redisService.setnx(lockKey, '1', 3600);
-    if (!locked) {
-      this.logger.warn('[Cron] Sync is already running (locked). Skipping.');
+    if (this.isLocalSyncing) {
+      this.logger.warn('[Cron] Sync is already running locally. Skipping.');
       return { success: false, count: 0, skipped: true };
     }
+
+    const lockKey = 'cj:sync:lock';
+    let locked = true;
+    if (this.redisService.isReady()) {
+      locked = await this.redisService.setnx(lockKey, '1', 3600);
+      if (!locked) {
+        this.logger.warn(
+          '[Cron] Sync is already running (Redis lock held). Skipping.',
+        );
+        return { success: false, count: 0, skipped: true };
+      }
+    }
+
+    this.isLocalSyncing = true;
 
     try {
       const syncStart = Date.now();
@@ -1430,7 +1443,10 @@ export class CjService implements OnModuleInit {
 
       return { success: true, count: allProducts.length };
     } finally {
-      await this.redisService.del(lockKey);
+      this.isLocalSyncing = false;
+      if (this.redisService.isReady()) {
+        await this.redisService.del(lockKey).catch(() => undefined);
+      }
     }
   }
 
@@ -1441,6 +1457,21 @@ export class CjService implements OnModuleInit {
   }
 
   async getProductCount(): Promise<number> {
+    if (this.warehouseCache && this.warehouseCache.length > 0) {
+      return this.warehouseCache.length;
+    }
+
+    if (this.productModel) {
+      try {
+        const count = await this.productModel.countDocuments().exec();
+        if (count > 0) return count;
+      } catch (err: any) {
+        this.logger.warn(
+          `[CJ] Mongo countDocuments check error: ${err?.message ?? err}`,
+        );
+      }
+    }
+
     const cached = await this.redisService.getJson<number>(
       PRODUCT_COUNT_CACHE_KEY,
     );

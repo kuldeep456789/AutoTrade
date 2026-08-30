@@ -3,6 +3,7 @@ import { useSelector } from 'react-redux';
 import { Navigate } from 'react-router-dom';
 import type { RootState } from '../../store/store';
 import { Shield, X, Lock, Eye, EyeOff } from 'lucide-react';
+import { apiUrl } from '../../lib/api';
 
 const ADMIN_SESSION_KEY = 'at_admin_verified';
 
@@ -39,7 +40,7 @@ export default function AdminRoute({ children }: { children: React.ReactNode }) 
 
     let validCode = import.meta.env.VITE_ADMIN_SECRET_CODE || 'admin123';
     try {
-      const res = await fetch('/api/settings');
+      const res = await fetch(apiUrl('/api/settings'));
       if (res.ok) {
         const data = await res.json();
         const settingsCode = data?.settings?.adminSecretCode || data?.adminSecretCode;

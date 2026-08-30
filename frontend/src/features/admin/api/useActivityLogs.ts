@@ -1,17 +1,36 @@
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import type { SharedUserActivityLog } from '../../../types/shared';
+import { apiUrl } from '../../../lib/api';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+function getToken(): string {
+  try {
+    const raw = localStorage.getItem('userInfo');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed?.accessToken || parsed?.token) {
+        return parsed.accessToken || parsed.token;
+      }
+    }
+    return localStorage.getItem('token') || localStorage.getItem('accessToken') || '';
+  } catch {
+    return localStorage.getItem('token') || localStorage.getItem('accessToken') || '';
+  }
+}
 
 export const useActivityLogs = (params: { page: number; limit: number; search: string; eventTypes: string }) => {
   return useQuery({
     queryKey: ['activityLogs', params],
     queryFn: async () => {
+      const token = getToken();
       const response = await axios.get<{ logs: SharedUserActivityLog[]; pagination: { total: number; pages: number } }>(
-        `${API_URL}/admin/user-activity-logs`,
+        apiUrl('/api/admin/user-activity-logs'),
         {
           params,
+          headers: {
+            Authorization: token ? `Bearer ${token}` : '',
+            'ngrok-skip-browser-warning': 'true',
+          },
           withCredentials: true,
         }
       );

@@ -12,6 +12,7 @@ import {
   useCancelOrderMutation,
 } from '../store/slices/orderApiSlice';
 import { useGetMyReturnsQuery } from '../store/slices/returnApiSlice';
+import { apiUrl } from '../lib/api';
 import {
   Package,
   User,
@@ -271,8 +272,11 @@ const AccountPage = () => {
           return;
         }
 
-        fetch(`/api/contact/me`, {
-          headers: { Authorization: `Bearer ${token}` },
+        fetch(apiUrl('/api/contact/me'), {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'ngrok-skip-browser-warning': 'true',
+          },
         })
           .then((res) => {
             if (res.status === 401) {

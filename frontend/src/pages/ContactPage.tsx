@@ -4,6 +4,7 @@ import { useSelector } from 'react-redux';
 import type { RootState } from '../store/store';
 import { ChevronRight, Mail, MapPin, Phone, Send, Check, User, Tag, PenLine, Clock, Copy, CheckCircle2, MessageCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { apiUrl } from '../lib/api';
 
 const ContactPage = () => {
   const { userInfo } = useSelector((state: RootState) => state.auth);
@@ -45,7 +46,7 @@ const ContactPage = () => {
     setError('');
 
     try {
-      const res = await fetch('/api/contact', {
+      const res = await fetch(apiUrl('/api/contact'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form)

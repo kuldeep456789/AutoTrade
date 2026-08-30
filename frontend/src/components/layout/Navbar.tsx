@@ -33,6 +33,7 @@ import { clearCartItems } from '../../store/slices/cartSlice';
 import { clearWishlist } from '../../store/slices/wishlistSlice';
 import { useGetProductsQuery, productApiSlice } from '../../store/slices/productApiSlice';
 import { getProductId } from '../../lib/product';
+import { apiUrl } from '../../lib/api';
 
 import MiniCart from './MiniCart';
 import CurrencySelector from './CurrencySelector';
@@ -126,8 +127,11 @@ const Navbar = () => {
         return;
       }
 
-      fetch('/api/contact/me', {
-        headers: { Authorization: `Bearer ${currentToken}` },
+      fetch(apiUrl('/api/contact/me'), {
+        headers: {
+          Authorization: `Bearer ${currentToken}`,
+          'ngrok-skip-browser-warning': 'true',
+        },
       })
         .then((res) => {
           if (res.status === 401) {

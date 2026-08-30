@@ -9,7 +9,7 @@ import { Request } from 'express';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(private readonly jwtService: JwtService) { }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request>();
@@ -23,8 +23,7 @@ export class JwtAuthGuard implements CanActivate {
       const payload = await this.jwtService.verifyAsync(token, {
         secret: process.env.JWT_SECRET || 'development-jwt-secret',
       });
-      // Attach the payload (user details) to the request object
-      // so it can be accessed in controllers
+
       request['user'] = payload;
     } catch (err) {
       throw new UnauthorizedException('Invalid or expired token');

@@ -1,5 +1,6 @@
 import type { SharedUserActivityLog } from '../types/shared';
-const BASE = '/api/admin';
+import { apiUrl } from '../lib/api';
+
 function getToken(): string {
   try {
     const raw = localStorage.getItem('userInfo');
@@ -17,12 +18,14 @@ function getToken(): string {
 function authHeaders(): HeadersInit {
   return {
     'Content-Type': 'application/json',
+    'ngrok-skip-browser-warning': 'true',
     Authorization: `Bearer ${getToken()}`,
   };
 }
 
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
+  const url = apiUrl(`/api/admin${path.startsWith('/') ? path : `/${path}`}`);
+  const res = await fetch(url, {
     method,
     headers: authHeaders(),
     body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -341,7 +344,9 @@ export const adminApi = {
   // Contact Messages
   messages: {
     list: async () => {
-      const res = await fetch('/api/contact');
+      const res = await fetch(apiUrl('/api/contact'), {
+        headers: authHeaders(),
+      });
       if (!res.ok) throw new Error('Failed to fetch contact messages');
       const contacts = (await res.json()) || [];
 
@@ -366,15 +371,15 @@ export const adminApi = {
       return contacts as ContactMessage[];
     },
     updateStatus: async (id: string, status: string) => {
-      let res = await fetch(`/api/contact/${id}/status`, {
+      let res = await fetch(apiUrl(`/api/contact/${id}/status`), {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify({ status }),
       });
       if (!res.ok) {
-        res = await fetch(`/api/contact/${id}/status`, {
+        res = await fetch(apiUrl(`/api/contact/${id}/status`), {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders(),
           body: JSON.stringify({ status }),
         });
       }
@@ -382,15 +387,15 @@ export const adminApi = {
       return res.json();
     },
     reply: async (id: string, adminReply: string, status = 'resolved') => {
-      let res = await fetch(`/api/contact/${id}/reply`, {
+      let res = await fetch(apiUrl(`/api/contact/${id}/reply`), {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify({ adminReply, status }),
       });
       if (!res.ok) {
-        res = await fetch(`/api/contact/${id}/reply`, {
+        res = await fetch(apiUrl(`/api/contact/${id}/reply`), {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders(),
           body: JSON.stringify({ adminReply, status }),
         });
       }

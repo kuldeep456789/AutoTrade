@@ -47,10 +47,44 @@ export async function bootstrap() {
   app.useGlobalFilters(new HttpExceptionFilter());
 
   // CORS Configuration
-  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  const allowedOrigins = [
+    'https://auto-trade-amber.vercel.app',
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'http://localhost:4173',
+    'http://127.0.0.1:5173',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:4173',
+  ];
+  if (process.env.FRONTEND_URL) {
+    allowedOrigins.push(process.env.FRONTEND_URL.replace(/\/+$/, ''));
+  }
+
   app.enableCors({
-    origin: process.env.NODE_ENV === 'production' ? [frontendUrl, /\.vercel\.app$/] : true,
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+
+      const cleanOrigin = origin.replace(/\/+$/, '');
+      if (
+        allowedOrigins.includes(cleanOrigin) ||
+        /\.vercel\.app$/.test(cleanOrigin) ||
+        /^https?:\/\/localhost(:\d+)?$/.test(cleanOrigin) ||
+        /^https?:\/\/127\.0\.0\.1(:\d+)?$/.test(cleanOrigin)
+      ) {
+        return callback(null, true);
+      }
+
+      return callback(null, true);
+    },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Requested-With',
+      'Accept',
+      'ngrok-skip-browser-warning',
+    ],
   });
 
   const config = new DocumentBuilder()

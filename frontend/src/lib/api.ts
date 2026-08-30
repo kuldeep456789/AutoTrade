@@ -9,16 +9,33 @@ interface FeaturedProductsResponse {
     featured: CjProduct[];
 }
 
-/** Absolute backend origin when VITE_API_URL is a full URL; empty string uses Vite /api proxy. */
+/**
+ * Returns the normalized backend origin (without trailing slash or /api).
+ * Example: "https://autotrade-1-k96m.onrender.com" or "" in dev.
+ */
 export function getApiBaseUrl(): string {
-    const apiUrl = import.meta.env.VITE_API_URL || '/api';
-    if (apiUrl.startsWith('http')) {
-        return apiUrl.replace(/\/api\/?$/, '');
+    const envUrl = import.meta.env.VITE_API_URL;
+    if (typeof envUrl === 'string' && envUrl.trim().startsWith('http')) {
+        return envUrl.trim().replace(/\/+$/, '').replace(/\/api\/?$/, '');
     }
     return '';
 }
 
-const API_URL = import.meta.env.VITE_API_URL || '/api';
+/**
+ * Builds a standardized API URL that preserves /api prefix and targets the backend origin.
+ * Example: apiUrl('/api/contact') -> "https://autotrade-1-k96m.onrender.com/api/contact"
+ *          apiUrl('contact') -> "https://autotrade-1-k96m.onrender.com/api/contact"
+ */
+export function apiUrl(path: string): string {
+    const base = getApiBaseUrl();
+    const cleanPath = path.startsWith('/') ? path : `/${path}`;
+    const pathWithApi =
+        cleanPath === '/api' || cleanPath.startsWith('/api/')
+            ? cleanPath
+            : `/api${cleanPath}`;
+
+    return base ? `${base}${pathWithApi}` : pathWithApi;
+}
 
 const EXCLUDED_IDS = new Set([
     '2607130752441623600',
@@ -40,7 +57,7 @@ const isExcluded = (p: any) =>
     EXCLUDED_IDS.has(String(p?.categoryId ?? p?.category ?? ''));
 
 export async function getFeaturedProducts(): Promise<CjProduct[]> {
-    const res = await fetch(`${API_URL}/cj/featured-products`, {
+    const res = await fetch(apiUrl('/api/cj/featured-products'), {
         headers: {
             'ngrok-skip-browser-warning': 'true',
         },

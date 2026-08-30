@@ -36,12 +36,12 @@ export class CjCronService implements OnModuleInit {
    * Startup sync trigger if the warehouse is empty.
    */
   private async checkWarehouseOnStartup() {
-    this.logger.log('[Cron] Checking if Redis warehouse is populated...');
+    this.logger.log('[Cron] Checking if catalog is populated in database or warehouse cache...');
     const count = await this.cjService.getProductCount();
 
     if (count === 0) {
       this.logger.warn(
-        '[Cron] Warehouse cache is EMPTY. Running startup catalog sync immediately...',
+        '[Cron] Warehouse catalog is EMPTY. Running startup catalog sync...',
       );
       this.executeSyncWithMetrics().catch((err) => {
         this.logger.error(
@@ -51,7 +51,7 @@ export class CjCronService implements OnModuleInit {
       });
     } else {
       this.logger.log(
-        `[Cron] Warehouse is active with ${count} products. Waiting for hourly cron.`,
+        `[Cron] Warehouse is active with ${count} products available. Startup sync skipped.`,
       );
     }
   }
@@ -100,7 +100,9 @@ export class CjCronService implements OnModuleInit {
       this.logger.log('[Cron] Performing pre-sync Health Checks...');
       const redisConnected = this.redisService.isReady();
       if (!redisConnected) {
-        throw new Error('Redis connection is offline');
+        this.logger.warn(
+          '[Cron] Upstash Redis is currently unavailable or quota limit exceeded. Sync will update MongoDB and local memory cache.',
+        );
       }
 
       // Check CJ Access Token

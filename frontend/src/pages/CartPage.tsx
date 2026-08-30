@@ -12,6 +12,7 @@ import QuantitySelector from '../components/QuantitySelector';
 import { useCurrency } from '../context/CurrencyContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import MinimumOrderModal from '../components/checkout/MinimumOrderModal';
+import { apiUrl } from '../lib/api';
 
 const CartPage = () => {
   const navigate = useNavigate();
@@ -78,7 +79,7 @@ const CartPage = () => {
     if (!cleanCode) return;
 
     try {
-      const res = await fetch('/api/coupons/validate', {
+      const res = await fetch(apiUrl('/api/coupons/validate'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code: cleanCode, orderAmount: itemsPrice }),
