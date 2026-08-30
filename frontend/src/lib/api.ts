@@ -9,22 +9,42 @@ interface FeaturedProductsResponse {
     featured: CjProduct[];
 }
 
+export const PROD_BACKEND_URL = 'https://autotrade-1-k96m.onrender.com';
+
 /**
  * Returns the normalized backend origin (without trailing slash or /api).
- * Example: "https://autotrade-1-k96m.onrender.com" or "" in dev.
+ * Example: "https://autotrade-1-k96m.onrender.com"
+ * 
+ * Priority:
+ * 1. Explicit import.meta.env.VITE_API_URL if configured
+ * 2. Hardcoded production Render backend URL when in production or on Vercel
+ * 3. Empty string in local development (falling back to Vite proxy /api)
  */
 export function getApiBaseUrl(): string {
     const envUrl = import.meta.env.VITE_API_URL;
-    if (typeof envUrl === 'string' && envUrl.trim().startsWith('http')) {
+    if (typeof envUrl === 'string' && envUrl.trim().length > 0) {
         return envUrl.trim().replace(/\/+$/, '').replace(/\/api\/?$/, '');
     }
+
+    // When deployed on Vercel or any non-localhost host, always target the Render backend
+    if (
+        import.meta.env.PROD ||
+        (typeof window !== 'undefined' &&
+            window.location.hostname !== 'localhost' &&
+            window.location.hostname !== '127.0.0.1')
+    ) {
+        return PROD_BACKEND_URL;
+    }
+
     return '';
 }
 
 /**
  * Builds a standardized API URL that preserves /api prefix and targets the backend origin.
- * Example: apiUrl('/api/contact') -> "https://autotrade-1-k96m.onrender.com/api/contact"
- *          apiUrl('contact') -> "https://autotrade-1-k96m.onrender.com/api/contact"
+ * Example: apiUrl('/api/auth/send-register-otp')
+ *          -> "https://autotrade-1-k96m.onrender.com/api/auth/send-register-otp"
+ *          apiUrl('products')
+ *          -> "https://autotrade-1-k96m.onrender.com/api/products"
  */
 export function apiUrl(path: string): string {
     const base = getApiBaseUrl();
