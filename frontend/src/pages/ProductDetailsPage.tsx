@@ -298,16 +298,11 @@ const ProductDetailsPage = () => {
       price: currentSellingPrice,
       image: displayImages[0],
       qty: qty,
+      increment: true,
       variant: { color: product.colors?.[0] || 'Default', size: 'One Size' },
       vid: product.variants?.[0]?.vid || '',
       sku: product.sku || product.pid || '',
     };
-
-    if (!userInfo) {
-      sessionStorage.setItem('pendingCartItem', JSON.stringify(itemSnapshot));
-      navigate(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
-      return;
-    }
 
     dispatch(addToCart(itemSnapshot));
     setIsAdded(true);

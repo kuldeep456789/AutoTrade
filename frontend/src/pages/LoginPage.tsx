@@ -90,9 +90,8 @@ const LoginPage = () => {
     setErrorMessage('');
   };
 
-  const resetToFreshSession = () => {
+    const resetToFreshSession = () => {
     dispatch(apiSlice.util.resetApiState());
-    dispatch(clearCartItems());
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -115,7 +114,13 @@ const LoginPage = () => {
         setRequires2FA(true);
       } else {
         resetToFreshSession();
-        dispatch(setCredentials({ ...payload.user, accessToken: payload.token || payload.accessToken }));
+        dispatch(
+          setCredentials({
+            ...payload.user,
+            accessToken: payload.accessToken || payload.token,
+            refreshToken: payload.refreshToken,
+          })
+        );
         if (payload?.user?.role === 'admin') {
           sessionStorage.setItem('at_admin_verified', '1');
         }
@@ -135,7 +140,13 @@ const LoginPage = () => {
     try {
       const payload = await verify2FALogin({ tempToken, code: twoFactorCode }).unwrap();
       resetToFreshSession();
-      dispatch(setCredentials({ ...payload.user, accessToken: payload.token || payload.accessToken }));
+      dispatch(
+        setCredentials({
+          ...payload.user,
+          accessToken: payload.accessToken || payload.token,
+          refreshToken: payload.refreshToken,
+        })
+      );
       if (payload?.user?.role === 'admin') {
         sessionStorage.setItem('at_admin_verified', '1');
       }
@@ -209,7 +220,13 @@ const LoginPage = () => {
       }).unwrap();
 
       resetToFreshSession();
-      dispatch(setCredentials({ ...payload.user, accessToken: payload.token || payload.accessToken }));
+      dispatch(
+        setCredentials({
+          ...payload.user,
+          accessToken: payload.accessToken || payload.token,
+          refreshToken: payload.refreshToken,
+        })
+      );
       if (payload?.user?.role === 'admin') {
         sessionStorage.setItem('at_admin_verified', '1');
         toast.success('Administrator account created! Directing to dashboard...');

@@ -18,14 +18,14 @@ const PlaceOrderPage = () => {
   const { formatCurrency, currency } = useCurrency();
 
   useEffect(() => {
-    if (cart.itemsPrice < 50000) {
+    if (!cart.cartItems || cart.cartItems.length === 0 || cart.totalPrice <= 0) {
       navigate('/cart');
     } else if (!cart.shippingAddress.address) {
       navigate('/shipping');
     } else if (!cart.paymentMethod) {
       navigate('/payment');
     }
-  }, [cart.itemsPrice, cart.paymentMethod, cart.shippingAddress.address, navigate]);
+  }, [cart.cartItems, cart.totalPrice, cart.paymentMethod, cart.shippingAddress.address, navigate]);
 
   const placeOrderHandler = async () => {
     const activeToken = userInfo?.accessToken || (userInfo as any)?.token || localStorage.getItem('token') || localStorage.getItem('accessToken');

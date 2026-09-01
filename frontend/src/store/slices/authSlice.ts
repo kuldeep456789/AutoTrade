@@ -17,6 +17,8 @@ export interface UserInfo {
   dateOfBirth?: string;
   isTwoFactorEnabled?: boolean;
   accessToken?: string;
+  refreshToken?: string;
+  token?: string;
 }
 
 interface AuthState {
@@ -36,14 +38,39 @@ const authSlice = createSlice({
     setCredentials: (state, action: PayloadAction<UserInfo>) => {
       state.userInfo = action.payload;
       localStorage.setItem('userInfo', JSON.stringify(action.payload));
+      if (action.payload.accessToken) {
+        localStorage.setItem('accessToken', action.payload.accessToken);
+        localStorage.setItem('token', action.payload.accessToken);
+      }
+      if (action.payload.refreshToken) {
+        localStorage.setItem('refreshToken', action.payload.refreshToken);
+      }
+    },
+    updateTokens: (state, action: PayloadAction<{ accessToken: string; refreshToken?: string }>) => {
+      if (state.userInfo) {
+        state.userInfo.accessToken = action.payload.accessToken;
+        state.userInfo.token = action.payload.accessToken;
+        if (action.payload.refreshToken) {
+          state.userInfo.refreshToken = action.payload.refreshToken;
+        }
+        localStorage.setItem('userInfo', JSON.stringify(state.userInfo));
+      }
+      localStorage.setItem('accessToken', action.payload.accessToken);
+      localStorage.setItem('token', action.payload.accessToken);
+      if (action.payload.refreshToken) {
+        localStorage.setItem('refreshToken', action.payload.refreshToken);
+      }
     },
     logout: (state) => {
       state.userInfo = null;
       localStorage.removeItem('userInfo');
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
       localStorage.removeItem('shippingAddress');
     },
   },
 });
 
-export const { setCredentials, logout } = authSlice.actions;
+export const { setCredentials, updateTokens, logout } = authSlice.actions;
 export default authSlice.reducer;

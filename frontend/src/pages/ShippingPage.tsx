@@ -75,9 +75,7 @@ const ShippingPage = () => {
     : (cart.cartItems || []).reduce((acc: number, item: any) => acc + Math.round(parsePrice(item.price)) * item.qty, 0);
 
   useEffect(() => {
-    if (!cart.cartItems || cart.cartItems.length === 0) {
-      navigate('/cart');
-    } else if (calculatedItemsPrice < 50000) {
+    if (!cart.cartItems || cart.cartItems.length === 0 || calculatedItemsPrice <= 0) {
       navigate('/cart');
     }
   }, [cart.cartItems, calculatedItemsPrice, navigate]);

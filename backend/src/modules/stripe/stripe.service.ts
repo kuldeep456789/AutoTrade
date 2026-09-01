@@ -246,8 +246,10 @@ export class StripeService {
 
     const returnBase =
       process.env.STRIPE_RETURN_BASE_URL ||
-      process.env.FRONTEND_URL ||
-      'http://127.0.0.1:3000';
+      process.env.BACKEND_URL ||
+      (process.env.NODE_ENV === 'production'
+        ? 'https://autotrade-1-k96m.onrender.com'
+        : 'http://127.0.0.1:3000');
 
     return this.stripe.checkout.sessions.create({
       mode: 'payment',

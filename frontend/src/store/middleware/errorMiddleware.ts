@@ -3,20 +3,14 @@ import type { MiddlewareAPI, Middleware } from '@reduxjs/toolkit';
 import toast from 'react-hot-toast';
 
 export const rtkQueryErrorLogger: Middleware =
-  (api: MiddlewareAPI) => (next) => (action: any) => {
+  (_api: MiddlewareAPI) => (next) => (action: any) => {
     if (isRejectedWithValue(action)) {
       const status = action.payload?.status;
       const data = action.payload?.data;
 
-      const endpointName = action.meta?.arg?.endpointName;
-
       // Handle specific status codes
       if (status === 401) {
-        // Trigger global logout if unauthorized, but ignore login/2fa login credentials failure
-        if (endpointName !== 'login' && endpointName !== 'verify2FALogin') {
-          api.dispatch({ type: 'auth/logout' });
-          toast.error('Session expired. Please log in again.');
-        }
+        // Re-auth is handled cleanly by baseQueryWithReauth in apiSlice.
       } else if (status === 403) {
         toast.error(data?.message || 'You do not have permission to perform this action.');
       } else if (status === 400 || status === 422) {
@@ -32,3 +26,4 @@ export const rtkQueryErrorLogger: Middleware =
 
     return next(action);
   };
+

@@ -48,7 +48,10 @@ export class StripeController {
   ) {
     const orderId = await this.stripeService.confirmSuccess(sessionId || '');
     const frontendBase =
-      process.env.FRONTEND_URL?.replace(/\/+$/, '') || 'http://127.0.0.1:5173';
+      process.env.FRONTEND_URL?.replace(/\/+$/, '') ||
+      (process.env.NODE_ENV === 'production'
+        ? 'https://auto-trade-amber.vercel.app'
+        : 'http://127.0.0.1:5173');
 
     if (orderId) {
       return res.redirect(302, `${frontendBase}/order/${orderId}`);
@@ -60,7 +63,10 @@ export class StripeController {
   @Get('cancel')
   cancel(@Res() res: Response) {
     const frontendBase =
-      process.env.FRONTEND_URL?.replace(/\/+$/, '') || 'http://127.0.0.1:5173';
+      process.env.FRONTEND_URL?.replace(/\/+$/, '') ||
+      (process.env.NODE_ENV === 'production'
+        ? 'https://auto-trade-amber.vercel.app'
+        : 'http://127.0.0.1:5173');
     return res.redirect(302, `${frontendBase}/cart`);
   }
 

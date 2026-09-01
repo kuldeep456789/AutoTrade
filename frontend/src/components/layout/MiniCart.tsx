@@ -36,8 +36,7 @@ const MiniCart = ({ isOpen, onClose }: MiniCartProps) => {
     : cartItems.reduce((acc, item) => acc + Math.round(parsePrice(item.price)) * item.qty, 0);
 
   const handleCheckout = () => {
-    if (calculatedSubtotal < 50000) {
-      setIsMinOrderModalOpen(true);
+    if (cartItems.length === 0 || calculatedSubtotal <= 0) {
       return;
     }
     onClose();

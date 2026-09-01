@@ -10,11 +10,6 @@ export class CjController {
     return this.cjService.syncOrderById(orderId);
   }
 
-  @Post('authentication')
-  authenticate() {
-    return this.cjService.getAccessToken();
-  }
-
   @Get('categories')
   getCategories() {
     return this.cjService.getCategories();

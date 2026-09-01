@@ -149,14 +149,31 @@ export const CATEGORY_SLUG_MAP: Record<string, { subcategoryName?: string; colle
   'windscreen-wipers-windows': { subcategoryName: 'Windscreen Wipers & Windows', collectionType: 'Auto Replacement Parts', title: 'Windscreen Wipers & Windows' },
 
   // Aliases for database-normalized slugs to fix tab navigation on collection pages
+  'all': { title: 'All Collections' },
   'dvr-and-dash-camera': { subcategoryName: 'DVR & Dash Camera', collectionType: 'Car Electronics', title: 'DVR & Dash Camera' },
+  'dash-camera': { subcategoryName: 'DVR & Dash Camera', collectionType: 'Car Electronics', title: 'DVR & Dash Camera' },
+  'dash-cam': { subcategoryName: 'DVR & Dash Camera', collectionType: 'Car Electronics', title: 'DVR & Dash Camera' },
   'alarm-systems-and-security': { subcategoryName: 'Alarm Systems & Security', collectionType: 'Car Electronics', title: 'Alarm Systems & Security' },
   'exhaust-and-exhaust-systems': { subcategoryName: 'Exhaust & Exhaust Systems', collectionType: 'Motorcycle Accessories & Parts', title: 'Exhaust Systems' },
   'motorcycle-accessories-and-parts': { collectionType: 'Motorcycle Accessories & Parts', title: 'Motorcycle Accessories & Parts' },
   'tools-maintenance-and-care': { collectionType: 'Tools, Maintenance & Care', title: 'Tools, Maintenance & Care' },
   'spark-plugs-and-ignition-system': { subcategoryName: 'Spark Plugs & Ignition System', collectionType: 'Auto Replacement Parts', title: 'Spark Plugs & Ignition System' },
+  'spark-plugs': { subcategoryName: 'Spark Plugs & Ignition System', collectionType: 'Auto Replacement Parts', title: 'Spark Plugs & Ignition System' },
   'windscreen-wipers-and-windows': { subcategoryName: 'Windscreen Wipers & Windows', collectionType: 'Auto Replacement Parts', title: 'Windscreen Wipers & Windows' },
   'lighting': { subcategoryName: 'Lighting', collectionType: 'Motorcycle Accessories & Parts', title: 'Motorcycle Lighting' },
+  'car-washers': { subcategoryName: 'Car Washer', collectionType: 'Tools, Maintenance & Care', title: 'Car Washer' },
+  'floor-mat': { subcategoryName: 'Floor Mats', collectionType: 'Interior Accessories', title: 'Floor Mats' },
+  'seat-covers': { subcategoryName: 'Automobiles Seat Covers', collectionType: 'Interior Accessories', title: 'Automobiles Seat Covers' },
+  'automobile-seat-covers': { subcategoryName: 'Automobiles Seat Covers', collectionType: 'Interior Accessories', title: 'Automobiles Seat Covers' },
+  'car-perfumes': { subcategoryName: 'Car Perfume', collectionType: 'Interior Accessories', title: 'Car Perfume' },
+  'diagnostic-tool': { subcategoryName: 'Diagnostic Tools', collectionType: 'Tools, Maintenance & Care', title: 'Diagnostic Tools' },
+  'gps-tracker': { subcategoryName: 'GPS Trackers', collectionType: 'Car Electronics', title: 'GPS Trackers' },
+  'key-cases': { subcategoryName: 'Key Case for Car', collectionType: 'Interior Accessories', title: 'Key Case for Car' },
+  'jump-starters': { subcategoryName: 'Jump Starter', collectionType: 'Car Electronics', title: 'Jump Starter' },
+  'helmet-headsets': { subcategoryName: 'Helmet Headset', collectionType: 'Motorcycle Accessories & Parts', title: 'Helmet Headset' },
+  'car-light': { subcategoryName: 'Car Lights', collectionType: 'Auto Replacement Parts', title: 'Car Lights' },
+  'interior-part': { subcategoryName: 'Interior Parts', collectionType: 'Auto Replacement Parts', title: 'Interior Parts' },
+  'exterior-part': { subcategoryName: 'Exterior Parts', collectionType: 'Auto Replacement Parts', title: 'Exterior Parts' },
 };
 
 export const normalizeSlug = (value: string) =>
@@ -167,3 +184,4 @@ export const normalizeSlug = (value: string) =>
     .replace(/&/g, ' and ')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
+

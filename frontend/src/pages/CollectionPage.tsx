@@ -93,13 +93,14 @@ const CollectionPage = () => {
   const { data: apiResponse, isLoading, error } = useGetProductsQuery(queryParams);
   const rawProducts = Array.isArray(apiResponse?.products) ? apiResponse.products : [];
 
-  // Derive subcategory tabs
+  // Derive subcategory / category tabs
   const derivedTabs = useMemo(() => {
     if (targetCollectionType) {
       const navCat = NAV_CATEGORIES.find((c) => c.label === targetCollectionType);
       if (navCat && navCat.subs.length > 0) {
         return navCat.subs.map((sub) => ({
           name: sub.label,
+          to: sub.to,
           count: rawProducts.filter(
             (p: any) => String(p.subcategoryName || '').toLowerCase() === sub.label.toLowerCase()
           ).length || 0,
@@ -107,16 +108,12 @@ const CollectionPage = () => {
       }
     }
 
-    const catMap = new Map<string, number>();
-    for (const p of rawProducts) {
-      const cat = String(p.subcategoryName ?? p._category ?? '').trim();
-      if (!cat) continue;
-      catMap.set(cat, (catMap.get(cat) || 0) + 1);
-    }
-
-    return Array.from(catMap.entries())
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count);
+    // Default for /collections/all: display all main categories
+    return NAV_CATEGORIES.map((cat) => ({
+      name: cat.label,
+      to: cat.to,
+      count: 0,
+    }));
   }, [targetCollectionType, rawProducts]);
 
   // Page title
@@ -231,8 +228,10 @@ const CollectionPage = () => {
                 const tabSlug = toSlug(tab.name);
                 const isActive = targetSubcategoryName
                   ? targetSubcategoryName.toLowerCase() === tab.name.toLowerCase()
+                  : targetCollectionType
+                  ? targetCollectionType.toLowerCase() === tab.name.toLowerCase()
                   : toSlug(tab.name) === normalizedSubcategory;
-                const linkTo = `/collections/${tabSlug}`;
+                const linkTo = tab.to || `/collections/${tabSlug}`;
 
                 return (
                   <Link

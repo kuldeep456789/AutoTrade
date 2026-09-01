@@ -102,12 +102,14 @@ const Navbar = () => {
 
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [expandedMobileCat, setExpandedMobileCat] = useState<string | null>(null);
 
   // Close mobile drawer and search focus on route change
   useEffect(() => {
     setMobileMenuOpen(false);
     setMobileSearchFocused(false);
     setSearchFocused(false);
+    setExpandedMobileCat(null);
   }, [location.pathname]);
 
   useEffect(() => {
@@ -944,19 +946,55 @@ const Navbar = () => {
                   </span>
                   {navCategories.map((cat) => {
                     const Icon = CATEGORY_ICONS[cat.label] || Car;
+                    const isExpanded = expandedMobileCat === cat.label;
+                    const hasSubs = cat.subs && cat.subs.length > 0;
+
                     return (
-                      <Link
-                        key={cat.to}
-                        to={cat.to}
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-zinc-300 hover:text-white hover:bg-zinc-900 transition-colors group"
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <Icon className="w-4 h-4 text-zinc-400 group-hover:text-[#FF7A00] transition-colors shrink-0" />
-                          <span className="truncate">{cat.label}</span>
+                      <div key={cat.to} className="rounded-xl overflow-hidden bg-zinc-900/40 border border-zinc-850/60 mb-1">
+                        <div className="flex items-center justify-between px-3 py-2.5 hover:bg-zinc-900 transition-colors">
+                          <Link
+                            to={cat.to}
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="flex items-center gap-3 min-w-0 flex-1 text-xs font-semibold text-zinc-200 hover:text-white"
+                          >
+                            <Icon className="w-4 h-4 text-zinc-400 group-hover:text-[#FF7A00] transition-colors shrink-0" />
+                            <span className="truncate">{cat.label}</span>
+                          </Link>
+
+                          {hasSubs && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setExpandedMobileCat(isExpanded ? null : cat.label);
+                              }}
+                              className="p-1 text-zinc-400 hover:text-white transition-transform cursor-pointer"
+                              aria-label="Toggle subcategories"
+                            >
+                              <ChevronRight
+                                size={14}
+                                className={`transition-transform duration-200 ${isExpanded ? 'rotate-90 text-[#FF7A00]' : ''}`}
+                              />
+                            </button>
+                          )}
                         </div>
-                        <ChevronRight size={13} className="text-zinc-600 group-hover:text-white transition-colors" />
-                      </Link>
+
+                        {/* Subcategories list */}
+                        {hasSubs && isExpanded && (
+                          <div className="bg-zinc-950/80 px-3 py-1.5 border-t border-zinc-850 space-y-1">
+                            {cat.subs.map((sub) => (
+                              <Link
+                                key={sub.to}
+                                to={sub.to}
+                                onClick={() => setMobileMenuOpen(false)}
+                                className="block py-1.5 px-3 text-[11.5px] font-medium text-zinc-400 hover:text-[#FF7A00] hover:bg-zinc-900/60 rounded-lg transition-colors"
+                              >
+                                {sub.label}
+                              </Link>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     );
                   })}
                 </div>
