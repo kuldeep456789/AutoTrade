@@ -18,7 +18,7 @@ const PlaceOrderPage = () => {
   const { formatCurrency, currency } = useCurrency();
 
   useEffect(() => {
-    if (!cart.cartItems || cart.cartItems.length === 0 || cart.totalPrice <= 0) {
+    if (!cart.cartItems || cart.cartItems.length === 0 || cart.totalPrice < 50000) {
       navigate('/cart');
     } else if (!cart.shippingAddress.address) {
       navigate('/shipping');

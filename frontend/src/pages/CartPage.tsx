@@ -119,6 +119,10 @@ const CartPage = () => {
       setCouponMsg({ text: 'Your cart is empty.', isError: true });
       return;
     }
+    if (itemsPrice < 50000) {
+      setIsMinOrderModalOpen(true);
+      return;
+    }
     navigate('/shipping');
   };
 

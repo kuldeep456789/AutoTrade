@@ -39,9 +39,9 @@ const MinimumOrderModal: React.FC<MinimumOrderModalProps> = ({ isOpen, onClose, 
           <div className="p-6">
             <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-xl p-4 mb-6">
               <p className="text-amber-800 dark:text-amber-200 text-[15px] leading-relaxed">
-                The minimum order value is <span className="font-bold">{formatCurrency(50000)}</span>.
+                AutoTrade is a B2B wholesale platform. The minimum order value is <span className="font-bold">{formatCurrency(50000)}</span>.
                 Your current cart total is <span className="font-bold">{formatCurrency(cartTotal)}</span>.
-                Please add more items to continue.
+                Please add more items to reach the minimum order requirement.
               </p>
             </div>
 

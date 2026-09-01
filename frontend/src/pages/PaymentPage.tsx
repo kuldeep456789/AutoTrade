@@ -32,7 +32,7 @@ const PaymentPage = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!cart.cartItems || cart.cartItems.length === 0 || cart.totalPrice <= 0) {
+    if (!cart.cartItems || cart.cartItems.length === 0 || cart.totalPrice < 50000) {
       navigate('/cart');
     } else if (!shippingAddress.address) {
       navigate('/shipping');

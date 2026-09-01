@@ -244,12 +244,12 @@ export class StripeService {
       throw new BadRequestException('Stripe is not configured on this server');
     }
 
+    const envReturnBase = process.env.STRIPE_RETURN_BASE_URL || process.env.BACKEND_URL;
+    const isLocalReturnBase = !envReturnBase || envReturnBase.includes('localhost') || envReturnBase.includes('127.0.0.1');
     const returnBase =
-      process.env.STRIPE_RETURN_BASE_URL ||
-      process.env.BACKEND_URL ||
-      (process.env.NODE_ENV === 'production'
-        ? 'https://autotrade-1-k96m.onrender.com'
-        : 'http://127.0.0.1:3000');
+      (process.env.NODE_ENV === 'production' || isLocalReturnBase)
+        ? (process.env.BACKEND_URL || 'https://autotrade-1-k96m.onrender.com')
+        : (envReturnBase || 'https://autotrade-1-k96m.onrender.com');
 
     return this.stripe.checkout.sessions.create({
       mode: 'payment',
@@ -541,8 +541,15 @@ export class StripeService {
   }
 
   private async getOwnedOrder(userId: string, orderId: string) {
-    return this.orderModel
-      .findOne({ _id: orderId, userId: new Types.ObjectId(userId) })
-      .exec();
+    const cleanOrderId = (orderId || '').trim().replace(/^#/, '');
+    const cleanUserId = (userId || '').trim();
+    if (!Types.ObjectId.isValid(cleanOrderId)) {
+      return null;
+    }
+    const filter: any = { _id: new Types.ObjectId(cleanOrderId) };
+    if (Types.ObjectId.isValid(cleanUserId)) {
+      filter.userId = new Types.ObjectId(cleanUserId);
+    }
+    return this.orderModel.findOne(filter).exec();
   }
 }

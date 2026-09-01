@@ -51,14 +51,9 @@ const initialState: CartState = {
     : '',
 };
 
-/** Calculates shipping cost based on discounted subtotal. */
-const calcShipping = (itemsPrice: number, couponDiscount: number): number => {
-  if (itemsPrice === 0) return 0;
-  const discountedTotal = itemsPrice - couponDiscount;
-  if (discountedTotal >= 5000) return 0;
-  if (discountedTotal >= 999) return 49;
-  if (discountedTotal >= 499) return 99;
-  return 150;
+/** Calculates shipping cost (Free for AutoTrade B2B orders). */
+const calcShipping = (_itemsPrice: number, _couponDiscount: number): number => {
+  return 0;
 };
 
 /** Available discount coupons and discount rules. */
@@ -118,12 +113,12 @@ const updateCart = (state: CartState) => {
 
   state.shippingPrice = calcShipping(state.itemsPrice, state.couponDiscount);
 
-  // No tax calculation (set to 0 as per user request)
+  // No tax calculation
   const taxableAmount = Math.max(0, state.itemsPrice - state.couponDiscount);
   state.taxPrice = 0;
 
-  // Grand total (without tax)
-  state.totalPrice = Number((taxableAmount + state.shippingPrice).toFixed(2));
+  // Grand total (Subtotal minus coupon discount, free shipping)
+  state.totalPrice = Number(taxableAmount.toFixed(2));
 
   localStorage.setItem('cartItems', JSON.stringify(state.cartItems));
   localStorage.setItem('appliedCoupon', state.appliedCoupon);

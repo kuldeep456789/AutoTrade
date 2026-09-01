@@ -125,7 +125,16 @@ const OrderSummarySidebar = ({ buttonText, buttonAction, disableButton }: OrderS
           <span className="text-zinc-500 dark:text-zinc-400">Subtotal</span>
           <span className="font-semibold text-zinc-800 dark:text-zinc-200">{formatCurrency(itemsPrice)}</span>
         </div>
-
+        {cart.couponDiscount > 0 && (
+          <div className="flex justify-between items-center text-[13px] text-green-600 dark:text-green-400">
+            <span>Coupon Discount</span>
+            <span className="font-semibold">-{formatCurrency(cart.couponDiscount)}</span>
+          </div>
+        )}
+        <div className="flex justify-between items-center text-[13px]">
+          <span className="text-zinc-500 dark:text-zinc-400">Shipping</span>
+          <span className="font-semibold text-green-600 dark:text-green-400">Free</span>
+        </div>
       </div>
 
       {/* Total */}

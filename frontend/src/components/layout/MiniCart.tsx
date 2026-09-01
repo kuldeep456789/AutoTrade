@@ -39,6 +39,10 @@ const MiniCart = ({ isOpen, onClose }: MiniCartProps) => {
     if (cartItems.length === 0 || calculatedSubtotal <= 0) {
       return;
     }
+    if (calculatedSubtotal < 50000) {
+      setIsMinOrderModalOpen(true);
+      return;
+    }
     onClose();
     navigate('/shipping');
   };
